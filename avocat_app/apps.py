@@ -10,4 +10,5 @@ class AvocatAppConfig(AppConfig):
 
     def ready(self):
         from .services import signals  # noqa: F401 — ensure signal registration
-
+        from .services import auth_signals  # إشارات التوكن
+        from .services import audit_signals  # <— تفعيل إشارات التدقيق

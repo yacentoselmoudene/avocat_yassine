@@ -514,3 +514,20 @@ class JournalActivite(models.Model):
 
     def __str__(self):
         return f"{self.action} — {self.objet} @ {self.date_action:%Y-%m-%d %H:%M}"
+
+
+class AuthToken:
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE, verbose_name='المستخدم')
+    token = models.CharField(max_length=255, unique=True, verbose_name='رمز المصادقة')
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    date_expiration = models.DateTimeField(verbose_name='تاريخ الانتهاء')
+
+    class Meta:
+        db_table = 'auth_token'
+        verbose_name = 'رمز مصادقة'
+        verbose_name_plural = 'رموز المصادقة'
+        indexes = [models.Index(fields=['date_expiration'])]
+    def __str__(self):
+        return f"Token for {self.utilisateur.nom_complet} — Expires on {self.date_expiration:%Y-%m-%d %H:%M}"
+    

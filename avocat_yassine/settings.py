@@ -40,14 +40,26 @@ INSTALLED_APPS = [
     'avocat_app.apps.AvocatAppConfig',
 ]
 
+# === Audit switches & defaults ===
+AUDIT_ENABLED = True
+AUDIT_REDACT_FIELDS = ["password", "mot_de_passe", "secret", "token", "authorization"]
+AUDIT_RETENTION_DAYS = 365  # احتفاظ سنة
+TOKEN_IDLE_TIMEOUT_SECONDS = 5 * 60
+TOKEN_MIN_TOUCH_INTERVAL_SECONDS = 60  # لتقليل الكتابة
+AUTH_TOKEN_COOKIE_SECURE = True
+AUTH_TOKEN_COOKIE_HTTPONLY = True
+AUTH_TOKEN_COOKIE_SAMESITE = "Lax"
+
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "avocat_app.middleware.idle_token.IdleTokenAuthMiddleware",  # لديك مسبقاً
+    "avocat_app.middleware.request_local.RequestLocalMiddleware", # <— جديد: يضع request في threadlocal
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = 'avocat_yassine.urls'

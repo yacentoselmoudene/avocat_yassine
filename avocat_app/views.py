@@ -1,415 +1,319 @@
 # =============================================================
-# FILE: views.py
-# Objectif:
-#  - Sécurité côté serveur maximale raisonnable (Login + Permissions)
-#  - UX performante: Toggle Table/Cards, recherche, pagination
-#  - Popups (modals) pour créer/mettre à jour/supprimer via HTMX
-#  - Réponses partielles si HX-Request (htmx), sinon pages complètes
-#  - Querysets optimisées (select_related/prefetch_related)
+# FILE: views.py (extrait mis à jour)
+# - Ajoute des réponses JSON uniformes (ok, html, refreshTarget, refreshUrl)
+# - Cible par défaut: rafraîchir #timeline d'une Affaire après Create/Update
+# - Gère HTMX modals pour Create/Update/Delete
+# - Sécurisé: LoginRequired + Permissions + CSRF cookie
 # =============================================================
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
-)
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
 from .models import (
     Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte
 )
+#AffairePartieForm, AffaireAvocatForm,
 from .forms import (
-    JuridictionForm, AvocatForm, AffaireForm, PartieForm, AffairePartieForm, AffaireAvocatForm,
+    JuridictionForm, AvocatForm, AffaireForm, PartieForm,
     AudienceForm, MesureForm, ExpertiseForm, DecisionForm, NotificationForm, VoieDeRecoursForm,
     ExecutionForm, DepenseForm, RecetteForm, PieceJointeForm, UtilisateurForm, TacheForm, AlerteForm
 )
 
 # -------------------------------------------------------------
-# Mixins de sécurité/UX réutilisables
+# Utilitaires communs
 # -------------------------------------------------------------
 class SecureBase(LoginRequiredMixin, PermissionRequiredMixin):
-    """Mix-in de base: nécessite connexion + permission par vue.
-    - Définit pagination, ordre par défaut
-    - Assure présence du cookie CSRF (utile pour HTMX POST)
-    """
     permission_required: str | tuple[str, ...] = ()
-    raise_exception = True  # 403 au lieu de rediriger
-    paginate_by = 20
-    ordering = '-pk'
+    raise_exception = True
 
     @method_decorator(ensure_csrf_cookie)
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         return super().dispatch(request, *args, **kwargs)
 
-    # Recherche simple sécurisée (q=...)
-    search_fields: tuple[str, ...] = ()
-
-    def filter_by_search(self, qs):
-        q = (self.request.GET.get('q') or '').strip()
-        if not q or not self.search_fields:
-            return qs
-        cond = Q()
-        for f in self.search_fields:
-            cond |= Q(**{f"{f}__icontains": q})
-        return qs.filter(cond)
-
-    # Gestion du mode d'affichage (toggle): 'table' ou 'cards'
-    def get_view_mode(self) -> str:
-        mode = self.request.GET.get('view')
-        if mode in {'table', 'cards'}:
-            self.request.session['list_view_mode'] = mode
-        return self.request.session.get('list_view_mode', 'table')
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['view_mode'] = self.get_view_mode()
-        ctx['query'] = (self.request.GET.get('q') or '').strip()
-        return ctx
-
-    # Réponses partielles si HTMX pour modals
-    def render_modal(self, request: HttpRequest, template: str, context: Dict[str, Any]) -> HttpResponse:
-        html = render_to_string(template, context=context, request=request)
-        return HttpResponse(html)
-
     def htmx(self) -> bool:
         return self.request.headers.get('HX-Request', '').lower() == 'true'
 
+    def success_json(self, message: str, affaire_pk: int | None = None) -> JsonResponse:
+        html = render_to_string('modals/_success_toast.html', {'message': message}, request=self.request)
+        payload: Dict[str, Any] = {'ok': True, 'html': html}
+        if affaire_pk:
+            payload.update({
+                'refreshTarget': '#timeline',
+                'refreshUrl': reverse('cabinet:affaire_timeline', args=[affaire_pk])
+            })
+        return JsonResponse(payload)
 
-class OptimizedAffaireQueryMixin:
-    def get_queryset(self):
-        qs = super().get_queryset()
-        if isinstance(self, ListView):
-            qs = qs.select_related('juridiction', 'avocat_responsable')
-        return qs
+    def render_modal(self, template: str, context: Dict[str, Any]) -> HttpResponse:
+        html = render_to_string(template, context=context, request=self.request)
+        return HttpResponse(html)
 
 
 # -------------------------------------------------------------
-# VUES: Juridiction (exemple complet avec toggle + htmx modals)
+# Aide pour retrouver l'affaire liée à une étape (audience/mesure/…)
 # -------------------------------------------------------------
-class JuridictionList(SecureBase, ListView):
-    model = Juridiction
-    permission_required = 'cabinet.view_juridiction'
-    search_fields = ('nom', 'ville')
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        qs = self.filter_by_search(qs)
-        return qs
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['page_title'] = 'المحاكم'
-        ctx['create_url'] = reverse('cabinet:juridiction_create')
-        return ctx
-
-
-class JuridictionDetail(SecureBase, DetailView):
-    model = Juridiction
-    permission_required = 'cabinet.view_juridiction'
+def _affaire_pk_from_step(obj) -> int | None:
+    if obj is None:
+        return None
+    if isinstance(obj, Audience):
+        return obj.affaire_id
+    if isinstance(obj, Mesure):
+        return obj.audience.affaire_id if obj.audience_id else None
+    if isinstance(obj, Expertise):
+        return obj.affaire_id
+    if isinstance(obj, Decision):
+        return obj.affaire_id
+    if isinstance(obj, Notification):
+        return obj.decision.affaire_id if obj.decision_id else None
+    if isinstance(obj, VoieDeRecours):
+        return obj.decision.affaire_id if obj.decision_id else None
+    if isinstance(obj, Execution):
+        return obj.decision.affaire_id if obj.decision_id else None
+    return None
 
 
-class JuridictionCreate(SecureBase, CreateView):
-    model = Juridiction
-    form_class = JuridictionForm
-    permission_required = 'cabinet.add_juridiction'
-    success_url = reverse_lazy('cabinet:juridiction_list')
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.contrib import messages
+
+from .models import Affaire, Juridiction, Avocat, Audience
+from .forms import AffaireForm, JuridictionForm, AvocatForm, AudienceForm
+
+# =============================
+# AFFAIRES
+# =============================
+class AffaireList(SecureBase, ListView):
+    model = Affaire
+    template_name = 'avocat/affaire_list.html'
+    permission_required = 'cabinet.view_affaire'
+    paginate_by = 20
+
+class AffaireDetail(SecureBase, DetailView):
+    model = Affaire
+    template_name = 'avocat/affaire_detail.html'
+    permission_required = 'cabinet.view_affaire'
+
+class AffaireCreate(SecureBase, CreateView):
+    model = Affaire
+    form_class = AffaireForm
+    template_name = 'avocat/affaire_form.html'
+    permission_required = 'cabinet.add_affaire'
 
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ الحفظ بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحفظ بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم إنشاء القضية بنجاح.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:affaire_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم إنشاء القضية بنجاح.')
         return super().form_valid(form)
 
-    def get(self, request, *args, **kwargs):
-        # Si HTMX: renvoyer uniquement le corps du formulaire للمودال
-        if self.htmx():
-            form = self.form_class()
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'إضافة جهة قضائية', 'action': request.path})
-        return super().get(request, *args, **kwargs)
+    def get_success_url(self):
+        return reverse_lazy('cabinet:affaire_detail', args=[self.object.pk])
 
-
-class JuridictionUpdate(SecureBase, UpdateView):
-    model = Juridiction
-    form_class = JuridictionForm
-    permission_required = 'cabinet.change_juridiction'
-    success_url = reverse_lazy('cabinet:juridiction_list')
+class AffaireUpdate(SecureBase, UpdateView):
+    model = Affaire
+    form_class = AffaireForm
+    template_name = 'avocat/affaire_form.html'
+    permission_required = 'cabinet.change_affaire'
 
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ التحديث بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ التحديث بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم تحديث القضية بنجاح.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:affaire_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم تحديث القضية بنجاح.')
         return super().form_valid(form)
 
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            form = self.form_class(instance=self.object)
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'تعديل جهة قضائية', 'action': request.path})
-        return super().get(request, *args, **kwargs)
+    def get_success_url(self):
+        return reverse_lazy('cabinet:affaire_detail', args=[self.object.pk])
 
-
-class JuridictionDelete(SecureBase, DeleteView):
-    model = Juridiction
-    permission_required = 'cabinet.delete_juridiction'
-    success_url = reverse_lazy('cabinet:juridiction_list')
+class AffaireDelete(SecureBase, DeleteView):
+    model = Affaire
+    template_name = 'avocat/affaire_confirm_delete.html'
+    success_url = reverse_lazy('cabinet:affaire_list')
+    permission_required = 'cabinet.delete_affaire'
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         self.object.delete()
-        messages.success(request, 'تمّ الحذف.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحذف.'}, request=request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return redirect(self.success_url)
+        if request.headers.get('HX-Request'):
+            return self.success_json('تم حذف القضية.', redirect=str(self.success_url))
+        messages.success(request, 'تم حذف القضية.')
+        return super().delete(request, *args, **kwargs)
 
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            return self.render_modal(request, 'modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
-        return super().get(request, *args, **kwargs)
+# =============================
+# JURIDICTIONS
+# =============================
+class JuridictionList(SecureBase, ListView):
+    model = Juridiction
+    template_name = 'avocat/juridiction_list.html'
+    permission_required = 'cabinet.view_juridiction'
 
+class JuridictionDetail(SecureBase, DetailView):
+    model = Juridiction
+    template_name = 'avocat/juridiction_detail.html'
+    permission_required = 'cabinet.view_juridiction'
 
-# -------------------------------------------------------------
-# Gabarit générique pour le reste des modèles (CRUD sécurisés)
-#  - Pour réduire la taille, on applique le même pattern
-#  - Optimisations spécifiques sur Affaire (select_related)
-# -------------------------------------------------------------
+class JuridictionCreate(SecureBase, CreateView):
+    model = Juridiction
+    form_class = JuridictionForm
+    template_name = 'avocat/juridiction_form.html'
+    permission_required = 'cabinet.add_juridiction'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم إنشاء المحكمة.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:juridiction_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم إنشاء المحكمة.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('cabinet:juridiction_detail', args=[self.object.pk])
+
+class JuridictionUpdate(SecureBase, UpdateView):
+    model = Juridiction
+    form_class = JuridictionForm
+    template_name = 'avocat/juridiction_form.html'
+    permission_required = 'cabinet.change_juridiction'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم تحديث المحكمة.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:juridiction_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم تحديث المحكمة.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('cabinet:juridiction_detail', args=[self.object.pk])
+
+class JuridictionDelete(SecureBase, DeleteView):
+    model = Juridiction
+    template_name = 'avocat/juridiction_confirm_delete.html'
+    success_url = reverse_lazy('cabinet:juridiction_list')
+    permission_required = 'cabinet.delete_juridiction'
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete()
+        if request.headers.get('HX-Request'):
+            return self.success_json('تم حذف المحكمة.', redirect=str(self.success_url))
+        messages.success(request, 'تم حذف المحكمة.')
+        return super().delete(request, *args, **kwargs)
+
+# =============================
+# AVOCATS
+# =============================
 class AvocatList(SecureBase, ListView):
     model = Avocat
+    template_name = 'avocat/avocat_list.html'
     permission_required = 'cabinet.view_avocat'
-    search_fields = ('nom', 'barreau', 'email', 'telephone')
-
-    def get_queryset(self):
-        return self.filter_by_search(super().get_queryset())
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['page_title'] = 'المحامون'
-        ctx['create_url'] = reverse('cabinet:avocat_create')
-        return ctx
 
 class AvocatDetail(SecureBase, DetailView):
     model = Avocat
+    template_name = 'avocat/avocat_detail.html'
     permission_required = 'cabinet.view_avocat'
 
 class AvocatCreate(SecureBase, CreateView):
     model = Avocat
     form_class = AvocatForm
+    template_name = 'avocat/avocat_form.html'
     permission_required = 'cabinet.add_avocat'
-    success_url = reverse_lazy('cabinet:avocat_list')
 
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ الحفظ بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحفظ بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم إضافة المحامي.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:avocat_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم إضافة المحامي.')
         return super().form_valid(form)
 
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            form = self.form_class()
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'إضافة محامٍ', 'action': request.path})
-        return super().get(request, *args, **kwargs)
+    def get_success_url(self):
+        return reverse_lazy('cabinet:avocat_detail', args=[self.object.pk])
 
 class AvocatUpdate(SecureBase, UpdateView):
     model = Avocat
     form_class = AvocatForm
+    template_name = 'avocat/avocat_form.html'
     permission_required = 'cabinet.change_avocat'
-    success_url = reverse_lazy('cabinet:avocat_list')
 
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ التحديث بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ التحديث بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
+        self.object = form.save()
+        if self.request.headers.get('HX-Request'):
+            return self.success_json('تم تعديل بيانات المحامي.', refreshTarget='#timeline', refreshUrl=reverse_lazy('cabinet:avocat_detail', args=[self.object.pk]))
+        messages.success(self.request, 'تم تعديل بيانات المحامي.')
         return super().form_valid(form)
 
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            form = self.form_class(instance=self.object)
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'تعديل محامٍ', 'action': request.path})
-        return super().get(request, *args, **kwargs)
+    def get_success_url(self):
+        return reverse_lazy('cabinet:avocat_detail', args=[self.object.pk])
 
 class AvocatDelete(SecureBase, DeleteView):
     model = Avocat
-    permission_required = 'cabinet.delete_avocat'
+    template_name = 'avocat/avocat_confirm_delete.html'
     success_url = reverse_lazy('cabinet:avocat_list')
+    permission_required = 'cabinet.delete_avocat'
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         self.object.delete()
-        messages.success(request, 'تمّ الحذف.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحذف.'}, request=request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return redirect(self.success_url)
+        if request.headers.get('HX-Request'):
+            return self.success_json('تم حذف المحامي.', redirect=str(self.success_url))
+        messages.success(request, 'تم حذف المحامي.')
+        return super().delete(request, *args, **kwargs)
 
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            return self.render_modal(request, 'modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
-        return super().get(request, *args, **kwargs)
-
-
-# ---------------- Affaire ----------------
-class AffaireList(SecureBase, OptimizedAffaireQueryMixin, ListView):
-    model = Affaire
-    permission_required = 'cabinet.view_affaire'
-    search_fields = ('reference_interne', 'reference_tribunal', 'objet')
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        qs = self.filter_by_search(qs)
-        return qs
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['page_title'] = 'القضايا'
-        ctx['create_url'] = reverse('cabinet:affaire_create')
-        # Chronologie compacte: آخر جلسة/قياس/حكم لكل ملف (للعرض قبل إضافة خطوة)
-        # (يمكن استخدامها في القالب لعرض Timeline خفيف)
-        ids = [a.pk for a in ctx['object_list']]
-        from django.db.models import Max
-        latest_aud = Audience.objects.filter(affaire_id__in=ids).values('affaire_id').annotate(last=Max('date_audience'))
-        latest_dec = Decision.objects.filter(affaire_id__in=ids).values('affaire_id').annotate(last=Max('date_prononce'))
-        latest_mes = Mesure.objects.filter(audience__affaire_id__in=ids).values('audience__affaire_id').annotate(last=Max('pk'))
-        ctx['latest_audience'] = {x['affaire_id']: x['last'] for x in latest_aud}
-        ctx['latest_decision'] = {x['affaire_id']: x['last'] for x in latest_dec}
-        ctx['latest_mesure'] = {x['audience__affaire_id']: x['last'] for x in latest_mes}
-        return ctx
-
-class AffaireDetail(SecureBase, DetailView):
-    model = Affaire
-    permission_required = 'cabinet.view_affaire'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        a: Affaire = self.object
-        # Chronology complète pour Timeline (optimisée)
-        ctx['audiences'] = Audience.objects.filter(affaire=a).select_related('affaire').order_by('date_audience')
-        ctx['mesures'] = Mesure.objects.filter(audience__affaire=a).select_related('audience').order_by('pk')
-        ctx['expertises'] = Expertise.objects.filter(affaire=a).order_by('date_ordonnee')
-        ctx['decisions'] = Decision.objects.filter(affaire=a).order_by('date_prononce')
-        ctx['notifications'] = Notification.objects.filter(decision__affaire=a).order_by('date_signification')
-        ctx['recours'] = VoieDeRecours.objects.filter(decision__affaire=a).order_by('date_depot')
-        ctx['executions'] = Execution.objects.filter(decision__affaire=a).order_by('date_demande')
-        return ctx
-
-class AffaireCreate(SecureBase, CreateView):
-    model = Affaire
-    form_class = AffaireForm
-    permission_required = 'cabinet.add_affaire'
-    success_url = reverse_lazy('cabinet:affaire_list')
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تمّ الحفظ بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحفظ بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return super().form_valid(form)
-
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            form = self.form_class()
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'إضافة قضية', 'action': request.path})
-        return super().get(request, *args, **kwargs)
-
-class AffaireUpdate(SecureBase, UpdateView):
-    model = Affaire
-    form_class = AffaireForm
-    permission_required = 'cabinet.change_affaire'
-    success_url = reverse_lazy('cabinet:affaire_list')
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تمّ التحديث بنجاح.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ التحديث بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return super().form_valid(form)
-
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            form = self.form_class(instance=self.object)
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'تعديل قضية', 'action': request.path})
-        return super().get(request, *args, **kwargs)
-
-class AffaireDelete(SecureBase, DeleteView):
-    model = Affaire
-    permission_required = 'cabinet.delete_affaire'
-    success_url = reverse_lazy('cabinet:affaire_list')
-
-    def delete(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        self.object.delete()
-        messages.success(request, 'تمّ الحذف.')
-        if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحذف.'}, request=request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return redirect(self.success_url)
-
-    def get(self, request, *args, **kwargs):
-        if self.htmx():
-            self.object = self.get_object()
-            return self.render_modal(request, 'modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
-        return super().get(request, *args, **kwargs)
-
-
-# ---------------- Générateur de CRUD pour le reste ----------------
-# Pour limiter la répétition, on applique le même schéma aux autres modèles.
-# (Vous avez déjà les classes dans une version antérieure — conservez la même structure
-#  et ajoutez les méthodes get() HTMX + form_valid() comme ci-dessus.)
-
-# Exemple compact pour Audience (le même pattern s'applique aux autres: Mesure, Expertise, Decision, ...)
+# =============================
+# AUDIENCES
+# =============================
 class AudienceList(SecureBase, ListView):
     model = Audience
+    template_name = 'avocat/audience_list.html'
     permission_required = 'cabinet.view_audience'
-    search_fields = ('affaire__reference_interne', 'type_audience')
-
-    def get_queryset(self):
-        return self.filter_by_search(super().get_queryset().select_related('affaire'))
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['page_title'] = 'الجلسات'
-        ctx['create_url'] = reverse('cabinet:audience_create')
-        return ctx
 
 class AudienceDetail(SecureBase, DetailView):
     model = Audience
+    template_name = 'avocat/audience_detail.html'
     permission_required = 'cabinet.view_audience'
 
+
+# -------------------------------------------------------------
+# Exemples complets: Audience / Mesure / Expertise / Decision / Notification
+# Appliquer le même motif aux autres models de workflow
+# -------------------------------------------------------------
 class AudienceCreate(SecureBase, CreateView):
     model = Audience
     form_class = AudienceForm
     permission_required = 'cabinet.add_audience'
     success_url = reverse_lazy('cabinet:audience_list')
 
+    def get_initial(self):
+        initial = super().get_initial()
+        # Pré-remplir l'affaire depuis ?affaire=ID si fourni
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            initial['affaire'] = get_object_or_404(Affaire, pk=int(affaire_id))
+        return initial
+
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ الحفظ بنجاح.')
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ الجلسة.')
         if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحفظ بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return super().form_valid(form)
+            return self.success_json('تمّ حفظ الجلسة.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
 
     def get(self, request, *args, **kwargs):
         if self.htmx():
-            form = self.form_class()
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'إضافة جلسة', 'action': request.path})
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة جلسة', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
 class AudienceUpdate(SecureBase, UpdateView):
@@ -419,17 +323,17 @@ class AudienceUpdate(SecureBase, UpdateView):
     success_url = reverse_lazy('cabinet:audience_list')
 
     def form_valid(self, form):
-        messages.success(self.request, 'تمّ التحديث بنجاح.')
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث الجلسة.')
         if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ التحديث بنجاح.'}, request=self.request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
-        return super().form_valid(form)
+            return self.success_json('تمّ تحديث الجلسة.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
 
     def get(self, request, *args, **kwargs):
         if self.htmx():
             self.object = self.get_object()
             form = self.form_class(instance=self.object)
-            return self.render_modal(request, 'modals/_form.html', {'form': form, 'title': 'تعديل جلسة', 'action': request.path})
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل جلسة', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
 class AudienceDelete(SecureBase, DeleteView):
@@ -439,50 +343,452 @@ class AudienceDelete(SecureBase, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
         self.object.delete()
-        messages.success(request, 'تمّ الحذف.')
+        messages.success(request, 'تمّ حذف الجلسة.')
         if self.htmx():
-            html = render_to_string('modals/_success_toast.html', {'message': 'تمّ الحذف.'}, request=request)
-            return JsonResponse({'ok': True, 'html': html, 'redirect': self.success_url})
+            return self.success_json('تمّ حذف الجلسة.', affaire_pk)
         return redirect(self.success_url)
 
     def get(self, request, *args, **kwargs):
         if self.htmx():
             self.object = self.get_object()
-            return self.render_modal(request, 'modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class MesureCreate(SecureBase, CreateView):
+    model = Mesure
+    form_class = MesureForm
+    permission_required = 'cabinet.add_mesure'
+    success_url = reverse_lazy('cabinet:mesure_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # si ?affaire=X passé, préselectionner audience la plus récente de l'affaire
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            aud = Audience.objects.filter(affaire_id=int(affaire_id)).order_by('-date_audience', '-pk').first()
+            if aud:
+                initial['audience'] = aud
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ الإجراء.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ الإجراء.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة إجراء', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class MesureUpdate(SecureBase, UpdateView):
+    model = Mesure
+    form_class = MesureForm
+    permission_required = 'cabinet.change_mesure'
+    success_url = reverse_lazy('cabinet:mesure_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث الإجراء.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث الإجراء.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل إجراء', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class MesureDelete(SecureBase, DeleteView):
+    model = Mesure
+    permission_required = 'cabinet.delete_mesure'
+    success_url = reverse_lazy('cabinet:mesure_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف الإجراء.')
+        if self.htmx():
+            return self.success_json('تمّ حذف الإجراء.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class ExpertiseCreate(SecureBase, CreateView):
+    model = Expertise
+    form_class = ExpertiseForm
+    permission_required = 'cabinet.add_expertise'
+    success_url = reverse_lazy('cabinet:expertise_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            initial['affaire'] = get_object_or_404(Affaire, pk=int(affaire_id))
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ الخبرة.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ الخبرة.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة خبرة', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class ExpertiseUpdate(SecureBase, UpdateView):
+    model = Expertise
+    form_class = ExpertiseForm
+    permission_required = 'cabinet.change_expertise'
+    success_url = reverse_lazy('cabinet:expertise_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث الخبرة.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث الخبرة.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل خبرة', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class ExpertiseDelete(SecureBase, DeleteView):
+    model = Expertise
+    permission_required = 'cabinet.delete_expertise'
+    success_url = reverse_lazy('cabinet:expertise_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف الخبرة.')
+        if self.htmx():
+            return self.success_json('تمّ حذف الخبرة.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class DecisionCreate(SecureBase, CreateView):
+    model = Decision
+    form_class = DecisionForm
+    permission_required = 'cabinet.add_decision'
+    success_url = reverse_lazy('cabinet:decision_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            initial['affaire'] = get_object_or_404(Affaire, pk=int(affaire_id))
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ الحكم.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ الحكم.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة حكم', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class DecisionUpdate(SecureBase, UpdateView):
+    model = Decision
+    form_class = DecisionForm
+    permission_required = 'cabinet.change_decision'
+    success_url = reverse_lazy('cabinet:decision_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث الحكم.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث الحكم.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل حكم', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class DecisionDelete(SecureBase, DeleteView):
+    model = Decision
+    permission_required = 'cabinet.delete_decision'
+    success_url = reverse_lazy('cabinet:decision_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف الحكم.')
+        if self.htmx():
+            return self.success_json('تمّ حذف الحكم.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class NotificationCreate(SecureBase, CreateView):
+    model = Notification
+    form_class = NotificationForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class NotificationUpdate(SecureBase, UpdateView):
+    model = Notification
+    form_class = NotificationForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class NotificationDelete(SecureBase, DeleteView):
+    model = Notification
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
 
 # -------------------------------------------------------------
-# Notes d'intégration côté templates/JS pour l'UX souhaitée:
+# VoieDeRecours / Execution — même motif, raccourcis
 # -------------------------------------------------------------
-# 1) Ajoutez HTMX + un modal Bootstrap dans base.html (dans block extra_js):
+class VoieDeRecoursCreate(SecureBase, CreateView):
+    model = VoieDeRecours
+    form_class = VoieDeRecoursForm
+    permission_required = 'cabinet.add_voiederecours'
+    success_url = reverse_lazy('cabinet:voiederecours_list')
 
-#
-# 2) Boutons "إضافة" و"تعديل" داخل les listes/détails:
-#    <a href="{% url 'cabinet:affaire_create' %}" class="btn btn-primary"
-#       hx-get="{% url 'cabinet:affaire_create' %}" hx-target="#modalBody" hx-trigger="click"
-#       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' data-bs-toggle="modal" data-bs-target="#mainModal">
-#       إضافة قضية
-#    </a>
-#
-# 3) Gabarits HTMX:
-#    - modals/_form.html : contient uniquement <form ...> الحقول والأزرار.
-#    - modals/_confirm.html : نص تأكيد + زر "حذف" يرسل POST.
-#    - modals/_success_toast.html : رسالة نجاح صغيرة لعرض Toast.
-#
-# 4) Toggle Table/Cards:
-#    - ضع أزرار في رأس الصفحة:
-#      <div class="btn-group" role="group">
-#        <a class="btn btn-outline-secondary {% if view_mode == 'table' %}active{% endif %}" href="?view=table">جدول</a>
-#        <a class="btn btn-outline-secondary {% if view_mode == 'cards' %}active{% endif %}" href="?view=cards">بطاقات</a>
-#      </div>
-#
-# 5) Sécurité additionnelle:
-#    - Chaque vue exige permission_* adéquate (add/change/delete/view)
-#    - ensure_csrf_cookie sur dispatch (cookie présent même sur GET)
-#    - Filtrage de recherche côté serveur par champs whitelists
-#    - Réponses JSON pour HTMX avec redirection de sécurité côté client
-#
-# 6) Appliquer le même pattern (Create/Update/Delete avec HTMX) aux autres modèles:
-#    Mesure, Expertise, Decision, Notification, VoieDeRecours, Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte.
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ الطعن.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ الطعن.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة طريق طعن', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class VoieDeRecoursUpdate(SecureBase, UpdateView):
+    model = VoieDeRecours
+    form_class = VoieDeRecoursForm
+    permission_required = 'cabinet.change_voiederecours'
+    success_url = reverse_lazy('cabinet:voiederecours_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث الطعن.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث الطعن.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل طريق طعن', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class VoieDeRecoursDelete(SecureBase, DeleteView):
+    model = VoieDeRecours
+    permission_required = 'cabinet.delete_voiederecours'
+    success_url = reverse_lazy('cabinet:voiederecours_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف طريق الطعن.')
+        if self.htmx():
+            return self.success_json('تمّ حذف طريق الطعن.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class ExecutionCreate(SecureBase, CreateView):
+    model = Execution
+    form_class = ExecutionForm
+    permission_required = 'cabinet.add_execution'
+    success_url = reverse_lazy('cabinet:execution_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التنفيذ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التنفيذ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تنفيذ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class ExecutionUpdate(SecureBase, UpdateView):
+    model = Execution
+    form_class = ExecutionForm
+    permission_required = 'cabinet.change_execution'
+    success_url = reverse_lazy('cabinet:execution_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التنفيذ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التنفيذ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تنفيذ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class ExecutionDelete(SecureBase, DeleteView):
+    model = Execution
+    permission_required = 'cabinet.delete_execution'
+    success_url = reverse_lazy('cabinet:execution_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التنفيذ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التنفيذ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+# -------------------------------------------------------------
+# Partial HTMX pour Timeline (déjà référencé par urls.py)
+# -------------------------------------------------------------
+from django.contrib.auth.decorators import login_required, permission_required
+
+@login_required
+@permission_required('cabinet.view_affaire', raise_exception=True)
+def affaire_timeline_partial(request: HttpRequest, pk: int):
+    affaire = get_object_or_404(Affaire, pk=pk)
+    ctx = {
+        'object': affaire,
+        'audiences': Audience.objects.filter(affaire=affaire).order_by('date_audience'),
+        'mesures': Mesure.objects.filter(audience__affaire=affaire).order_by('pk'),
+        'expertises': Expertise.objects.filter(affaire=affaire).order_by('date_ordonnee'),
+        'decisions': Decision.objects.filter(affaire=affaire).order_by('date_prononce'),
+        'notifications': Notification.objects.filter(decision__affaire=affaire).order_by('date_signification'),
+        'recours': VoieDeRecours.objects.filter(decision__affaire=affaire).order_by('date_depot'),
+        'executions': Execution.objects.filter(decision__affaire=affaire).order_by('date_demande'),
+    }
+    return render(request, 'affaires/_timeline.html', ctx)

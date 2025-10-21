@@ -1,179 +1,224 @@
-# =============================================================
-# FILE: forms.py  (نماذج عربية لكل النماذج — RTL + رسائل عربية)
-# =============================================================
+# cabinet/forms.py
 from django import forms
+from django.core.exceptions import ValidationError
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from .models import (
     Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte
 )
 
-ARABIC_INPUT_CSS_CLASS = 'arabic-input'
-
-class BaseArabicForm(forms.ModelForm):
-    """تهيئة عامة للـwidgets والرسائل بالعربية + اتجاه RTL."""
-    default_error_messages = {
-        'required': 'هذا الحقل إجباري.',
-        'invalid': 'القيمة غير صالحة.',
-        'max_length': 'النص أطول من المسموح.',
-        'min_length': 'النص أقصر من المسموح.',
-    }
-
+# ---------- Base mixin: RTL + Bootstrap + تنظيف مدخلات ----------
+class ArabicBootstrapFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
-            field.error_messages = {**self.default_error_messages, **field.error_messages}
-            css = field.widget.attrs.get('class', '')
-            attrs = {'dir': 'rtl', 'class': f"{css} {ARABIC_INPUT_CSS_CLASS}".strip()}
-            # عناصر التاريخ والوقت بنمط HTML5
+            css = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (css + " form-control").strip()
+            field.widget.attrs.setdefault("dir", "rtl")
+            # عناصر Boolean/Checkbox
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs["class"] = (css + " form-check-input").strip()
+            # تواريخ
             if isinstance(field.widget, (forms.DateInput, forms.DateTimeInput)):
-                attrs['type'] = 'date' if isinstance(field.widget, forms.DateInput) else 'datetime-local'
-            field.widget.attrs.update(attrs)
+                field.widget.attrs.setdefault("type", "date")
+
+    def clean(self):
+        cleaned = super().clean()
+        # تنميط نصوص: إزالة مسافات زائدة
+        for k, v in cleaned.items():
+            if isinstance(v, str):
+                cleaned[k] = v.strip()
+        return cleaned
+
+# داخل cabinet/forms.py
 
 
-# --- نماذج أساسية لكل Model ---
-class JuridictionForm(BaseArabicForm):
-    class Meta:
-        model = Juridiction
-        fields = '__all__'
+class ArabicLoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "اسم المستخدم أو البريد الإلكتروني"
+        self.fields["password"].label = "كلمة المرور"
+        for f in self.fields.values():
+            classes = f.widget.attrs.get("class", "")
+            f.widget.attrs["class"] = (classes + " form-control").strip()
+            f.widget.attrs.setdefault("dir", "rtl")
 
-class AvocatForm(BaseArabicForm):
+
+# ---------- Avocat ----------
+class AvocatForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Avocat
-        fields = '__all__'
+        fields = "__all__"
+        labels = {
+            "nom": "الاسم الكامل",
+            "barreau": "هيئة الانتماء",
+            "telephone": "الهاتف",
+            "email": "البريد الإلكتروني",
+        }
+        help_texts = {
+            "email": "اكتب بريدًا صحيحًا لتلقي الإشعارات.",
+        }
 
-class AffaireForm(BaseArabicForm):
+
+# ---------- Affaire ----------
+class AffaireForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Affaire
-        fields = '__all__'
+        fields = "__all__"
+        labels = {
+            "reference_interne": "المرجع الداخلي",
+            "reference_tribunal": "مرجع المحكمة",
+            "type_affaire": "نوع القضية",
+            "statut_affaire": "الحالة",
+            "juridiction": "المحكمة",
+            "date_ouverture": "تاريخ الفتح",
+            "objet": "موضوع موجز",
+            "avocat_responsable": "المحامي المسؤول",
+        }
         widgets = {
-            'objet': forms.Textarea(attrs={'rows': 3}),
-            'notes': forms.Textarea(attrs={'rows': 2}),
-            'date_ouverture': forms.DateInput(attrs={'type': 'date'}),
+            "date_ouverture": forms.DateInput(attrs={"type": "date"}),
+            "objet": forms.Textarea(attrs={"rows": 3}),
         }
 
-class PartieForm(BaseArabicForm):
+    def clean(self):
+        cleaned = super().clean()
+        # مثال تحقق بسيط: مرجع داخلي مطلوب ومميز (اعتمد القيد unique بالموديل أيضًا)
+        if not cleaned.get("reference_interne"):
+            raise ValidationError("المرجع الداخلي مطلوب.")
+        return cleaned
+
+
+# ---------- أمثلة مختصرة لنماذج أخرى بنفس النمط ----------
+class JuridictionForm(ArabicBootstrapFormMixin):
+    class Meta:
+        model = Juridiction
+        fields = "__all__"
+        labels = {"nom": "الاسم", "ville": "المدينة", "type": "النوع"}
+
+class PartieForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Partie
-        fields = '__all__'
-        widgets = {
-            'adresse': forms.Textarea(attrs={'rows': 2}),
+        fields = "__all__"
+        labels = {
+            "nom_complet": "الاسم الكامل",
+            "type_partie": "الصفة",
+            "cin_ou_rc": "البطاقة/السجل",
+            "adresse": "العنوان",
+            "telephone": "الهاتف",
+            "email": "البريد",
         }
 
-class AffairePartieForm(BaseArabicForm):
-    class Meta:
-        model = AffairePartie
-        fields = '__all__'
-
-class AffaireAvocatForm(BaseArabicForm):
-    class Meta:
-        model = AffaireAvocat
-        fields = '__all__'
-
-class AudienceForm(BaseArabicForm):
+class AudienceForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Audience
-        fields = '__all__'
-        widgets = {
-            'date_audience': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'proces_verbal': forms.Textarea(attrs={'rows': 3}),
+        fields = "__all__"
+        labels = {
+            "affaire": "القضية",
+            "type_audience": "نوع الجلسة",
+            "date_audience": "تاريخ الجلسة",
+            "resultat": "النتيجة",
+            "proces_verbal": "محضر",
         }
+        widgets = {"date_audience": forms.DateInput(attrs={"type": "date"})}
 
-class MesureForm(BaseArabicForm):
+class MesureForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Mesure
-        fields = '__all__'
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 2}),
-        }
+        fields = "__all__"
+        labels = {"audience": "الجلسة", "type_mesure": "نوع الإجراء", "statut": "الحالة", "notes": "ملاحظات"}
 
-class ExpertiseForm(BaseArabicForm):
+class ExpertiseForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Expertise
-        fields = '__all__'
+        fields = "__all__"
+        labels = {
+            "affaire": "القضية", "expert_nom": "اسم الخبير",
+            "date_ordonnee": "تاريخ الأمر", "date_depot": "تاريخ الإيداع",
+            "contre_expertise": "خبرة مضادة",
+        }
         widgets = {
-            'date_ordonnee': forms.DateInput(attrs={'type': 'date'}),
-            'date_depot': forms.DateInput(attrs={'type': 'date'}),
+            "date_ordonnee": forms.DateInput(attrs={"type": "date"}),
+            "date_depot": forms.DateInput(attrs={"type": "date"}),
         }
 
-class DecisionForm(BaseArabicForm):
+class DecisionForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Decision
-        fields = '__all__'
-        widgets = {
-            'date_prononce': forms.DateInput(attrs={'type': 'date'}),
-            'resumé': forms.Textarea(attrs={'rows': 3}),
+        fields = "__all__"
+        labels = {
+            "affaire": "القضية", "numero_decision": "رقم الحكم",
+            "date_prononce": "تاريخ النطق", "resumé": "ملخص", "susceptible_recours": "قابل للطعن",
         }
+        widgets = {"date_prononce": forms.DateInput(attrs={"type": "date"})}
 
-class NotificationForm(BaseArabicForm):
+class NotificationForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Notification
-        fields = '__all__'
+        fields = "__all__"
+        labels = {
+            "decision": "الحكم", "demande_numero": "رقم طلب التبليغ",
+            "date_depot_demande": "تاريخ إيداع الطلب", "huissier_nom": "اسم المفوض",
+            "date_remise_huissier": "تاريخ التسليم للمفوض", "date_signification": "تاريخ التبليغ",
+        }
         widgets = {
-            'date_depot_demande': forms.DateInput(attrs={'type': 'date'}),
-            'date_remise_huissier': forms.DateInput(attrs={'type': 'date'}),
-            'date_signification': forms.DateInput(attrs={'type': 'date'}),
+            "date_depot_demande": forms.DateInput(attrs={"type": "date"}),
+            "date_remise_huissier": forms.DateInput(attrs={"type": "date"}),
+            "date_signification": forms.DateInput(attrs={"type": "date"}),
         }
 
-class VoieDeRecoursForm(BaseArabicForm):
+class VoieDeRecoursForm(ArabicBootstrapFormMixin):
     class Meta:
         model = VoieDeRecours
-        fields = '__all__'
-        widgets = {
-            'date_depot': forms.DateInput(attrs={'type': 'date'}),
-        }
+        fields = "__all__"
+        labels = {"decision": "الحكم", "type_recours": "نوع الطعن", "date_depot": "تاريخ الإيداع", "juridiction": "المحكمة", "statut": "الحالة"}
+        widgets = {"date_depot": forms.DateInput(attrs={"type": "date"})}
 
-class ExecutionForm(BaseArabicForm):
+class ExecutionForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Execution
-        fields = '__all__'
-        widgets = {
-            'date_demande': forms.DateInput(attrs={'type': 'date'}),
-            'date_demande_liquidation': forms.DateInput(attrs={'type': 'date'}),
-            'date_pv_refus': forms.DateInput(attrs={'type': 'date'}),
-            'date_contrainte': forms.DateInput(attrs={'type': 'date'}),
-        }
+        fields = "__all__"
+        labels = {"decision": "الحكم", "type_execution": "نوع التنفيذ", "date_demande": "تاريخ الطلب", "statut": "الحالة", "depot_caisse_barreau": "إحالة للهيئة"}
+        widgets = {"date_demande": forms.DateInput(attrs={"type": "date"})}
 
-class DepenseForm(BaseArabicForm):
+class DepenseForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Depense
-        fields = '__all__'
-        widgets = {
-            'date_depense': forms.DateInput(attrs={'type': 'date'}),
-        }
+        fields = "__all__"
+        labels = {"affaire": "القضية", "type_depense": "النوع", "montant": "المبلغ", "date_depense": "التاريخ", "beneficiaire": "المستفيد"}
+        widgets = {"date_depense": forms.DateInput(attrs={"type": "date"})}
 
-class RecetteForm(BaseArabicForm):
+class RecetteForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Recette
-        fields = '__all__'
-        widgets = {
-            'date_recette': forms.DateInput(attrs={'type': 'date'}),
-        }
+        fields = "__all__"
+        labels = {"affaire": "القضية", "type_recette": "النوع", "montant": "المبلغ", "date_recette": "التاريخ", "source": "المصدر"}
+        widgets = {"date_recette": forms.DateInput(attrs={"type": "date"})}
 
-class PieceJointeForm(BaseArabicForm):
+class PieceJointeForm(ArabicBootstrapFormMixin):
     class Meta:
         model = PieceJointe
-        fields = '__all__'
+        fields = "__all__"
+        labels = {"affaire": "القضية", "titre": "العنوان", "type_piece": "النوع", "fichier": "الملف", "date_ajout": "تاريخ الإضافة"}
+        widgets = {"date_ajout": forms.DateInput(attrs={"type": "date"})}
 
-class UtilisateurForm(BaseArabicForm):
+class UtilisateurForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Utilisateur
-        fields = '__all__'
+        fields = "__all__"
+        labels = {"nom_complet": "الاسم", "role": "الدور", "email": "البريد", "actif": "نشط"}
 
-class TacheForm(BaseArabicForm):
+class TacheForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Tache
-        fields = '__all__'
-        widgets = {
-            'echeance': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'description': forms.Textarea(attrs={'rows': 2}),
-        }
+        fields = "__all__"
+        labels = {"titre": "العنوان", "description": "الوصف", "affaire": "القضية", "assigne_a": "المكلّف", "echeance": "الأجل", "statut": "الحالة"}
+        widgets = {"echeance": forms.DateInput(attrs={"type": "date"})}
 
-class AlerteForm(BaseArabicForm):
+class AlerteForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Alerte
-        fields = '__all__'
-        widgets = {
-            'date_alerte': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'message': forms.Textarea(attrs={'rows': 2}),
-        }
+        fields = "__all__"
+        labels = {"type_alerte": "النوع", "reference_id": "المعرّف", "date_alerte": "التاريخ", "moyen": "القناة", "destinataire": "المرسل إليه", "message": "النص"}
+        widgets = {"date_alerte": forms.DateInput(attrs={"type": "date"})}

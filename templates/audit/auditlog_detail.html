@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}تفاصيل العملية{% endblock %}
+{% block page_title %}تفاصيل العملية{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-3">الوقت</dt><dd class="col-sm-9">{{ object.timestamp }}</dd>
+      <dt class="col-sm-3">المستخدم</dt><dd class="col-sm-9">{{ object.actor|default:"—" }}</dd>
+      <dt class="col-sm-3">العملية</dt><dd class="col-sm-9">{{ object.get_action_display }}</dd>
+      <dt class="col-sm-3">المسار</dt><dd class="col-sm-9">{{ object.path }} ({{ object.method }})</dd>
+      <dt class="col-sm-3">IP/Agent</dt><dd class="col-sm-9">{{ object.ip }} — {{ object.user_agent }}</dd>
+      <dt class="col-sm-3">الكائن</dt><dd class="col-sm-9">{{ object.app_label }}.{{ object.model }} #{{ object.object_pk }} — {{ object.object_repr }}</dd>
+      <dt class="col-sm-3">التغييرات</dt>
+      <dd class="col-sm-9">
+        {% if object.changes %}
+          <pre class="mb-0 small">{{ object.changes|json_script:"ch" }}</pre>
+          <script>document.currentScript.previousElementSibling.textContent = JSON.stringify(JSON.parse(document.getElementById('ch').textContent), null, 2)</script>
+        {% else %} — {% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+{% endblock %}

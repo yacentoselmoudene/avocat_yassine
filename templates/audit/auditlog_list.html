@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}سجل العمليات{% endblock %}
+{% block page_title %}سجل العمليات{% endblock %}
+{% block header_actions %}
+  <div class="input-group" style="max-width:360px">
+    <input name="q" class="form-control" placeholder="بحث..." value="{{ request.GET.q }}">
+    <button class="btn btn-outline-secondary" onclick="location='?q='+this.previousElementSibling.value">بحث</button>
+  </div>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-light">
+        <tr><th>الوقت</th><th>المستخدم</th><th>العملية</th><th>الكائن</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+      {% for a in object_list %}
+        <tr>
+          <td>{{ a.timestamp }}</td>
+          <td>{{ a.actor|default:"—" }}</td>
+          <td>{{ a.get_action_display }}</td>
+          <td><a href="{% url 'cabinet:audit_detail' a.pk %}">{{ a.app_label }}.{{ a.model }} #{{ a.object_pk }}</a></td>
+          <td>{{ a.ip|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center text-secondary">لا شيء بعد</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
