@@ -1,10 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{# FILE: templates/affaires/_timeline.html #}
+<div id="timeline" class="card card-hover mb-3">
+  <div class="card-body">
+    <h6 class="mb-3">التسلسل الزمني للملف</h6>
+    <ul class="list-group list-group-flush">
+      {% for aud in audiences %}
+      <li class="list-group-item">
+        <i class="bi bi-calendar3 ms-1"></i>
+        جلسة {{ aud.get_type_audience_display }} — {{ aud.date_audience }}
+      </li>
+      {% endfor %}
+      {% for mes in mesures %}
+      <li class="list-group-item">
+        <i class="bi bi-list-check ms-1"></i>
+        إجراء {{ mes.get_type_mesure_display }} — {{ mes.get_statut_display }}
+      </li>
+      {% endfor %}
+      {% for exp in expertises %}
+      <li class="list-group-item">
+        <i class="bi bi-eyeglasses ms-1"></i>
+        خبرة {{ exp.expert_nom }} — أمر: {{ exp.date_ordonnee }} {% if exp.date_depot %}| إيداع: {{ exp.date_depot }}{% endif %}
+      </li>
+      {% endfor %}
+      {% for dec in decisions %}
+      <li class="list-group-item">
+        <i class="bi bi-hammer ms-1"></i>
+        حكم رقم {{ dec.numero_decision }} — {{ dec.date_prononce }}
+      </li>
+      {% endfor %}
+      {% for noti in notifications %}
+      <li class="list-group-item">
+        <i class="bi bi-envelope-paper ms-1"></i>
+        تبليغ طلب {{ noti.demande_numero }} — {{ noti.date_signification|default:'—' }}
+      </li>
+      {% endfor %}
+      {% for rec in recours %}
+      <li class="list-group-item">
+        <i class="bi bi-arrow-90deg-left ms-1"></i>
+        طعن {{ rec.get_type_recours_display }} — {{ rec.date_depot }}
+      </li>
+      {% endfor %}
+      {% for exe in executions %}
+      <li class="list-group-item">
+        <i class="bi bi-gear ms-1"></i>
+        تنفيذ {{ exe.get_type_execution_display }} — {{ exe.get_statut_display }}
+      </li>
+      {% endfor %}
+      {% if not audiences and not mesures and not expertises and not decisions and not notifications and not recours and not executions %}
+      <li class="list-group-item text-center text-secondary">لا توجد بيانات زمنية بعد</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>

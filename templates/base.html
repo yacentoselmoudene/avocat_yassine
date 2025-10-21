@@ -179,7 +179,7 @@
       </footer>
       {% endblock footer %}
     </div>
-
+{% include '_partials/_toast_container.html' %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     {% block extra_js %}
      <script src="https://unpkg.com/htmx.org@1.9.12"></script>
@@ -194,6 +194,63 @@
         </div>
       </div>
     </div>
+        <script>
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+      try {
+        const xhr = evt.detail.xhr;
+        const contentType = xhr.getResponseHeader('Content-Type') || '';
+        if (contentType.includes('application/json')) {
+          const data = JSON.parse(xhr.responseText);
+          if (data.ok) {
+            // success toast
+            const msg = (data.html && (new DOMParser()).parseFromString(data.html, 'text/html').querySelector('#hx-success-payload')?.dataset.message) || 'تمت العملية بنجاح.';
+            const el = document.querySelector('#toastBody');
+            if (el) { el.textContent = msg; }
+            const toastEl = document.querySelector('#liveToast');
+            if (toastEl) new bootstrap.Toast(toastEl).show();
+            // redirect or partial refresh
+            if (data.redirect) {
+              window.location.assign(data.redirect);
+            } else if (data.refreshTarget && data.refreshUrl) {
+              htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
+            }
+            // close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
+            if (modal) modal.hide();
+          }
+        }
+      } catch (e) { /* ignore */ }
+    });
+  </script> 
+        
+<script>
+  document.body.addEventListener('htmx:afterRequest', function (evt) {
+    try {
+      const xhr = evt.detail.xhr;
+      const type = (xhr.getResponseHeader('Content-Type')||'');
+      if (type.includes('application/json')) {
+        const data = JSON.parse(xhr.responseText||'{}');
+        if (data.ok) {
+          // Toast
+          const payload = (data.html && (new DOMParser()).parseFromString(data.html,'text/html').querySelector('#hx-success-payload')) || null;
+          const msg = payload?.dataset.message || 'تمت العملية بنجاح.';
+          const tb = document.querySelector('#toastBody'); if (tb) tb.textContent = msg;
+          const toastEl = document.querySelector('#liveToast'); if (toastEl) new bootstrap.Toast(toastEl).show();
+          // تحديث جزء محدد أو إعادة توجيه
+          if (data.redirect) {
+            window.location.assign(data.redirect);
+          } else if (data.refreshTarget && data.refreshUrl) {
+            htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
+          }
+          // إغلاق المودال
+          const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
+          if (modal) modal.hide();
+        }
+      }
+    } catch (e) {}
+  });
+</script>
+
     {% endblock %}
   </body>
 </html>

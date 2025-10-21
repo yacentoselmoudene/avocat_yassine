@@ -1,10 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{# =====================================================================
+  PART A — HTMX Modals (Bootstrap RTL)
+  Files:
+    - templates/modals/_form.html
+    - templates/modals/_confirm.html
+    - templates/modals/_success_toast.html
+    - (helper) templates/_partials/_toast_container.html
+  Notes:
+    - Requires Bootstrap 5 + htmx in base.html (already suggested)
+    - Includes minimal JS to handle JSON responses from views (success redirect)
+===================================================================== #}
+
+
+
+
+
+{# Suggestion: in base.html (inside block extra_js), include this handler once #}
+
+
+
+{# =====================================================================
+  PART B — Affaire: Detail with “+ خطوة” wizard & Timeline refresh
+  Files:
+    - templates/affaires/detail.html (extends generic/detail.html)
+    - templates/affaires/_timeline.html (partial to refresh)
+    - templates/affaires/_step_selector.html (tabs to load create forms via HTMX)
+===================================================================== #}
+
+
+
+
+
+{# =====================================================================
+  PART C — Avocat CRUD templates (with HTMX buttons)
+  Files:
+    - templates/cabinet/avocat_list.html
+    - templates/cabinet/avocat_detail.html
+    - templates/cabinet/avocat_form.html
+    - templates/cabinet/avocat_confirm_delete.html
+===================================================================== #}
+
+
+
+
+
+
+{# =====================================================================
+  PART D — Affaire CRUD templates (with HTMX buttons + Timeline)
+  Files:
+    - templates/cabinet/affaire_list.html
+    - templates/cabinet/affaire_detail.html  (wraps the detail from PART B)
+    - templates/cabinet/affaire_form.html
+    - templates/cabinet/affaire_confirm_delete.html
+===================================================================== #}
+
+
+
+
+
+
+
+

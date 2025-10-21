@@ -1,10 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{# FILE: templates/affaires/_step_selector.html #}
+<div class="mb-3">
+  <ul class="nav nav-pills" id="stepTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-audience" data-bs-toggle="pill" data-bs-target="#pane-audience" type="button">جلسة</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-mesure" data-bs-toggle="pill" data-bs-target="#pane-mesure" type="button">إجراء</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-expertise" data-bs-toggle="pill" data-bs-target="#pane-expertise" type="button">خبرة</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-decision" data-bs-toggle="pill" data-bs-target="#pane-decision" type="button">حكم</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-notification" data-bs-toggle="pill" data-bs-target="#pane-notification" type="button">تبليغ</button>
+    </li>
+  </ul>
+</div>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="pane-audience">
+    <div hx-get="{% url 'cabinet:audience_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-trigger="load"></div>
+  </div>
+  <div class="tab-pane fade" id="pane-mesure">
+    <div hx-get="{% url 'cabinet:mesure_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-trigger="load"></div>
+  </div>
+  <div class="tab-pane fade" id="pane-expertise">
+    <div hx-get="{% url 'cabinet:expertise_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-trigger="load"></div>
+  </div>
+  <div class="tab-pane fade" id="pane-decision">
+    <div hx-get="{% url 'cabinet:decision_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-trigger="load"></div>
+  </div>
+  <div class="tab-pane fade" id="pane-notification">
+    <div hx-get="{% url 'cabinet:notification_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-trigger="load"></div>
+  </div>
+</div>
