@@ -1,0 +1,53 @@
+{# FILE: templates/generic/list.html                                 #}
+{# مثال صفحة لائحة عامة — يمتد من base.html                          #}
+{# ============================================================= #}
+{% extends 'base.html' %}
+{% block title %}{{ page_title|default:'اللائحة' }}{% endblock %}
+{% block page_title %}{{ page_title|default:'اللائحة' }}{% endblock %}
+{% block header_actions %}
+  {% if create_url %}
+  <a href="{{ create_url }}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة</a>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% if not object_list %}
+    {% include '_partials/_empty_state.html' %}
+  {% else %}
+  <div class="card card-hover">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            {% for head in headers %}
+              <th>{{ head }}</th>
+            {% endfor %}
+            <th class="text-center" style="width:160px">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for obj in object_list %}
+          <tr>
+            {% for field in row_fields %}
+              <td>{{ obj|dict:get_item:field|default:obj|safe }}</td>
+            {% endfor %}
+            <td class="text-center">
+              <div class="btn-group">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ obj.get_absolute_url|default:detail_url_template|yesno:'', '' }}{{ obj.pk }}"><i class="bi bi-eye"></i></a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ update_url_template }}{{ obj.pk }}/edit/"><i class="bi bi-pencil"></i></a>
+                <a class="btn btn-sm btn-outline-danger" href="{{ delete_url_template }}{{ obj.pk }}/delete/"><i class="bi bi-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+  // JS مخصص للقائمة عند الحاجة
+</script>
+{% endblock %}
+{# ============================================================= #}

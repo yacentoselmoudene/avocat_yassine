@@ -1,0 +1,328 @@
+{# =============================================================
+ 1) Responsive Cards: switch table → cards on small screens
+    - Include partial `_cards_grid.html` and use it in list pages.
+ 2) Security (CSRF + headers) snippets for settings.py and middleware
+ 3) Auth: views/urls using django.contrib.auth with attractive Arabic templates
+============================================================= #}
+
+{# ======================== PART 1 — CARDS PARTIAL ======================== #}
+{# FILE: templates/_partials/_cards_grid.html #}
+{# Usage:
+  {% include '_partials/_cards_grid.html' with items=object_list fields=card_fields title='العنوان' subtitle='وصف' meta='...' detail_url_name='cabinet:affaire_detail' edit_url_name='cabinet:affaire_update' delete_url_name='cabinet:affaire_delete' %}
+  Where card_fields is a list of tuples [(label, value)], passed from the view context or built inline per item.
+#}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+  {% for it in items %}
+  <div class="col">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h5 class="card-title mb-1">{{ it.card_title|default:it|stringformat:'s' }}</h5>
+            {% if it.card_subtitle %}<div class="text-secondary small">{{ it.card_subtitle }}</div>{% endif %}
+          </div>
+          <div class="text-end">
+            {% if it.badge %}<span class="badge bg-primary-subtle text-primary-emphasis">{{ it.badge }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="mt-3 flex-grow-1">
+          <dl class="row mb-0">
+            {% for label, value in it.card_fields %}
+              <dt class="col-5 text-secondary small">{{ label }}</dt>
+              <dd class="col-7 small mb-2">{{ value|default:'—' }}</dd>
+            {% endfor %}
+          </dl>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          {% if detail_url_name %}
+          <a href="{% url detail_url_name it.pk %}" class="btn btn-sm btn-outline-secondary flex-fill"><i class="bi bi-eye"></i> عرض</a>
+          {% endif %}
+          {% if edit_url_name %}
+          <a href="{% url edit_url_name it.pk %}" class="btn btn-sm btn-primary flex-fill"><i class="bi bi-pencil"></i> تعديل</a>
+          {% endif %}
+          {% if delete_url_name %}
+          <a href="{% url delete_url_name it.pk %}" class="btn btn-sm btn-outline-danger flex-fill"><i class="bi bi-trash"></i> حذف</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+    {% include '_partials/_empty_state.html' %}
+  {% endfor %}
+</div>
+
+
+{# ======================== PART 1B — LIST TEMPLATES USING CARDS ======================== #}
+{# Example 1: Juridiction — cards on xs/sm, table on lg+ #}
+{# FILE: templates/cabinet/juridiction_list.html (override) #}
+{% extends 'base.html' %}
+{% block title %}المحاكم{% endblock %}
+{% block page_title %}المحاكم{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:juridiction_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة جهة</a>{% endblock %}
+{% block content %}
+  <div class="d-lg-none">{# Cards for small screens #}
+    {% for obj in object_list %}
+      {% with _fields=(('المدينة', obj.ville), ('النوع', obj.get_type_display)) %}
+        {% include '_partials/_cards_grid.html' with items=[{
+          'pk': obj.pk,
+          'card_title': obj.nom,
+          'card_subtitle': obj.ville,
+          'badge': obj.get_type_display,
+          'card_fields': _fields,
+        }] detail_url_name='cabinet:juridiction_detail' edit_url_name='cabinet:juridiction_update' delete_url_name='cabinet:juridiction_delete' %}
+      {% endwith %}
+    {% endfor %}
+  </div>
+  <div class="card card-hover d-none d-lg-block">{# Table for large screens #}
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead class="table-light"><tr><th>الاسم</th><th>المدينة</th><th>النوع</th><th class="text-center">إجراءات</th></tr></thead>
+        <tbody>
+        {% for obj in object_list %}
+          <tr>
+            <td>{{ obj.nom }}</td>
+            <td>{{ obj.ville }}</td>
+            <td>{{ obj.get_type_display }}</td>
+            <td class="text-center">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:juridiction_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:juridiction_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:juridiction_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+            </td>
+          </tr>
+        {% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
+
+{# Example 2: Avocat — cards #}
+{# FILE: templates/cabinet/avocat_list.html (override) #}
+{% extends 'base.html' %}
+{% block title %}المحامون{% endblock %}
+{% block page_title %}المحامون{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:avocat_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة محامٍ</a>{% endblock %}
+{% block content %}
+  <div class="d-lg-none">
+    {% for obj in object_list %}
+      {% with _fields=(('الهيئة', obj.barreau|default:'—'), ('الهاتف', obj.telephone|default:'—'), ('البريد', obj.email|default:'—')) %}
+        {% include '_partials/_cards_grid.html' with items=[{
+          'pk': obj.pk,
+          'card_title': obj.nom,
+          'card_subtitle': obj.barreau,
+          'badge': None,
+          'card_fields': _fields,
+        }] detail_url_name='cabinet:avocat_detail' edit_url_name='cabinet:avocat_update' delete_url_name='cabinet:avocat_delete' %}
+      {% endwith %}
+    {% endfor %}
+  </div>
+  <div class="card card-hover d-none d-lg-block">
+    <div class="table-responsive">
+      <table class="table align-middle"><thead class="table-light"><tr><th>الاسم</th><th>الهيئة</th><th>الهاتف</th><th>البريد</th><th class="text-center">إجراءات</th></tr></thead>
+      <tbody>
+        {% for obj in object_list %}
+        <tr>
+          <td>{{ obj.nom }}</td><td>{{ obj.barreau|default:'—' }}</td><td>{{ obj.telephone|default:'—' }}</td><td>{{ obj.email|default:'—' }}</td>
+          <td class="text-center">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:avocat_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:avocat_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:avocat_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        {% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+{% endblock %}
+
+
+{# ======================== PART 2 — SECURITY (settings.py snippets) ======================== #}
+{# FILE: settings_snippets/security.py (paste into settings.py) #}
+"""
+# --- Core security hardening ---
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # if behind proxy
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = [
+    'https://your-domain.tld',
+    'https://www.your-domain.tld',
+]
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True  # legacy header for some proxies
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',  # CSRF côté serveur
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# Templates — ensure built-in CSRF context processor is on (default)
+TEMPLATES[0]['OPTIONS']['context_processors'] += [
+    'django.template.context_processors.csrf',
+]
+"""
+
+
+{# ======================== PART 3 — AUTH (views/urls/templates) ======================== #}
+{# FILE: cabinet/auth_urls.py #}
+from django.urls import path
+from django.contrib.auth import views as auth_views
+
+app_name = 'authui'
+urlpatterns = [
+    path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('password-change/', auth_views.PasswordChangeView.as_view(template_name='auth/password_change.html', success_url='/'), name='password_change'),
+    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='auth/password_reset.html', email_template_name='auth/password_reset_email.txt', success_url='/auth/password-reset/done/'), name='password_reset'),
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='auth/password_reset_done.html'), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='auth/password_reset_confirm.html', success_url='/auth/reset/complete/'), name='password_reset_confirm'),
+    path('reset/complete/', auth_views.PasswordResetCompleteView.as_view(template_name='auth/password_reset_complete.html'), name='password_reset_complete'),
+]
+
+{# FILE: project/urls.py (include) #}
+"""
+from django.urls import path, include
+urlpatterns = [
+    # ...
+    path('auth/', include('cabinet.auth_urls', namespace='authui')),
+]
+"""
+
+{# FILE: templates/auth/login.html #}
+{% extends 'base.html' %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block page_title %}تسجيل الدخول{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-10 col-md-8 col-lg-5">
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <div class="text-center mb-3">
+          <img src="{% static 'img/logo-primary.png' %}" alt="Logo" style="height:48px" onerror="this.style.display='none'">
+          <h1 class="h5 mt-2 mb-0">مرحبًا بعودتك</h1>
+          <p class="text-secondary small">سجّل دخولك لمتابعة ملفات المكتب</p>
+        </div>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label">البريد الإلكتروني أو اسم المستخدم</label>
+            {{ form.username|add_class:'form-control' }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">كلمة المرور</label>
+            {{ form.password|add_class:'form-control' }}
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="remember">
+              <label class="form-check-label" for="remember">تذكرني</label>
+            </div>
+            <a class="small" href="{% url 'authui:password_reset' %}">نسيت كلمة المرور؟</a>
+          </div>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-left ms-1"></i> دخول</button>
+        </form>
+      </div>
+      <div class="card-footer text-center small text-secondary">
+        بدخولك تؤكد موافقتك على شروط الاستخدام وسياسة الخصوصية.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{# FILE: templates/auth/password_change.html #}
+{% extends 'base.html' %}
+{% block title %}تغيير كلمة المرور{% endblock %}
+{% block page_title %}تغيير كلمة المرور{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-12 col-md-6 col-lg-5">
+  <form method="post" class="card card-hover">
+    <div class="card-body">
+      {% csrf_token %}
+      <div class="mb-3"><label class="form-label">الحالية</label>{{ form.old_password|add_class:'form-control' }}</div>
+      <div class="mb-3"><label class="form-label">الجديدة</label>{{ form.new_password1|add_class:'form-control' }}</div>
+      <div class="mb-3"><label class="form-label">تأكيد الجديدة</label>{{ form.new_password2|add_class:'form-control' }}</div>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="/">إلغاء</a>
+      <button class="btn btn-primary" type="submit">حفظ</button>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+
+{# FILE: templates/auth/password_reset.html #}
+{% extends 'base.html' %}
+{% block title %}إعادة تعيين كلمة المرور{% endblock %}
+{% block page_title %}إعادة تعيين كلمة المرور{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-12 col-md-6 col-lg-5">
+  <form method="post" class="card card-hover">
+    <div class="card-body">
+      {% csrf_token %}
+      <div class="mb-3"><label class="form-label">البريد الإلكتروني</label>{{ form.email|add_class:'form-control' }}</div>
+      <p class="small text-secondary mb-0">سنرسل لك رابطًا لإعادة التعيين إذا كان بريدك مسجلاً.</p>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'authui:login' %}">رجوع</a>
+      <button class="btn btn-primary" type="submit">إرسال</button>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+
+{# FILE: templates/auth/password_reset_done.html #}
+{% extends 'base.html' %}
+{% block title %}تم الإرسال{% endblock %}
+{% block page_title %}تم الإرسال{% endblock %}
+{% block content %}<div class="alert alert-success">تم إرسال التعليمات إلى بريدك إن كان مسجلاً.</div>{% endblock %}
+
+{# FILE: templates/auth/password_reset_confirm.html #}
+{% extends 'base.html' %}
+{% block title %}تعيين كلمة مرور جديدة{% endblock %}
+{% block page_title %}تعيين كلمة مرور جديدة{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-12 col-md-6 col-lg-5">
+  <form method="post" class="card card-hover">
+    <div class="card-body">
+      {% csrf_token %}
+      <div class="mb-3"><label class="form-label">كلمة المرور الجديدة</label>{{ form.new_password1|add_class:'form-control' }}</div>
+      <div class="mb-3"><label class="form-label">تأكيد كلمة المرور</label>{{ form.new_password2|add_class:'form-control' }}</div>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="/">إلغاء</a>
+      <button class="btn btn-primary" type="submit">حفظ</button>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+
+{# FILE: templates/auth/password_reset_complete.html #}
+{% extends 'base.html' %}
+{% block title %}تمت إعادة التعيين{% endblock %}
+{% block page_title %}تمت إعادة التعيين{% endblock %}
+{% block content %}<div class="alert alert-success">تم تعيين كلمة مرورك بنجاح. يمكنك الآن <a href="{% url 'authui:login' %}">تسجيل الدخول</a>.</div>{% endblock %}
+
+{# FILE: templates/auth/password_reset_email.txt #}
+لقد طُلب إعادة تعيين كلمة المرور لحسابك في نظام مكتب المحاماة.
+
+اضغط على الرابط التالي لإتمام العملية:
+{{ protocol }}://{{ domain }}{% url 'authui:password_reset_confirm' uidb64=uid token=token %}
+
+إذا لم تطلب ذلك، تجاهل هذه الرسالة.

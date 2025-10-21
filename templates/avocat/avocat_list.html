@@ -1,0 +1,23 @@
+{# FILE: templates/avocat/avocat_list.html #}
+{% extends 'base.html' %}
+{% block title %}المحامون{% endblock %}
+{% block page_title %}المحامون{% endblock %}
+{% block header_actions %}
+    <a href="{% url 'cabinet:avocat_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة محامٍ</a>
+{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الاسم</th><th>الهيئة</th><th>الهاتف</th><th>البريد</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.nom }}</td><td>{{ obj.barreau|default:'—' }}</td><td>{{ obj.telephone|default:'—' }}</td><td>{{ obj.email|default:'—' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:avocat_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:avocat_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:avocat_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

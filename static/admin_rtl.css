@@ -1,0 +1,108 @@
+
+/* اتجاه عام */
+html, body { direction: rtl; }
+/* خط عربي مناسب */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap');
+body, input, select, textarea { font-family: 'Cairo', Tahoma, Arial, sans-serif; }
+/* محاذاة الجداول والعناوين */
+th, td { text-align: right; }
+.breadcrumbs { float: left; }
+#header { direction: rtl; }
+/* تحسين حقول الإدخال العربية */
+.arabic-input { text-align: right; }
+/* تخصيص أزرار */
+button, .btn { font-family: 'Cairo', Tahoma, Arial, sans-serif; }
+/* تخصيص القوائم المنسدلة */
+select { direction: rtl; }
+/* تخصيص النماذج */
+.form-group { text-align: right; }
+/* تخصيص التنقل الجانبي */
+.sidebar { direction: rtl; }
+/* تخصيص الفوتر */
+footer { text-align: center; }
+/* تخصيص التنبيهات */
+.alert { text-align: right; }
+/* تخصيص الجداول */
+.table { direction: rtl; }
+/* تخصيص الأزرار في الجداول */
+.table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص القوائم */
+.navbar-nav { float: left; }
+/* تخصيص الأيقونات */
+.icon { float: left; }
+/* تخصيص العناوين */
+h1, h2, h3, h4, h5, h6 { text-align: right; }
+/* تخصيص الفقرات */
+p { text-align: right; }
+/* تخصيص القوائم غير المرتبة */
+ul { text-align: right; }
+/* تخصيص القوائم المرتبة */
+ol { text-align: right; }
+/* تخصيص الروابط */
+a { text-align: right; }
+/* تخصيص الجداول في النماذج */
+.form-table { direction: rtl; }
+/* تخصيص الأزرار في النماذج */
+.form-table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص الرسائل */
+.message { text-align: right; }
+/* تخصيص الأزرار في الرسائل */
+.message .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص القوائم في الرسائل */
+.message ul { text-align: right; }
+/* تخصيص الجداول في الرسائل */
+.message .table { direction: rtl; }
+/* تخصيص الأزرار في الجداول داخل الرسائل */
+.message .table .btn { margin-left: 5px; margin-right: 0;   }
+/* تخصيص الفوتر في الرسائل */
+.message footer { text-align: center; }
+/* تخصيص الأزرار في الفوتر داخل الرسائل */
+.message footer .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص القوائم في الفوتر داخل الرسائل */
+.message footer ul { text-align: right; }
+/* تخصيص الجداول في الفوتر داخل الرسائل */
+.message footer .table { direction: rtl; }
+/* تخصيص الأزرار في الجداول داخل الفوتر في الرسائل */
+.message footer .table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص العناوين في الفوتر داخل الرسائل */
+.message footer h1, .message footer h2, .message footer h3, .message footer h4, .message footer h5, .message footer h6 { text-align: right; }
+/* تخصيص الفقرات في الفوتر داخل الرسائل */
+.message footer p { text-align: right; }
+/* تخصيص الروابط في الفوتر داخل الرسائل */
+.message footer a { text-align: right; }
+/* تخصيص القوائم غير المرتبة في الفوتر داخل الرسائل */
+.message footer ul { text-align: right; }
+/* تخصيص القوائم المرتبة في الفوتر داخل الرسائل */
+.message footer ol { text-align: right; }
+/* تخصيص الجداول في الفوتر داخل الرسائل */
+.message footer .table { direction: rtl; }
+/* تخصيص الأزرار في الجداول داخل الفوتر في الرسائل */
+.message footer .table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص الحقول في الفوتر داخل الرسائل */
+.message footer .form-group { text-align: right; }
+/* تخصيص القوائم الجانبية في الفوتر داخل الرسائل */
+.message footer .sidebar { direction: rtl; }
+/* تخصيص التنبيهات في الفوتر داخل الرسائل */
+.message footer .alert { text-align: right; }
+/* تخصيص الجداول في الفوتر داخل الرسائل */
+.message footer .table { direction: rtl; }
+/* تخصيص الأزرار في الجداول داخل الفوتر في الرسائل */
+.message footer .table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص العناوين في الفوتر داخل الرسائل */
+.message footer h1, .message footer h2, .message footer h3, .message footer h4, .message footer h5, .message footer h6 { text-align: right; }
+/* تخصيص الفقرات في الفوتر داخل الرسائل */
+.message footer p { text-align: right; }
+/* تخصيص الروابط في الفوتر داخل الرسائل */
+.message footer a { text-align: right; }
+/* تخصيص القوائم غير المرتبة في الفوتر داخل الرسائل */
+.message footer ul { text-align: right; }
+/* تخصيص القوائم المرتبة في الفوتر داخل الرسائل */
+.message footer ol { text-align: right; }
+/* تخصيص الجداول في الفوتر داخل الرسائل */
+.message footer .table { direction: rtl; }
+/* تخصيص الأزرار في الجداول داخل الفوتر في الرسائل */
+.message footer .table .btn { margin-left: 5px; margin-right: 0; }
+/* تخصيص الحقول في الفوتر داخل الرسائل */
+.message footer .form-group { text-align: right; }
+/* تخصيص القوائم الجانبية في الفوتر داخل الرسائل */
+.message footer .sidebar { direction: rtl; }

@@ -1,0 +1,28 @@
+{# FILE: templates/avocat/juridiction_list.html #}
+{% extends 'base.html' %}
+{% block title %}المحاكم{% endblock %}
+{% block page_title %}المحاكم{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:juridiction_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة جهة</a>{% endblock %}
+{% block content %}
+<div class="card card-hover">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-light"><tr><th>الاسم</th><th>المدينة</th><th>النوع</th><th class="text-center">إجراءات</th></tr></thead>
+      <tbody>
+        {% for obj in object_list %}
+        <tr>
+          <td>{{ obj.nom }}</td>
+          <td>{{ obj.ville }}</td>
+          <td>{{ obj.get_type_display }}</td>
+          <td class="text-center">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:juridiction_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:juridiction_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:juridiction_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        {% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

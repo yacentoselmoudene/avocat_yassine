@@ -1,0 +1,38 @@
+{# FILE: templates/_partials/_footer.html                           #}
+{# تذييل قابل لإعادة الاستخدام                                       #}
+{# ============================================================= #}
+<footer class="app-footer mt-auto py-4">
+    <div class="container">
+        <div class="row g-4 align-items-start">
+            <div class="col-12 col-md-4">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <img src="{% static 'img/logo-footer.png' %}" alt="Logo" style="height:32px" onerror="this.style.display='none'">
+                    <strong>مكتب المحاماة</strong>
+                </div>
+                <p class="mb-1 small">نساعدكم على تتبع ملفاتكم القضائية بكفاءة عالية.</p>
+                <div class="small text-secondary">© جميع الحقوق محفوظة.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <h6 class="mb-2">العناوين ووسائل الاتصال</h6>
+                <!-- أماكن العنوان/الهاتف/البريد -->
+                <ul class="list-unstyled small m-0">
+                    <li class="mb-1"><i class="bi bi-geo-alt ms-1"></i> العنوان: شارع …، المدينة …</li>
+                    <li class="mb-1"><i class="bi bi-telephone ms-1"></i> الهاتف: 05xx-xx-xx-xx</li>
+                    <li class="mb-1"><i class="bi bi-envelope ms-1"></i> البريد:yass@gmail.com
+                    </li>
+                    <li><i class="bi bi-clock ms-1"></i> المواعيد: 09:00–17:00 (الإثنين–الجمعة)</li>
+                </ul>
+            </div>
+            <div class="col-12 col-md-4">
+                <h6 class="mb-2">روابط سريعة</h6>
+                <ul class="list-unstyled small m-0">
+                    <li class="mb-1"><a class="footer-link" href="{% url 'cabinet:affaire_list' %}"><i class="bi bi-journal-text ms-1"></i> القضايا</a></li>
+                    <li class="mb-1"><a class="footer-link" href="{% url 'cabinet:audience_list' %}"><i class="bi bi-calendar3 ms-1"></i> الجلسات</a></li>
+                    <li class="mb-1"><a class="footer-link" href="{% url 'cabinet:execution_list' %}"><i class="bi bi-gear ms-1"></i> التنفيذ</a></li>
+                    <li><a class="footer-link" href="{% url 'cabinet:alerte_list' %}"><i class="bi bi-bell ms-1"></i> التنبيهات</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>
+{# ============================================================= #}

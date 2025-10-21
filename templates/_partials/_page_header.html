@@ -1,0 +1,20 @@
+{# ============================================================= #}
+{# FILE: templates/_partials/_page_header.html                     #}
+{# رأس صفحة قابل لإعادة الاستخدام                                   #}
+{# ============================================================= #}
+<div class="page-header mb-3">
+  <div>
+    <h1 class="h4 m-0">{% block page_title %}العنوان{% endblock %}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb small m-0">
+        {% block breadcrumbs %}
+        <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+        {% endblock %}
+      </ol>
+    </nav>
+  </div>
+  <div class="d-flex gap-2">
+    {% block header_actions %}{% endblock %}
+  </div>
+</div>
+{# ============================================================= #}

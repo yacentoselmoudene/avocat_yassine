@@ -1,0 +1,55 @@
+{# FILE: templates/_partials/_navbar.html                           #}
+{# شريط تنقل قابل لإعادة الاستخدام                                   #}
+{# ============================================================= #}
+<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+            <!-- مكان شعار رئيسي -->
+            <img src="{% static 'img/logo-primary.png' %}" alt="Logo" onerror="this.style.display='none'">
+            <div class="d-flex flex-column lh-1">
+            <strong>مكتب المحاماة</strong>
+            <span class="brand-subtitle">تسيير الدعاوى والتنفيذ</span>
+            </div>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cabinet:affaire_list' %}">القضايا</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cabinet:depense_list' %}">المالية</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cabinet:execution_list' %}">التنفيذ والطعن</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cabinet:piecejointe_list' %}">الأرشيف والمرجع</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="nav-item me-3 d-none d-lg-flex align-items-center">
+                    <!-- مكان شعار ثانوي (هيئة المحامين مثلاً) -->
+                    <img src="{% static 'img/logo-barreau.png' %}" alt="Barreau" style="height:28px" onerror="this.style.display='none'">
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> الحساب
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text"><i class="bi bi-envelope-at ms-1"></i> {{ request.user.email }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'cabinet:tache_list' %}"><i class="bi bi-check2-square ms-1"></i> مهامي</a></li>
+                        <li><a class="dropdown-item" href="{% url 'cabinet:alerte_list' %}"><i class="bi bi-bell ms-1"></i> التنبيهات</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/admin/"><i class="bi bi-speedometer2 ms-1"></i> إدارة النظام</a></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-left ms-1"></i> خروج</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{# ============================================================= #} 

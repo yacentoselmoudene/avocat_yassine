@@ -1,0 +1,16 @@
+{# FILE: templates/avocat/avocat_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل محامٍ{% endblock %}
+{% block page_title %}تفاصيل محامٍ{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الاسم</dt><dd class="col-sm-9">{{ object.nom }}</dd>
+  <dt class="col-sm-3">الهيئة</dt><dd class="col-sm-9">{{ object.barreau|default:'—' }}</dd>
+  <dt class="col-sm-3">الهاتف</dt><dd class="col-sm-9">{{ object.telephone|default:'—' }}</dd>
+  <dt class="col-sm-3">البريد</dt><dd class="col-sm-9">{{ object.email|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:avocat_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:avocat_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}

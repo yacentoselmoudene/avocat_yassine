@@ -1,0 +1,903 @@
+{# =============================================================
+ Per-model templates pack — Bootstrap 5 RTL, Arabic UX
+ Paths below reflect Django default resolution for CBVs (app_label = cabinet):
+   avocat/<model>_list.html
+   avocat/<model>_detail.html
+   avocat/<model>_form.html
+   avocat/<model>_confirm_delete.html
+ All pages extend base.html and are fully responsive.
+============================================================= #}
+
+{# ------------------------- JURIDICTION ------------------------- #}
+
+
+
+
+
+
+
+
+
+{# ------------------------- AVOCAT ------------------------- #}
+
+
+
+
+
+
+
+
+
+{# ------------------------- AFFAIRE ------------------------- #}
+{# FILE: templates/avocat/affaire_list.html #}
+{% extends 'base.html' %}
+{% block title %}القضايا{% endblock %}
+{% block page_title %}القضايا{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:affaire_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة قضية</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>المرجع</th><th>النوع</th><th>الحالة</th><th>المحكمة</th><th>تاريخ الفتح</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.reference_interne }}</td>
+  <td>{{ obj.get_type_affaire_display }}</td>
+  <td>{{ obj.get_statut_affaire_display }}</td>
+  <td>{{ obj.juridiction }}</td>
+  <td>{{ obj.date_ouverture }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:affaire_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:affaire_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affaire_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/affaire_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل القضية{% endblock %}
+{% block page_title %}تفاصيل القضية{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">المرجع</dt><dd class="col-sm-9">{{ object.reference_interne }}</dd>
+  <dt class="col-sm-3">نوع القضية</dt><dd class="col-sm-9">{{ object.get_type_affaire_display }}</dd>
+  <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_affaire_display }}</dd>
+  <dt class="col-sm-3">المحكمة</dt><dd class="col-sm-9">{{ object.juridiction }}</dd>
+  <dt class="col-sm-3">تاريخ الفتح</dt><dd class="col-sm-9">{{ object.date_ouverture }}</dd>
+  <dt class="col-sm-3">الموضوع</dt><dd class="col-sm-9">{{ object.objet|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:affaire_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affaire_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/affaire_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج قضية{% endblock %}
+{% block page_title %}نموذج قضية{% endblock %}
+
+{# FILE: templates/avocat/affaire_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف قضية{% endblock %}
+{% block page_title %}حذف قضية{% endblock %}
+
+
+{# ------------------------- PARTIE ------------------------- #}
+{# FILE: templates/avocat/partie_list.html #}
+{% extends 'base.html' %}
+{% block title %}الأطراف{% endblock %}
+{% block page_title %}الأطراف{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:partie_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة طرف</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الاسم الكامل</th><th>الصفة</th><th>الهاتف</th><th>البريد</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.nom_complet }}</td><td>{{ obj.get_type_partie_display }}</td><td>{{ obj.telephone|default:'—' }}</td><td>{{ obj.email|default:'—' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:partie_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:partie_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:partie_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/partie_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل الطرف{% endblock %}
+{% block page_title %}تفاصيل الطرف{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الاسم</dt><dd class="col-sm-9">{{ object.nom_complet }}</dd>
+  <dt class="col-sm-3">الصفة</dt><dd class="col-sm-9">{{ object.get_type_partie_display }}</dd>
+  <dt class="col-sm-3">العنوان</dt><dd class="col-sm-9">{{ object.adresse|default:'—' }}</dd>
+  <dt class="col-sm-3">الهاتف</dt><dd class="col-sm-9">{{ object.telephone|default:'—' }}</dd>
+  <dt class="col-sm-3">البريد</dt><dd class="col-sm-9">{{ object.email|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:partie_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:partie_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/partie_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج طرف{% endblock %}
+{% block page_title %}نموذج طرف{% endblock %}
+
+{# FILE: templates/avocat/partie_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف طرف{% endblock %}
+{% block page_title %}حذف طرف{% endblock %}
+
+
+{# ------------------------- AFFAIRE-PARTIE ------------------------- #}
+{# FILE: templates/avocat/affairepartie_list.html #}
+{% extends 'base.html' %}
+{% block title %}أطراف القضايا{% endblock %}
+{% block page_title %}أطراف القضايا{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:affairepartie_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> ربط طرف</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>الطرف</th><th>الدور</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.partie.nom_complet }}</td><td>{{ obj.get_role_dans_affaire_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:affairepartie_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:affairepartie_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affairepartie_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/affairepartie_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل ربط طرف{% endblock %}
+{% block page_title %}تفاصيل ربط طرف{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">الطرف</dt><dd class="col-sm-9">{{ object.partie.nom_complet }}</dd>
+  <dt class="col-sm-3">الدور</dt><dd class="col-sm-9">{{ object.get_role_dans_affaire_display }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:affairepartie_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affairepartie_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/affairepartie_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}ربط طرف بقضية{% endblock %}
+{% block page_title %}ربط طرف بقضية{% endblock %}
+
+{# FILE: templates/avocat/affairepartie_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف الربط{% endblock %}
+{% block page_title %}حذف الربط{% endblock %}
+
+
+{# ------------------------- AFFAIRE-AVOCAT ------------------------- #}
+{# FILE: templates/avocat/affaireavocat_list.html #}
+{% extends 'base.html' %}
+{% block title %}محامو القضايا{% endblock %}
+{% block page_title %}محامو القضايا{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:affaireavocat_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> ربط محامٍ</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>المحامي</th><th>الدور</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.avocat.nom }}</td><td>{{ obj.get_role_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:affaireavocat_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:affaireavocat_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affaireavocat_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/affaireavocat_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل ربط محامٍ{% endblock %}
+{% block page_title %}تفاصيل ربط محامٍ{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">المحامي</dt><dd class="col-sm-9">{{ object.avocat.nom }}</dd>
+  <dt class="col-sm-3">الدور</dt><dd class="col-sm-9">{{ object.get_role_display }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:affaireavocat_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:affaireavocat_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/affaireavocat_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}ربط محامٍ بقضية{% endblock %}
+{% block page_title %}ربط محامٍ بقضية{% endblock %}
+
+{# FILE: templates/avocat/affaireavocat_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف الربط{% endblock %}
+{% block page_title %}حذف الربط{% endblock %}
+
+
+{# ------------------------- AUDIENCE ------------------------- #}
+{# FILE: templates/avocat/audience_list.html #}
+{% extends 'base.html' %}
+{% block title %}الجلسات{% endblock %}
+{% block page_title %}الجلسات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:audience_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة جلسة</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>النوع</th><th>التاريخ</th><th>النتيجة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.get_type_audience_display }}</td><td>{{ obj.date_audience }}</td><td>{{ obj.get_resultat_display|default:'—' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:audience_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:audience_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:audience_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/audience_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل الجلسة{% endblock %}
+{% block page_title %}تفاصيل الجلسة{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_audience_display }}</dd>
+  <dt class="col-sm-3">التاريخ</dt><dd class="col-sm-9">{{ object.date_audience }}</dd>
+  <dt class="col-sm-3">النتيجة</dt><dd class="col-sm-9">{{ object.get_resultat_display|default:'—' }}</dd>
+  <dt class="col-sm-3">محضر</dt><dd class="col-sm-9">{{ object.proces_verbal|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:audience_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:audience_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/audience_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج جلسة{% endblock %}
+{% block page_title %}نموذج جلسة{% endblock %}
+
+{# FILE: templates/avocat/audience_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف جلسة{% endblock %}
+{% block page_title %}حذف جلسة{% endblock %}
+
+
+{# ------------------------- MESURE ------------------------- #}
+{# FILE: templates/avocat/mesure_list.html #}
+{% extends 'base.html' %}
+{% block title %}الإجراءات{% endblock %}
+{% block page_title %}الإجراءات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:mesure_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة إجراء</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الجلسة</th><th>النوع</th><th>الحالة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.audience.affaire.reference_interne }}</td><td>{{ obj.get_type_mesure_display }}</td><td>{{ obj.get_statut_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:mesure_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:mesure_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:mesure_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/mesure_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل إجراء{% endblock %}
+{% block page_title %}تفاصيل إجراء{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الجلسة</dt><dd class="col-sm-9">{{ object.audience.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_mesure_display }}</dd>
+  <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_display }}</dd>
+  <dt class="col-sm-3">ملاحظات</dt><dd class="col-sm-9">{{ object.notes|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:mesure_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:mesure_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/mesure_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج إجراء{% endblock %}
+{% block page_title %}نموذج إجراء{% endblock %}
+
+{# FILE: templates/avocat/mesure_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف إجراء{% endblock %}
+{% block page_title %}حذف إجراء{% endblock %}
+
+
+{# ------------------------- EXPERTISE ------------------------- #}
+{# FILE: templates/avocat/expertise_list.html #}
+{% extends 'base.html' %}
+{% block title %}الخبرات{% endblock %}
+{% block page_title %}الخبرات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:expertise_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة خبرة</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>الخبير</th><th>أُمرت بتاريخ</th><th>أودعت بتاريخ</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.expert_nom }}</td><td>{{ obj.date_ordonnee }}</td><td>{{ obj.date_depot|default:'—' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:expertise_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:expertise_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:expertise_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/expertise_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل خبرة{% endblock %}
+{% block page_title %}تفاصيل خبرة{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">الخبير</dt><dd class="col-sm-9">{{ object.expert_nom }}</dd>
+  <dt class="col-sm-3">تاريخ الأمر</dt><dd class="col-sm-9">{{ object.date_ordonnee }}</dd>
+  <dt class="col-sm-3">تاريخ الإيداع</dt><dd class="col-sm-9">{{ object.date_depot|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:expertise_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:expertise_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/expertise_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج خبرة{% endblock %}
+{% block page_title %}نموذج خبرة{% endblock %}
+
+{# FILE: templates/avocat/expertise_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف خبرة{% endblock %}
+{% block page_title %}حذف خبرة{% endblock %}
+
+
+{# ------------------------- DECISION ------------------------- #}
+{# FILE: templates/avocat/decision_list.html #}
+{% extends 'base.html' %}
+{% block title %}الأحكام{% endblock %}
+{% block page_title %}الأحكام{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:decision_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة حكم</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>رقم الحكم</th><th>تاريخ النطق</th><th>قابل للطعن</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.numero_decision }}</td><td>{{ obj.date_prononce }}</td><td>{{ obj.susceptible_recours|yesno:'نعم,لا' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:decision_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:decision_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:decision_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/decision_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل حكم{% endblock %}
+{% block page_title %}تفاصيل حكم{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">رقم الحكم</dt><dd class="col-sm-9">{{ object.numero_decision }}</dd>
+  <dt class="col-sm-3">تاريخ النطق</dt><dd class="col-sm-9">{{ object.date_prononce }}</dd>
+  <dt class="col-sm-3">الملخص</dt><dd class="col-sm-9">{{ object.resumé|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:decision_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:decision_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/decision_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج حكم{% endblock %}
+{% block page_title %}نموذج حكم{% endblock %}
+
+{# FILE: templates/avocat/decision_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف حكم{% endblock %}
+{% block page_title %}حذف حكم{% endblock %}
+
+
+{# ------------------------- NOTIFICATION ------------------------- #}
+{# FILE: templates/avocat/notification_list.html #}
+{% extends 'base.html' %}
+{% block title %}التبليغات{% endblock %}
+{% block page_title %}التبليغات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:notification_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة تبليغ</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الحكم</th><th>رقم الطلب</th><th>إيداع</th><th>التبليغ</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.decision.numero_decision }}</td><td>{{ obj.demande_numero }}</td><td>{{ obj.date_depot_demande }}</td><td>{{ obj.date_signification|default:'—' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:notification_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:notification_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:notification_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/notification_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل تبليغ{% endblock %}
+{% block page_title %}تفاصيل تبليغ{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الحكم</dt><dd class="col-sm-9">{{ object.decision.numero_decision }}</dd>
+  <dt class="col-sm-3">رقم الطلب</dt><dd class="col-sm-9">{{ object.demande_numero }}</dd>
+  <dt class="col-sm-3">تاريخ الإيداع</dt><dd class="col-sm-9">{{ object.date_depot_demande }}</dd>
+  <dt class="col-sm-3">تاريخ التبليغ</dt><dd class="col-sm-9">{{ object.date_signification|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:notification_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:notification_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/notification_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج تبليغ{% endblock %}
+{% block page_title %}نموذج تبليغ{% endblock %}
+
+{# FILE: templates/avocat/notification_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف تبليغ{% endblock %}
+{% block page_title %}حذف تبليغ{% endblock %}
+
+
+{# ------------------------- VOIE DE RECOURS ------------------------- #}
+{# FILE: templates/avocat/voiederecours_list.html #}
+{% extends 'base.html' %}
+{% block title %}طرق الطعن{% endblock %}
+{% block page_title %}طرق الطعن{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:voiederecours_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة طعن</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الحكم</th><th>نوع الطعن</th><th>تاريخ الإيداع</th><th>الحالة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.decision.numero_decision }}</td><td>{{ obj.get_type_recours_display }}</td><td>{{ obj.date_depot }}</td><td>{{ obj.get_statut_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:voiederecours_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:voiederecours_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:voiederecours_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/voiederecours_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل طريق طعن{% endblock %}
+{% block page_title %}تفاصيل طريق طعن{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الحكم</dt><dd class="col-sm-9">{{ object.decision.numero_decision }}</dd>
+  <dt class="col-sm-3">نوع الطعن</dt><dd class="col-sm-9">{{ object.get_type_recours_display }}</dd>
+  <dt class="col-sm-3">تاريخ الإيداع</dt><dd class="col-sm-9">{{ object.date_depot }}</dd>
+  <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_display }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:voiederecours_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:voiederecours_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/voiederecours_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج طريق طعن{% endblock %}
+{% block page_title %}نموذج طريق طعن{% endblock %}
+
+{# FILE: templates/avocat/voiederecours_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف طريق طعن{% endblock %}
+{% block page_title %}حذف طريق طعن{% endblock %}
+
+
+{# ------------------------- EXECUTION ------------------------- #}
+{# FILE: templates/avocat/execution_list.html #}
+{% extends 'base.html' %}
+{% block title %}التنفيذات{% endblock %}
+{% block page_title %}التنفيذات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:execution_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة تنفيذ</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الحكم</th><th>النوع</th><th>تاريخ الطلب</th><th>الحالة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.decision.numero_decision }}</td><td>{{ obj.get_type_execution_display }}</td><td>{{ obj.date_demande }}</td><td>{{ obj.get_statut_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:execution_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:execution_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:execution_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/execution_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل تنفيذ{% endblock %}
+{% block page_title %}تفاصيل تنفيذ{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الحكم</dt><dd class="col-sm-9">{{ object.decision.numero_decision }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_execution_display }}</dd>
+  <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_display }}</dd>
+  <dt class="col-sm-3">تصفية الوديعة</dt><dd class="col-sm-9">{{ object.date_demande_liquidation|default:'—' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:execution_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:execution_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/execution_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج تنفيذ{% endblock %}
+{% block page_title %}نموذج تنفيذ{% endblock %}
+
+{# FILE: templates/avocat/execution_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف تنفيذ{% endblock %}
+{% block page_title %}حذف تنفيذ{% endblock %}
+
+
+{# ------------------------- DEPENSE ------------------------- #}
+{# FILE: templates/avocat/depense_list.html #}
+{% extends 'base.html' %}
+{% block title %}المصاريف{% endblock %}
+{% block page_title %}المصاريف{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:depense_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة مصروف</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.get_type_depense_display }}</td><td>{{ obj.montant }}</td><td>{{ obj.date_depense }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:depense_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:depense_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:depense_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/depense_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل مصروف{% endblock %}
+{% block page_title %}تفاصيل مصروف{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_depense_display }}</dd>
+  <dt class="col-sm-3">المبلغ</dt><dd class="col-sm-9">{{ object.montant }}</dd>
+  <dt class="col-sm-3">التاريخ</dt><dd class="col-sm-9">{{ object.date_depense }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:depense_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:depense_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/depense_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج مصروف{% endblock %}
+{% block page_title %}نموذج مصروف{% endblock %}
+
+{# FILE: templates/avocat/depense_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف مصروف{% endblock %}
+{% block page_title %}حذف مصروف{% endblock %}
+
+
+{# ------------------------- RECETTE ------------------------- #}
+{# FILE: templates/avocat/recette_list.html #}
+{% extends 'base.html' %}
+{% block title %}المداخيل{% endblock %}
+{% block page_title %}المداخيل{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:recette_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة دخل</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.get_type_recette_display }}</td><td>{{ obj.montant }}</td><td>{{ obj.date_recette }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:recette_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:recette_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:recette_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/recette_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل دخل{% endblock %}
+{% block page_title %}تفاصيل دخل{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_recette_display }}</dd>
+  <dt class="col-sm-3">المبلغ</dt><dd class="col-sm-9">{{ object.montant }}</dd>
+  <dt class="col-sm-3">التاريخ</dt><dd class="col-sm-9">{{ object.date_recette }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:recette_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:recette_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/recette_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج دخل{% endblock %}
+{% block page_title %}نموذج دخل{% endblock %}
+
+{# FILE: templates/avocat/recette_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف دخل{% endblock %}
+{% block page_title %}حذف دخل{% endblock %}
+
+
+{# ------------------------- PIECE JOINTE ------------------------- #}
+{# FILE: templates/avocat/piecejointe_list.html #}
+{% extends 'base.html' %}
+{% block title %}المرفقات{% endblock %}
+{% block page_title %}المرفقات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:piecejointe_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة مرفق</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>القضية</th><th>العنوان</th><th>النوع</th><th>الإضافة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.affaire.reference_interne }}</td><td>{{ obj.titre }}</td><td>{{ obj.get_type_piece_display }}</td><td>{{ obj.date_ajout }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:piecejointe_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:piecejointe_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:piecejointe_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/piecejointe_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل مرفق{% endblock %}
+{% block page_title %}تفاصيل مرفق{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne }}</dd>
+  <dt class="col-sm-3">العنوان</dt><dd class="col-sm-9">{{ object.titre }}</dd>
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_piece_display }}</dd>
+</dl>
+{% if object.fichier %}<a class="btn btn-outline-secondary" href="{{ object.fichier.url }}" target="_blank"><i class="bi bi-file-earmark-arrow-down"></i> تنزيل</a>{% endif %}
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:piecejointe_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:piecejointe_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/piecejointe_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج مرفق{% endblock %}
+{% block page_title %}نموذج مرفق{% endblock %}
+
+{# FILE: templates/avocat/piecejointe_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف مرفق{% endblock %}
+{% block page_title %}حذف مرفق{% endblock %}
+
+
+{# ------------------------- UTILISATEUR ------------------------- #}
+{# FILE: templates/avocat/utilisateur_list.html #}
+{% extends 'base.html' %}
+{% block title %}المستخدمون{% endblock %}
+{% block page_title %}المستخدمون{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:utilisateur_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة مستخدم</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>الاسم</th><th>الدور</th><th>البريد</th><th>نشط</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.nom_complet }}</td><td>{{ obj.get_role_display }}</td><td>{{ obj.email }}</td><td>{{ obj.actif|yesno:'نعم,لا' }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:utilisateur_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:utilisateur_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:utilisateur_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/utilisateur_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل مستخدم{% endblock %}
+{% block page_title %}تفاصيل مستخدم{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">الاسم</dt><dd class="col-sm-9">{{ object.nom_complet }}</dd>
+  <dt class="col-sm-3">الدور</dt><dd class="col-sm-9">{{ object.get_role_display }}</dd>
+  <dt class="col-sm-3">البريد</dt><dd class="col-sm-9">{{ object.email }}</dd>
+  <dt class="col-sm-3">نشط</dt><dd class="col-sm-9">{{ object.actif|yesno:'نعم,لا' }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:utilisateur_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:utilisateur_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/utilisateur_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج مستخدم{% endblock %}
+{% block page_title %}نموذج مستخدم{% endblock %}
+
+{# FILE: templates/avocat/utilisateur_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف مستخدم{% endblock %}
+{% block page_title %}حذف مستخدم{% endblock %}
+
+
+{# ------------------------- TACHE ------------------------- #}
+{# FILE: templates/avocat/tache_list.html #}
+{% extends 'base.html' %}
+{% block title %}المهام{% endblock %}
+{% block page_title %}المهام{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:tache_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة مهمة</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>العنوان</th><th>القضية</th><th>المكلّف</th><th>الحالة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.titre }}</td><td>{{ obj.affaire.reference_interne|default:'—' }}</td><td>{{ obj.assigne_a.nom_complet|default:'—' }}</td><td>{{ obj.get_statut_display }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:tache_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:tache_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:tache_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/tache_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل مهمة{% endblock %}
+{% block page_title %}تفاصيل مهمة{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">العنوان</dt><dd class="col-sm-9">{{ object.titre }}</dd>
+  <dt class="col-sm-3">الوصف</dt><dd class="col-sm-9">{{ object.description|default:'—' }}</dd>
+  <dt class="col-sm-3">القضية</dt><dd class="col-sm-9">{{ object.affaire.reference_interne|default:'—' }}</dd>
+  <dt class="col-sm-3">المكلّف</dt><dd class="col-sm-9">{{ object.assigne_a.nom_complet|default:'—' }}</dd>
+  <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_display }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:tache_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:tache_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/tache_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج مهمة{% endblock %}
+{% block page_title %}نموذج مهمة{% endblock %}
+
+{# FILE: templates/avocat/tache_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف مهمة{% endblock %}
+{% block page_title %}حذف مهمة{% endblock %}
+
+
+{# ------------------------- ALERTE ------------------------- #}
+{# FILE: templates/avocat/alerte_list.html #}
+{% extends 'base.html' %}
+{% block title %}التنبيهات{% endblock %}
+{% block page_title %}التنبيهات{% endblock %}
+{% block header_actions %}<a href="{% url 'cabinet:alerte_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة تنبيه</a>{% endblock %}
+{% block content %}
+<div class="card card-hover"><div class="table-responsive">
+<table class="table align-middle"><thead class="table-light"><tr><th>النوع</th><th>المعرّف</th><th>التاريخ</th><th>القناة</th><th class="text-center">إجراءات</th></tr></thead>
+<tbody>
+{% for obj in object_list %}
+<tr>
+  <td>{{ obj.get_type_alerte_display }}</td><td>{{ obj.reference_id }}</td><td>{{ obj.date_alerte }}</td><td>{{ obj.moyen }}</td>
+  <td class="text-center">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:alerte_detail' obj.pk %}"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'cabinet:alerte_update' obj.pk %}"><i class="bi bi-pencil"></i></a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:alerte_delete' obj.pk %}"><i class="bi bi-trash"></i></a>
+  </td>
+</tr>
+{% empty %}{% include '_partials/_empty_state.html' %}{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
+
+{# FILE: templates/avocat/alerte_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}تفاصيل تنبيه{% endblock %}
+{% block page_title %}تفاصيل تنبيه{% endblock %}
+{% block detail_body %}
+<dl class="row">
+  <dt class="col-sm-3">النوع</dt><dd class="col-sm-9">{{ object.get_type_alerte_display }}</dd>
+  <dt class="col-sm-3">المعرّف المرتبط</dt><dd class="col-sm-9">{{ object.reference_id }}</dd>
+  <dt class="col-sm-3">التاريخ</dt><dd class="col-sm-9">{{ object.date_alerte }}</dd>
+  <dt class="col-sm-3">القناة</dt><dd class="col-sm-9">{{ object.moyen }}</dd>
+  <dt class="col-sm-3">النص</dt><dd class="col-sm-9">{{ object.message }}</dd>
+</dl>
+{% endblock %}
+{% block detail_actions %}
+<a class="btn btn-sm btn-primary" href="{% url 'cabinet:alerte_update' object.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+<a class="btn btn-sm btn-outline-danger" href="{% url 'cabinet:alerte_delete' object.pk %}"><i class="bi bi-trash"></i> حذف</a>
+{% endblock %}
+
+{# FILE: templates/avocat/alerte_form.html #}
+{% extends 'generic/form.html' %}
+{% block title %}نموذج تنبيه{% endblock %}
+{% block page_title %}نموذج تنبيه{% endblock %}
+
+{# FILE: templates/avocat/alerte_confirm_delete.html #}
+{% extends 'generic/confirm_delete.html' %}
+{% block title %}حذف تنبيه{% endblock %}
+{% block page_title %}حذف تنبيه{% endblock %}

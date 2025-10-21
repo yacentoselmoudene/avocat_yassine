@@ -1,0 +1,19 @@
+{# FILE: templates/generic/confirm_delete.html                        #}
+{# صفحة تأكيد حذف                                                     #}
+{# ============================================================= #}
+{% extends 'base.html' %}
+{% block title %}تأكيد الحذف{% endblock %}
+{% block page_title %}تأكيد الحذف{% endblock %}
+{% block content %}
+  <form method="post" class="card border-danger">
+    {% csrf_token %}
+    <div class="card-body">
+      <p>هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذه العملية.</p>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a href="{{ cancel_url }}" class="btn btn-outline-secondary">إلغاء</a>
+      <button class="btn btn-danger" type="submit"><i class="bi bi-trash ms-1"></i> حذف</button>
+    </div>
+  </form>
+{% endblock %}
+{# ============================================================= #}

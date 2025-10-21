@@ -1,0 +1,30 @@
+{# FILE: templates/generic/detail.html                                #}
+{# صفحة تفاصيل عامة                                                   #}
+{# ============================================================= #}
+{% extends 'base.html' %}
+{% block title %}{{ page_title|default:'تفاصيل' }}{% endblock %}
+{% block page_title %}{{ page_title|default:'تفاصيل' }}{% endblock %}
+{% block header_actions %}
+  {% if edit_url %}<a href="{{ edit_url }}" class="btn btn-primary"><i class="bi bi-pencil ms-1"></i> تعديل</a>{% endif %}
+  {% if back_url %}<a href="{{ back_url }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع</a>{% endif %}
+{% endblock %}
+{% block content %}
+  <div class="row g-3">
+    <div class="col-12 col-lg-8">
+      <div class="card card-hover">
+        <div class="card-body">
+          {% block detail_body %}{% endblock %}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="mb-3">عمليات</h6>
+          {% block detail_actions %}{% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{# ============================================================= #}
