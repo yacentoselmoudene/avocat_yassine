@@ -1,4 +1,4 @@
-# cabinet/forms.py
+# avocat_app/forms.py
 from django import forms
 from django.core.exceptions import ValidationError
 from django import forms
@@ -32,7 +32,82 @@ class ArabicBootstrapFormMixin(forms.ModelForm):
                 cleaned[k] = v.strip()
         return cleaned
 
-# داخل cabinet/forms.py
+# داخل avocat_app/forms.py
+
+
+# -*- coding: utf-8 -*-
+from django import forms
+from django.utils.translation import gettext_lazy as _
+from .models import AffairePartie, AffaireAvocat, Partie, Avocat
+
+# ========= تنسيق عربي عام للنماذج =========
+class ArabicModelForm(forms.ModelForm):
+    """أساس لكل النماذج لتطبيق تنسيق عربي وحقول RTL"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+            field.widget.attrs.setdefault("dir", "rtl")
+            if isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.setdefault("rows", 3)
+
+# ========= 1) نموذج ربط القضية بالأطراف =========
+class AffairePartieForm(ArabicModelForm):
+    class Meta:
+        model = AffairePartie
+        fields = ["affaire", "partie", "role_dans_affaire"]
+        labels = {
+            "affaire": "القضية",
+            "partie": "الطرف",
+            "role_dans_affaire": "الدور في القضية",
+
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # ترتيب الحقول حسب الحاجة
+        self.fields["affaire"].widget = forms.HiddenInput()  # غالبًا نمررها من الـview
+        self.fields["partie"].queryset = Partie.objects.all().order_by("nom_complet")
+        self.fields["role_dans_affaire"].widget.attrs.update({
+            "class": "form-select",
+        })
+
+    def clean(self):
+        cleaned = super().clean()
+        partie = cleaned.get("partie")
+        affaire = cleaned.get("affaire")
+        if partie and affaire:
+            exists = AffairePartie.objects.filter(affaire=affaire, partie=partie).exists()
+            if exists and not self.instance.pk:
+                raise forms.ValidationError("هذا الطرف مسجّل بالفعل في نفس القضية.")
+        return cleaned
+
+# ========= 2) نموذج ربط القضية بالمحامين =========
+class AffaireAvocatForm(ArabicModelForm):
+    class Meta:
+        model = AffaireAvocat
+        fields = ["affaire", "avocat", "role"]
+        labels = {
+            "affaire": "القضية",
+            "avocat": "المحامي",
+            "role": "دور المحامي في القضية",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["affaire"].widget = forms.HiddenInput()
+        self.fields["avocat"].queryset = Avocat.objects.all().order_by("nom")
+        self.fields["role"].widget.attrs.update({"class": "form-select"})
+
+    def clean(self):
+        cleaned = super().clean()
+        avocat = cleaned.get("avocat")
+        affaire = cleaned.get("affaire")
+        if avocat and affaire:
+            exists = AffaireAvocat.objects.filter(affaire=affaire, avocat=avocat).exists()
+            if exists and not self.instance.pk:
+                raise forms.ValidationError("هذا المحامي مسجّل بالفعل في نفس القضية.")
+        return cleaned
 
 
 class ArabicLoginForm(AuthenticationForm):

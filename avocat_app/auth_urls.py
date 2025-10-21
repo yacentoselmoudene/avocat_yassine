@@ -1,4 +1,4 @@
-# cabinet/auth_urls.py
+# avocat_app/auth_urls.py
 from django.urls import path
 from .auth_views import LoginView, logout_view
 from django.contrib.auth import views as auth_views

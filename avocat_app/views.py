@@ -24,9 +24,9 @@ from .models import (
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte
 )
-#AffairePartieForm, AffaireAvocatForm,
+
 from .forms import (
-    JuridictionForm, AvocatForm, AffaireForm, PartieForm,
+    JuridictionForm, AvocatForm, AffaireForm, PartieForm, AffairePartieForm, AffaireAvocatForm,
     AudienceForm, MesureForm, ExpertiseForm, DecisionForm, NotificationForm, VoieDeRecoursForm,
     ExecutionForm, DepenseForm, RecetteForm, PieceJointeForm, UtilisateurForm, TacheForm, AlerteForm
 )
@@ -92,6 +92,61 @@ from django.contrib import messages
 
 from .models import Affaire, Juridiction, Avocat, Audience
 from .forms import AffaireForm, JuridictionForm, AvocatForm, AudienceForm
+from django.utils import timezone
+from django.views.generic import TemplateView
+from django.db.models import Sum
+from datetime import timedelta
+
+from .models import Affaire, Audience, Recette, Depense
+
+class DashboardView(SecureBase, TemplateView):
+    """الصفحة الرئيسية بعد تسجيل الدخول - لوحة التحكم"""
+    template_name = "dashboard/index.html"
+    permission_required = "cabinet.view_affaire"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        upcoming_limit = today + timedelta(days=14)
+
+        # إحصاءات عامة
+        ctx["stats"] = {
+            "affaires_total": Affaire.objects.count(),
+            "affaires_ouvertes": Affaire.objects.filter(statut_affaire__in=["Ouverte", "EnCours", "جارية"]).count()
+                if hasattr(Affaire, "statut_affaire") else Affaire.objects.count(),
+            "audiences_a_venir": Audience.objects.filter(date_audience__range=(today, upcoming_limit)).count(),
+        }
+
+        # جلسات قادمة
+        ctx["next_audiences"] = (
+            Audience.objects
+            .select_related("affaire")
+            .filter(date_audience__gte=today)
+            .order_by("date_audience")[:6]
+        )
+
+        # آخر القضايا المضافة
+        ctx["recent_affaires"] = (
+            Affaire.objects.select_related("juridiction")
+            .order_by("-date_ouverture")[:6]
+        )
+
+        # ملخص مالي للشهر الحالي
+        try:
+            ctx["finance"] = {
+                "depenses_mois": Depense.objects.filter(
+                    date_depense__month=today.month,
+                    date_depense__year=today.year
+                ).aggregate(Sum("montant"))["montant__sum"] or 0,
+                "recettes_mois": Recette.objects.filter(
+                    date_recette__month=today.month,
+                    date_recette__year=today.year
+                ).aggregate(Sum("montant"))["montant__sum"] or 0,
+            }
+        except Exception:
+            ctx["finance"] = {"depenses_mois": 0, "recettes_mois": 0}
+
+        return ctx
 
 # =============================
 # AFFAIRES
@@ -273,7 +328,11 @@ class AvocatDelete(SecureBase, DeleteView):
 
 # =============================
 # AUDIENCES
-# =============================
+# ============================
+# -------------------------------------------------------------
+# Exemples complets: Audience / Mesure / Expertise / Decision / Notification
+# Appliquer le même motif aux autres models de workflow
+# -------------------------------------------------------------
 class AudienceList(SecureBase, ListView):
     model = Audience
     template_name = 'avocat/audience_list.html'
@@ -283,12 +342,6 @@ class AudienceDetail(SecureBase, DetailView):
     model = Audience
     template_name = 'avocat/audience_detail.html'
     permission_required = 'cabinet.view_audience'
-
-
-# -------------------------------------------------------------
-# Exemples complets: Audience / Mesure / Expertise / Decision / Notification
-# Appliquer le même motif aux autres models de workflow
-# -------------------------------------------------------------
 class AudienceCreate(SecureBase, CreateView):
     model = Audience
     form_class = AudienceForm
@@ -356,6 +409,16 @@ class AudienceDelete(SecureBase, DeleteView):
             return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
+
+class MesureList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/mesure_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class MesureDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/mesure_detail.html'
+    permission_required = 'cabinet.view_audience'
 
 class MesureCreate(SecureBase, CreateView):
     model = Mesure
@@ -427,6 +490,16 @@ class MesureDelete(SecureBase, DeleteView):
         return super().get(request, *args, **kwargs)
 
 
+class ExpertiseList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/expertise_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class ExpertiseDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/expertise_detail.html'
+    permission_required = 'cabinet.view_audience'
+
 class ExpertiseCreate(SecureBase, CreateView):
     model = Expertise
     form_class = ExpertiseForm
@@ -494,6 +567,16 @@ class ExpertiseDelete(SecureBase, DeleteView):
         return super().get(request, *args, **kwargs)
 
 
+class DecisionList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/decision_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class DecisionDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/decision_detail.html'
+    permission_required = 'cabinet.view_audience'
+
 class DecisionCreate(SecureBase, CreateView):
     model = Decision
     form_class = DecisionForm
@@ -560,6 +643,16 @@ class DecisionDelete(SecureBase, DeleteView):
             return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
+
+class NotificationList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class NotificationDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
 
 class NotificationCreate(SecureBase, CreateView):
     model = Notification
@@ -631,9 +724,743 @@ class NotificationDelete(SecureBase, DeleteView):
         return super().get(request, *args, **kwargs)
 
 
+class AlerteList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class AlerteDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class AlerteCreate(SecureBase, CreateView):
+    model = Alerte
+    form_class = AlerteForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AlerteUpdate(SecureBase, UpdateView):
+    model = Alerte
+    form_class = AlerteForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AlerteDelete(SecureBase, DeleteView):
+    model = Alerte
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class TacheList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class TacheDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class TacheCreate(SecureBase, CreateView):
+    model = Tache
+    form_class = TacheForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class TacheUpdate(SecureBase, UpdateView):
+    model = Tache
+    form_class = TacheForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class TacheDelete(SecureBase, DeleteView):
+    model = Tache
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class UtilisateurList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class UtilisateurDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class UtilisateurCreate(SecureBase, CreateView):
+    model = Utilisateur
+    form_class = UtilisateurForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class UtilisateurUpdate(SecureBase, UpdateView):
+    model = Utilisateur
+    form_class = UtilisateurForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class UtilisateurDelete(SecureBase, DeleteView):
+    model = Utilisateur
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class PieceJointeList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class PieceJointeDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class PieceJointeCreate(SecureBase, CreateView):
+    model = PieceJointe
+    form_class = PieceJointeForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class PieceJointeUpdate(SecureBase, UpdateView):
+    model = PieceJointe
+    form_class = PieceJointeForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class PieceJointeDelete(SecureBase, DeleteView):
+    model = PieceJointe
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class RecetteList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class RecetteDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class RecetteCreate(SecureBase, CreateView):
+    model = Recette
+    form_class = RecetteForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class RecetteUpdate(SecureBase, UpdateView):
+    model = Recette
+    form_class = RecetteForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class RecetteDelete(SecureBase, DeleteView):
+    model = Recette
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class DepenseList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class DepenseDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class DepenseCreate(SecureBase, CreateView):
+    model = Depense
+    form_class = DepenseForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class DepenseUpdate(SecureBase, UpdateView):
+    model = Depense
+    form_class = DepenseForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class DepenseDelete(SecureBase, DeleteView):
+    model = Depense
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+
+
+
+class AffaireAvocatList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class AffaireAvocatDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class AffaireAvocatCreate(SecureBase, CreateView):
+    model = AffaireAvocat
+    form_class = AffaireAvocatForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AffaireAvocatUpdate(SecureBase, UpdateView):
+    model = AffaireAvocat
+    form_class = AffaireAvocatForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AffaireAvocatDelete(SecureBase, DeleteView):
+    model = AffaireAvocat
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class AffairePartieList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class AffairePartieDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class AffairePartieCreate(SecureBase, CreateView):
+    model = AffairePartie
+    form_class = AffairePartieForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AffairePartieUpdate(SecureBase, UpdateView):
+    model = AffairePartie
+    form_class = AffairePartieForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class AffairePartieDelete(SecureBase, DeleteView):
+    model = AffairePartie
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
+class PartieList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class PartieDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
+class PartieCreate(SecureBase, CreateView):
+    model = Partie
+    form_class = PartieForm
+    permission_required = 'cabinet.add_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get('affaire')
+        if affaire_id and affaire_id.isdigit():
+            # Préremplir la dernière decision de l'affaire si dispo
+            dec = Decision.objects.filter(affaire_id=int(affaire_id)).order_by('-date_prononce', '-pk').first()
+            if dec:
+                initial['decision'] = dec
+        return initial
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ حفظ التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حفظ التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            form = self.form_class(initial=self.get_initial())
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class PartieUpdate(SecureBase, UpdateView):
+    model = Partie
+    form_class = PartieForm
+    permission_required = 'cabinet.change_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(self.request, 'تمّ تحديث التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ تحديث التبليغ.', _affaire_pk_from_step(self.object))
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            form = self.form_class(instance=self.object)
+            return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل تبليغ', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+class PartieDelete(SecureBase, DeleteView):
+    model = Partie
+    permission_required = 'cabinet.delete_notification'
+    success_url = reverse_lazy('cabinet:notification_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        affaire_pk = _affaire_pk_from_step(self.object)
+        self.object.delete()
+        messages.success(request, 'تمّ حذف التبليغ.')
+        if self.htmx():
+            return self.success_json('تمّ حذف التبليغ.', affaire_pk)
+        return redirect(self.success_url)
+
+    def get(self, request, *args, **kwargs):
+        if self.htmx():
+            self.object = self.get_object()
+            return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
+        return super().get(request, *args, **kwargs)
+
+
 # -------------------------------------------------------------
 # VoieDeRecours / Execution — même motif, raccourcis
 # -------------------------------------------------------------
+
+class VoieDeRecoursList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class VoieDeRecoursDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
+
 class VoieDeRecoursCreate(SecureBase, CreateView):
     model = VoieDeRecours
     form_class = VoieDeRecoursForm
@@ -702,6 +1529,16 @@ class VoieDeRecoursDelete(SecureBase, DeleteView):
             return self.render_modal('modals/_confirm.html', {'title': 'تأكيد الحذف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
+
+class ExecutionList(SecureBase, ListView):
+    model = Audience
+    template_name = 'avocat/notification_list.html'
+    permission_required = 'cabinet.view_audience'
+
+class ExecutionDetail(SecureBase, DetailView):
+    model = Audience
+    template_name = 'avocat/notification_detail.html'
+    permission_required = 'cabinet.view_audience'
 
 class ExecutionCreate(SecureBase, CreateView):
     model = Execution

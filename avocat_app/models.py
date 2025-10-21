@@ -2,6 +2,12 @@ from uuid import uuid4
 from django.db import models
 from django.core.validators import RegexValidator, MinValueValidator, EmailValidator
 from django.utils.translation import gettext_lazy as _
+from uuid import uuid4
+import secrets
+from datetime import timedelta
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
 
 # =============================================
 # Validateurs — فرض إدخال عربي للمحتوى الظاهر للمستخدم
@@ -516,18 +522,63 @@ class JournalActivite(models.Model):
         return f"{self.action} — {self.objet} @ {self.date_action:%Y-%m-%d %H:%M}"
 
 
-class AuthToken:
+
+# إذا كان لديك موديل Utilisateur هو الـUser الفعلي:
+# settings.AUTH_USER_MODEL يجب أن يشير إليه (مثلاً "avocat_app.Utilisateur")
+
+class AuthToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE, verbose_name='المستخدم')
+    # FK إلى المستخدم — اسم الحقل لديك "utilisateur"
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='المستخدم', related_name="tokens")
     token = models.CharField(max_length=255, unique=True, verbose_name='رمز المصادقة')
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     date_expiration = models.DateTimeField(verbose_name='تاريخ الانتهاء')
+    # لإدارة عدم النشاط:
+    last_seen = models.DateTimeField(default=timezone.now, verbose_name='آخر نشاط')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    user_agent = models.CharField(max_length=256, null=True, blank=True)
+    ip_addr = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
-        db_table = 'auth_token'
-        verbose_name = 'رمز مصادقة'
-        verbose_name_plural = 'رموز المصادقة'
-        indexes = [models.Index(fields=['date_expiration'])]
+        indexes = [
+            models.Index(fields=["token"]),
+            models.Index(fields=["user", "is_active"]),
+        ]
+        verbose_name = "رمز مصادقة"
+        verbose_name_plural = "رموز المصادقة"
+
     def __str__(self):
-        return f"Token for {self.utilisateur.nom_complet} — Expires on {self.date_expiration:%Y-%m-%d %H:%M}"
-    
+        return f"{self.user} — {self.token[:8]}…"
+
+    @classmethod
+    def issue(cls, user, request=None):
+        """
+        إنشاء توكن جديد للمستخدم مع انتهاء بعد مهلة الخمول (5 دقائق افتراضيًا).
+        """
+        idle_seconds = int(getattr(settings, "TOKEN_IDLE_TIMEOUT_SECONDS", 300))
+        now = timezone.now()
+        tok = secrets.token_urlsafe(48)
+        return cls.objects.create(
+            user=user,
+            token=tok,
+            date_expiration=now + timedelta(seconds=idle_seconds),
+            last_seen=now,
+            is_active=True,
+            user_agent=(request.META.get("HTTP_USER_AGENT")[:256] if request else None),
+            ip_addr=(request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR")) if request else None,
+        )
+
+    def touch(self):
+        """
+        تحديث آخر نشاط وإعادة ضبط تاريخ الانتهاء بناءً على عدم النشاط.
+        """
+        idle_seconds = int(getattr(settings, "TOKEN_IDLE_TIMEOUT_SECONDS", 300))
+        now = timezone.now()
+        self.last_seen = now
+        self.date_expiration = now + timedelta(seconds=idle_seconds)
+        self.save(update_fields=["last_seen", "date_expiration"])
+
+    def revoke(self):
+        if self.is_active:
+            self.is_active = False
+            self.save(update_fields=["is_active"])

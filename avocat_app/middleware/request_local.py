@@ -1,4 +1,4 @@
-# cabinet/middleware/request_local.py
+# avocat_app/middleware/request_local.py
 from threading import local
 
 _request_state = local()

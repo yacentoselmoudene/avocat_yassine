@@ -1,4 +1,4 @@
-# cabinet/services/token_utils.py
+# avocat_app/services/token_utils.py
 from __future__ import annotations
 
 from typing import Optional
@@ -70,3 +70,73 @@ def is_token_expired(token: AuthToken) -> bool:
         return True
     idle_seconds = (timezone.now() - token.last_seen).total_seconds()
     return idle_seconds > IDLE_TIMEOUT
+
+def touch_token(token: AuthToken) -> None:
+    """
+    يُحدّث last_seen للتوكن إلى الوقت الحالي.
+    يُستخدم لإعادة تعيين مهلة الخمول.
+    """
+    token.last_seen = timezone.now()
+    token.save(update_fields=["last_seen"])
+
+def should_touch_token(token: AuthToken) -> bool:
+    """
+    يحدد ما إذا كان يجب تحديث last_seen للتوكن بناءً على
+    الحد الأدنى لفاصل اللمس لتقليل عمليات الكتابة.
+    """
+    min_interval = int(getattr(settings, "TOKEN_MIN_TOUCH_INTERVAL_SECONDS", 60))
+    idle_seconds = (timezone.now() - token.last_seen).total_seconds()
+    return idle_seconds >= min_interval
+
+def issue_token_for_user(user, request: Optional[HttpRequest] = None) -> AuthToken:
+    """
+    يصدر توكنًا جديدًا للمستخدم المحدد.
+    يمكن ربط الطلب بالتوكن لأغراض التدقيق.
+    """
+    token = AuthToken.objects.create(user=user, issued_ip=get_client_ip(request) if request else None)
+    return token
+
+def revoke_token(token: AuthToken) -> None:
+    """يعطل التوكن المحدد."""
+    token.is_active = False
+    token.save(update_fields=["is_active"])
+
+def revoke_all_tokens_for_user(user) -> None:
+    """يعطل جميع التوكنات النشطة للمستخدم المحدد."""
+    AuthToken.objects.filter(user=user, is_active=True).update(is_active=False)
+
+def get_token_by_key(token_key: str) -> Optional[AuthToken]:
+    """يسترجع التوكن بواسطة المفتاح إن وُجد."""
+    try:
+        return AuthToken.objects.get(key=token_key)
+    except AuthToken.DoesNotExist:
+        return None
+
+def validate_token(token: AuthToken) -> bool:
+    """
+    يتحقق من صلاحية التوكن:
+      - نشط (is_active=True)
+      - غير منتهي الصلاحية (حسب مهلة الخمول)
+    """
+    return token.is_active and not is_token_expired(token)
+
+def authenticate_request(request: HttpRequest) -> Optional[AuthToken]:
+    """
+    يحاول مصادقة الطلب باستخدام توكن من الكوكيز.
+    يعيد التوكن إذا كان صالحًا، وإلا يعيد None.
+    """
+    token_key = get_token_from_request(request)
+    if not token_key:
+        return None
+    token = get_token_by_key(token_key)
+    if token and validate_token(token):
+        return token
+    return None
+
+def refresh_token_if_needed(token: AuthToken) -> None:
+    """
+    يُحدّث last_seen للتوكن إذا لزم الأمر بناءً على
+    الحد الأدنى لفاصل اللمس لتقليل عمليات الكتابة.
+    """
+    if should_touch_token(token):
+        touch_token(token)

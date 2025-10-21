@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row g-3">
+
+    <!-- بطاقات الإحصاءات -->
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">عدد القضايا الكلي</div>
+            <div class="fs-3 fw-bold">{{ stats.affaires_total }}</div>
+          </div>
+          <i class="bi bi-folder2-open fs-1 text-primary"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">قضايا جارية</div>
+            <div class="fs-3 fw-bold">{{ stats.affaires_ouvertes }}</div>
+          </div>
+          <i class="bi bi-activity fs-1 text-success"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">جلسات قادمة (14 يوم)</div>
+            <div class="fs-3 fw-bold">{{ stats.audiences_a_venir }}</div>
+          </div>
+          <i class="bi bi-calendar-event fs-1 text-warning"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- الجلسات القادمة -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light fw-bold">الجلسات القادمة</div>
+        <ul class="list-group list-group-flush">
+          {% for a in next_audiences %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <i class="bi bi-calendar3 ms-1 text-primary"></i>
+              {{ a.get_type_audience_display }} — {{ a.affaire.reference_interne }}
+            </span>
+            <span class="badge bg-secondary">{{ a.date_audience }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted text-center">لا توجد جلسات قريبة</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- القضايا الأخيرة -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light fw-bold">أحدث القضايا</div>
+        <ul class="list-group list-group-flush">
+          {% for f in recent_affaires %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <i class="bi bi-folder2 text-success ms-1"></i>
+              {{ f.reference_interne }} — {{ f.juridiction.nom }}
+            </span>
+            <span class="badge bg-info">{{ f.get_type_affaire_display }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted text-center">لا توجد قضايا حديثة</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- ملخص مالي -->
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-light fw-bold">الملخص المالي (الشهر الحالي)</div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-6 mb-2">
+              <div class="text-muted small">المصاريف</div>
+              <div class="fs-4 text-danger">{{ finance.depenses_mois }} درهم</div>
+            </div>
+            <div class="col-md-6 mb-2">
+              <div class="text-muted small">الإيرادات</div>
+              <div class="fs-4 text-success">{{ finance.recettes_mois }} درهم</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

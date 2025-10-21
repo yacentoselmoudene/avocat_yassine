@@ -1,4 +1,4 @@
-# cabinet/services/audit_utils.py
+# avocat_app/services/audit_utils.py
 from django.forms.models import model_to_dict
 from django.db.models import Model
 from django.conf import settings

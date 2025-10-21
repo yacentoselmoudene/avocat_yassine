@@ -15,6 +15,21 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# === ملفات ثابتة (CSS / JS / صور) ===
+STATIC_URL = '/static/'
+
+# في وضع التطوير:
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',   # مجلدك المحلي الذي يحتوي ملفاتك
+]
+
+# في الإنتاج: سيتم نسخ كل شيء هنا بعد collectstatic
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# === ملفات الميديا (صور مرفوعة) ===
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -49,6 +64,9 @@ TOKEN_MIN_TOUCH_INTERVAL_SECONDS = 60  # لتقليل الكتابة
 AUTH_TOKEN_COOKIE_SECURE = True
 AUTH_TOKEN_COOKIE_HTTPONLY = True
 AUTH_TOKEN_COOKIE_SAMESITE = "Lax"
+LOGIN_URL = "/auth/login/"
+LOGIN_REDIRECT_URL = "/"      # بعد الدخول -> لوحة التحكم
+LOGOUT_REDIRECT_URL = "/auth/login/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -60,6 +78,7 @@ MIDDLEWARE = [
     "avocat_app.middleware.request_local.RequestLocalMiddleware", # <— جديد: يضع request في threadlocal
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'django.contrib.messages.middleware.MessageMiddleware',  # ✅ ici
 ]
 
 ROOT_URLCONF = 'avocat_yassine.urls'
@@ -137,7 +156,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
