@@ -12,7 +12,7 @@ urlpatterns = [
     # يمكن تخصيص قوالب تسجيل الدخول/الخروج عبر:
     # templates/registration/login.html
     # templates/registration/logged_out.html
-
+    path("ref/", include("avocat_app.urls_ref")),  # toutes les pages référentiel sous /ref/
 
     # تطبيق المكتب (كل صفحات CRUD والمودالات HTMX…)
     path("", include(("avocat_app.urls", "cabinet"), namespace="cabinet")),

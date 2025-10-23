@@ -2,52 +2,62 @@
 {% extends 'generic/detail.html' %}
 {% block title %}تفاصيل القضية{% endblock %}
 {% block page_title %}تفاصيل القضية{% endblock %}
+
 {% block header_actions %}
   <div class="btn-group me-2" role="group">
     <a href="?view=table" class="btn btn-outline-secondary">جدول</a>
     <a href="?view=cards" class="btn btn-outline-secondary">بطاقات</a>
   </div>
+
+  <!-- تعديل القضية (يفتح نموذج التعديل) -->
   <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:affaire_update' object.pk %}" hx-target="#modalBody" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+     hx-get="{% url 'cabinet:affaire_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
-  <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:affaire_create' %}?parent={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
-    <i class="bi bi-plus-circle ms-1"></i> إضافة ملف مرتبط
-  </a>
-  <a href="#" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:audience_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + جلسة -->
+  <a href="#" class="btn btn-warning {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:audience_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-calendar-plus ms-1"></i> جلسة
   </a>
-  <a href="#" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:mesure_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + إجراء -->
+  <a href="#" class="btn btn-outline-primary {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:mesure_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-list-check ms-1"></i> إجراء
   </a>
-  <a href="#" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:expertise_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + خبرة -->
+  <a href="#" class="btn btn-outline-dark {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:expertise_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-eyeglasses ms-1"></i> خبرة
   </a>
-  <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:decision_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + حكم -->
+  <a href="#" class="btn btn-outline-secondary {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:decision_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-hammer ms-1"></i> حكم
   </a>
+
+  <!-- + تبليغ -->
   <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:notification_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+     hx-get="{% url 'cabinet:notification_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-envelope-paper ms-1"></i> تبليغ
   </a>
-  <a href="#" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:voiederecours_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + طعن -->
+  <a href="#" class="btn btn-outline-success {% if lock_predecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:voiederecours_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-arrow-90deg-left ms-1"></i> طعن
   </a>
-  <a href="#" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:execution_create' %}?affaire={{ object.pk }}" hx-target="#modalBody" hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'>
+
+  <!-- + تنفيذ -->
+  <a href="#" class="btn btn-outline-success {% if lock_predecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:execution_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-gear ms-1"></i> تنفيذ
   </a>
-  <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:affaire_update' object.pk %}" hx-target="#modalBody" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <i class="bi bi-diagram-3 ms-1"></i> + خطوة (مُرشد)
-  </a>
 {% endblock %}
+
 {% block detail_body %}
   <dl class="row">
     <dt class="col-sm-3">المرجع</dt><dd class="col-sm-9">{{ object.reference_interne }}</dd>
@@ -56,23 +66,30 @@
     <dt class="col-sm-3">المحكمة</dt><dd class="col-sm-9">{{ object.juridiction }}</dd>
     <dt class="col-sm-3">تاريخ الفتح</dt><dd class="col-sm-9">{{ object.date_ouverture }}</dd>
   </dl>
-  {% include 'affaires/_timeline.html' %}
+  <div
+  hx-get="{% url 'cabinet:affaire_timeline' object.pk %}"
+  hx-trigger="load"
+  hx-target="this"
+  hx-swap="outerHTML">
+  <!-- placeholder pendant le chargement -->
+  <div class="text-center text-secondary py-3">جاري تحميل الجدول الزمني…</div>
+</div>
 {% endblock %}
+
 {% block detail_actions %}
+  <!-- زر إضافة خطوة سريعة (جلسة كافتراض) -->
   <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#mainModal"
-          hx-get="{% url 'cabinet:audience_create' %}?affaire={{ object.pk }}" hx-target="#modalBody">
+          hx-get="{% url 'cabinet:audience_create' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-plus-circle ms-1"></i> إضافة خطوة سريعة
   </button>
+
   <button class="btn btn-outline-primary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#mainModal"
           hx-get="{% url 'cabinet:affaire_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل القضية
   </button>
+
   <button class="btn btn-outline-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#mainModal"
           hx-get="{% url 'cabinet:affaire_delete' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-trash ms-1"></i> حذف
   </button>
 {% endblock %}
-
-{# Tip: to load the multi-step wizard instead of a single form, you can do: #}
-{# <a data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:affaire_detail' object.pk %}" hx-target="#modalBody" hx-select="#wizard">+ خطوة (مرشد)</a> #}
-{# and then include below a hidden <div id="wizard"> with {% include 'affaires/_step_selector.html' %} #}

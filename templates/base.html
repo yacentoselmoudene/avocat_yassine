@@ -1,3 +1,4 @@
+
 {# ============================================================= #}
 {# FILE: templates/base.html                                         #}
 {# Bootstrap 5 RTL, واجهة عربية حديثة، كتل قابلة للامتداد           #}
@@ -12,13 +13,18 @@
     <title>{% block title %}لوحة تسيير مكتب المحاماة{% endblock %}</title>
     <!-- Bootstrap 5 RTL -->
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
       rel="stylesheet" >
       <!-- Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- خط عربي مناسب -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
+    <!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<!-- Thème Bootstrap 5 (optionnel pour un meilleur rendu) -->
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+      <style>
       body { font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
       .navbar-brand img { height: 36px; }
       .brand-subtitle { font-size: .8rem; opacity:.75; }
@@ -29,7 +35,24 @@
       .page-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
       .page-header .breadcrumb { --bs-breadcrumb-divider: '›'; }
       .card-hover:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.08); }
-    </style>
+    .select2-container--bootstrap-5 .select2-selection {
+  border-radius: 0.75rem;
+  min-height: calc(2.25rem + 2px);
+  text-align: right;
+}
+.select2-selection__choice__remove {
+  float: left; /* place la croix à gauche dans le mode RTL */
+}
+
+/* style.css */
+.select2-container--bootstrap-5 .select2-selection__choice {
+  padding-right: .75rem;
+}
+.select2-container--bootstrap-5 .select2-selection__choice__remove {
+  margin-left: .5rem; /* espace pour RTL */
+  font-size: 1rem;
+}
+      </style>
     {% block extra_css %}{% endblock %}
   </head>
   <body class="bg-light">
@@ -50,7 +73,35 @@
           </button>
           <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-              <li class="nav-item dropdown">
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="paramDropdown"
+                     role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-gear ms-1"></i> الإعدادات
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-end text-end" aria-labelledby="paramDropdown">
+                    <li><a class="dropdown-item" href="{% url 'cabinet:typedepense_list' %}">
+                      <i class="bi bi-cash-coin ms-1 text-secondary"></i> أنواع المصاريف
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'cabinet:typerecette_list' %}">
+                      <i class="bi bi-wallet2 ms-1 text-success"></i> أنواع المداخيل
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'cabinet:roleutilisateur_list' %}">
+                      <i class="bi bi-person-badge ms-1 text-primary"></i> أدوار المستخدمين
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'cabinet:statuttache_list' %}">
+                      <i class="bi bi-list-check ms-1 text-warning"></i> حالات المهام
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'cabinet:typealerte_list' %}">
+                      <i class="bi bi-bell ms-1 text-danger"></i> أنواع التنبيهات
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-muted" href="#">
+                      <i class="bi bi-gear-wide-connected ms-1"></i> إعدادات أخرى (لاحقًا)
+                    </a></li>
+                  </ul>
+                </li>
+
+                <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   القضايا
                 </a>
@@ -103,6 +154,7 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:alerte_list' %}"><i class="bi bi-bell ms-1"></i> التنبيهات</a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="/admin/"><i class="bi bi-speedometer2 ms-1"></i> إدارة النظام</a></li>
+                    <li><a class="dropdown-item" href="{% url 'authui:logout' %}"><i class="bi bi-box-arrow-left ms-1"></i> خروج</a></li>
                 </ul>
               </li>
             </ul>
@@ -251,8 +303,80 @@
     } catch (e) {}
   });
 </script>
+        <script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+  document.body.addEventListener('htmx:configRequest', function (evt) {
+    const token = getCookie('csrftoken');
+    if (token) evt.detail.headers['X-CSRFToken'] = token;
+  });
+</script>
+        <script>
+  // Si le middleware renvoie 401/redirect (AJAX/HTMX), on redirige vers /auth/login/
+  document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
+    if (evt.detail.xhr && evt.detail.xhr.status === 401) {
+      try {
+        const data = JSON.parse(evt.detail.xhr.responseText || "{}");
+        if (data.redirect) window.location.href = data.redirect;
+      } catch (e) {}
+    }
+  });
+
+  // Après réponse HTMX OK, on traite le JSON de succès (toast/refresh…)
+  document.body.addEventListener('htmx:afterOnLoad', function (evt) {
+    try {
+      const json = JSON.parse(evt.detail.xhr.responseText || "{}");
+      if (json && json.ok) {
+        const msg = json.message || json.html || "تمت العملية.";
+        // TODO: afficher ton toast ici si tu veux
+        if (json.refreshTarget && json.refreshUrl) {
+          htmx.ajax('GET', json.refreshUrl, { target: json.refreshTarget, swap: 'outerHTML' });
+        }
+        if (json.redirect) window.location.href = json.redirect;
+      }
+    } catch (e) {}
+  });
+</script>
+        <script>
+// Initialisation lors du chargement initial
+document.addEventListener("DOMContentLoaded", function() {
+  initSelect2(document);
+});
+
+// Réinitialisation automatique après tout échange HTMX
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+  initSelect2(evt.target);
+});
+
+function initSelect2(context){
+  $(context).find('select').each(function(){
+    const $el = $(this);
+    if ($el.data('select2')) return; // ← empêche double init
+    $el.select2({
+      theme:'bootstrap-5', dir:'rtl', width:'100%',
+      allowClear:true, placeholder:$el.attr('placeholder')||'اختر...',
+      closeOnSelect: !$el.prop('multiple'),
+      language:{ noResults:()=>"لا توجد نتائج", searching:()=>"جاري البحث..." }
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', ()=> initSelect2(document));
+document.body.addEventListener('htmx:afterSwap', (e)=> initSelect2(e.target));
+
+</script>
+
+
 
     {% endblock %}
+  <!-- jQuery (nécessaire pour Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+
   </body>
 </html>
 {# ============================================================= #}

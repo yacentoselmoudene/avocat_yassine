@@ -1,11 +1,14 @@
 {# FILE: templates/generic/form.html                                  #}
 {# إنشاء/تعديل — حقول نموذج متوافقة مع Bootstrap                     #}
 {# ============================================================= #}
-{% extends 'base.html' %}
+
+{% load form_extras %}
 {% block title %}{{ page_title|default:'نموذج' }}{% endblock %}
 {% block page_title %}{{ page_title|default:'نموذج' }}{% endblock %}
 {% block content %}
-  <form method="post" enctype="multipart/form-data" class="card card-hover">
+    <form method="post" enctype="multipart/form-data" class="card card-hover"
+      hx-post="{{ request.path }}" 
+      hx-target="#modalBody" hx-swap="outerHTML">
     <div class="card-body">
       {% csrf_token %}
       {% if form.non_field_errors %}

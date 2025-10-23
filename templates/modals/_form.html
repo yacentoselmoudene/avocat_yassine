@@ -1,22 +1,27 @@
-{# FILE: templates/modals/_form.html #}
-<form method="post" action="{{ action }}" enctype="multipart/form-data"
-      hx-post="{{ action }}" hx-target="#modalBody" hx-swap="innerHTML">
+{# templates/modals/_form.html #}
+<form method="post"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody"
+      hx-swap="outerHTML">
   {% csrf_token %}
+
   {% if form.non_field_errors %}
     <div class="alert alert-danger">{{ form.non_field_errors }}</div>
   {% endif %}
-  <div class="row g-3">
-    {% for field in form %}
-      <div class="col-12 {% if field.field.widget.input_type != 'checkbox' %}col-md-6{% endif %}">
-        <label class="form-label">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-      </div>
-    {% endfor %}
-  </div>
-  <div class="mt-4 d-flex justify-content-between">
-    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إغلاق</button>
-    <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle ms-1"></i> حفظ</button>
+
+  {% for field in form.visible_fields %}
+    <div class="mb-3">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}
+        <div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+    <button type="submit" class="btn btn-primary">حفظ</button>
   </div>
 </form>

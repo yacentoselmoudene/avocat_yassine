@@ -2,7 +2,10 @@
 {% extends 'base.html' %}
 {% block title %}المحاكم{% endblock %}
 {% block page_title %}المحاكم{% endblock %}
-{% block header_actions %}<a href="{% url 'cabinet:juridiction_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle ms-1"></i> إضافة جهة</a>{% endblock %}
+{% block header_actions %}
+    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:juridiction_create' %}" hx-target="#modalBody"><i class="bi bi-plus-circle ms-1"></i> + محكمةٍ</a>
+   {% endblock %}
 {% block content %}
 <div class="card card-hover">
   <div class="table-responsive">

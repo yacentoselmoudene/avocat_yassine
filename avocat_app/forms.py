@@ -6,7 +6,11 @@ from django.contrib.auth.forms import AuthenticationForm
 from .models import (
     Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
-    Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte
+    Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte, Expert,
+    TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte,
+    TypeAffaire, StatutAffaire, TypeMesure, TypeAudience,
+    TypeExecution, StatutExecution,
+    StatutMesure
 )
 
 # ---------- Base mixin: RTL + Bootstrap + تنظيف مدخلات ----------
@@ -188,9 +192,8 @@ class PartieForm(ArabicBootstrapFormMixin):
 class AudienceForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Audience
-        fields = "__all__"
+        fields = ["type_audience", "date_audience", "resultat"]  # pas "affaire" ici
         labels = {
-            "affaire": "القضية",
             "type_audience": "نوع الجلسة",
             "date_audience": "تاريخ الجلسة",
             "resultat": "النتيجة",
@@ -202,7 +205,8 @@ class MesureForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Mesure
         fields = "__all__"
-        labels = {"audience": "الجلسة", "type_mesure": "نوع الإجراء", "statut": "الحالة", "notes": "ملاحظات"}
+        labels = {"audience": "الجلسة", "type_mesure": "نوع الإجراء", "statut": "الحالة", "notes": "ملاحظات", "date_ordonnee": "تاريخ الأمر"}
+        widgets = {"date_ordonnee": forms.DateInput(attrs={"type": "date"})}
 
 class ExpertiseForm(ArabicBootstrapFormMixin):
     class Meta:
@@ -221,9 +225,9 @@ class ExpertiseForm(ArabicBootstrapFormMixin):
 class DecisionForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Decision
-        fields = "__all__"
+        fields = ["numero_decision", "date_prononce", "resumé", "susceptible_recours"]
         labels = {
-            "affaire": "القضية", "numero_decision": "رقم الحكم",
+            "numero_decision": "رقم الحكم",
             "date_prononce": "تاريخ النطق", "resumé": "ملخص", "susceptible_recours": "قابل للطعن",
         }
         widgets = {"date_prononce": forms.DateInput(attrs={"type": "date"})}
@@ -291,9 +295,74 @@ class TacheForm(ArabicBootstrapFormMixin):
         labels = {"titre": "العنوان", "description": "الوصف", "affaire": "القضية", "assigne_a": "المكلّف", "echeance": "الأجل", "statut": "الحالة"}
         widgets = {"echeance": forms.DateInput(attrs={"type": "date"})}
 
+class ExpertForm(ArabicBootstrapFormMixin):
+    class Meta:
+        model = Expert
+        fields = "__all__"
+        labels = {"nom_complet": "الاسم", "email": "البريد", "telephone": "الهاتف", "specialite": "التخصص", "adresse": "العنوان"}
+
 class AlerteForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Alerte
         fields = "__all__"
         labels = {"type_alerte": "النوع", "reference_id": "المعرّف", "date_alerte": "التاريخ", "moyen": "القناة", "destinataire": "المرسل إليه", "message": "النص"}
         widgets = {"date_alerte": forms.DateInput(attrs={"type": "date"})}
+
+class ArabicModelForm(forms.ModelForm):
+    """Base: ajoute RTL + form-control automatiquement."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for f in self.fields.values():
+            f.widget.attrs.setdefault("class", "form-control")
+            f.widget.attrs.setdefault("dir", "rtl")
+            if isinstance(f.widget, forms.Textarea):
+                f.widget.attrs.setdefault("rows", 3)
+
+class LibelleForm(ArabicModelForm):
+    class Meta:
+        fields = ["libelle"]
+        labels = {"libelle": "الاسم"}
+
+# Spécifiques (tous identiques mais explicitement typés si besoin d’extensions futures)
+class TypeDepenseForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeDepense
+
+class TypeRecetteForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeRecette
+
+class RoleUtilisateurForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = RoleUtilisateur
+
+class StatutTacheForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = StatutTache
+
+class TypeAlerteForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeAlerte
+class TypeAffaireForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeAffaire
+class StatutAffaireForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = StatutAffaire
+
+class TypeMesureForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeMesure
+class TypeAudienceForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeAudience
+
+class TypeExecutionForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeExecution
+class StatutExecutionForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = StatutExecution
+class StatutMesureForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = StatutMesure

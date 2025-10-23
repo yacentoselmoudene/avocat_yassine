@@ -1,14 +1,16 @@
 from uuid import uuid4
 from django.db import models
+from .models_base import TimeStampedSoftDeleteModel
 from django.core.validators import RegexValidator, MinValueValidator, EmailValidator
+from django.db.models import DO_NOTHING
 from django.utils.translation import gettext_lazy as _
 from uuid import uuid4
 import secrets
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-
+from django.urls import reverse
 # =============================================
 # Validateurs — فرض إدخال عربي للمحتوى الظاهر للمستخدم
 # =============================================
@@ -24,157 +26,365 @@ arabic_name_validator = RegexValidator(
     message=_("الاسم يجب أن يكون بالعربية."),
 )
 
-# =============================================
-# Choices — القيم المخزّنة بالفرنسية، التسميات المعروضة بالعربية
-# =============================================
-class TypeAffaire(models.TextChoices):
-    PENAL = 'Pénal', 'جنائي'
-    PENAL_FLAGRANT = 'Pénal-Flagrant', 'جنائي تلبّسي'
-    PENAL_CONTRAVENTION = 'Pénal-Contravention', 'مخالفة'
-    PENAL_ROUTIER = 'Pénal-Routier', 'جنح السير'
-    CIVIL = 'Civil', 'مدني'
-    LOCATION = 'Location', 'كراء'
-    FAMILLE = 'Famille', 'أسرة'
-    SOCIAL = 'Social', 'اجتماعي'
-    COMMERCIAL = 'Commercial', 'تجاري'
-    AUTRE = 'Autre', 'أخرى'
+class AuditAction(models.TextChoices):
+    CREATE = "CREATE", "إنشاء"
+    UPDATE = "UPDATE", "تعديل"
+    DELETE = "DELETE", "حذف"
+    LOGIN  = "LOGIN",  "دخول"
+    LOGOUT = "LOGOUT", "خروج"
+    ATTACH = "ATTACH", "إرفاق ملف"
+    EMAIL  = "EMAIL",  "إرسال بريد"
+    SMS    = "SMS",    "إرسال SMS"
+    EXPORT = "EXPORT", "تصدير"
+    IMPORT = "IMPORT", "استيراد"
+    OTHER  = "OTHER",  "أخرى"
+
+class AuditLog(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                              on_delete=models.SET_NULL, related_name="audit_entries")
+    action = models.CharField(max_length=16, choices=AuditAction.choices)
+    app_label = models.CharField(max_length=80)
+    model = models.CharField(max_length=80)
+    object_pk = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    object_repr = models.CharField(max_length=255, blank=True)
+    changes = models.JSONField(blank=True, null=True)   # {field: [old, new]}
+    path = models.CharField(max_length=255, blank=True)
+    method = models.CharField(max_length=8, blank=True)
+    status_code = models.IntegerField(null=True, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=256, null=True, blank=True)
+    session_key = models.CharField(max_length=40, null=True, blank=True)
+    token_id = models.CharField(max_length=36, null=True, blank=True)
+
+    class Meta:
+        ordering = ("-timestamp",)
+        indexes = [
+            models.Index(fields=["app_label", "model", "object_pk"]),
+            models.Index(fields=["actor", "action", "timestamp"]),
+        ]
+
+    def __str__(self):
+        return f"{self.timestamp:%Y-%m-%d %H:%M} {self.action} {self.app_label}.{self.model}#{self.object_pk}"
 
 
-class StatutAffaire(models.TextChoices):
-    OUVERTE = 'Ouverte', 'مفتوحة'
-    EN_AUDIENCE = 'En audience', 'في الجلسات'
-    EN_DELIBERE = 'En délibéré', 'في المداولة'
-    JUGEE = 'Jugée', 'محكوم فيها'
-    EN_NOTIFICATION = 'En notification', 'قيد التبليغ'
-    EN_RECOURS = 'En recours', 'قيد الطعن'
-    EN_EXECUTION = 'En exécution', 'قيد التنفيذ'
-    CLOTUREE = 'Clôturée', 'مختتمة'
-    CLASSEE = 'Classée', 'محفوظة'
+class TypeAffaire(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typeaffaire_libelle_alive",
+            )
+        ]
 
-class TypeJuridiction(models.TextChoices):
-    TPI = 'Tribunal de Première Instance', 'المحكمة الابتدائية'
-    CA = "Cour d’Appel", 'محكمة الاستئناف'
-    CC = 'Cour de Cassation', 'محكمة النقض'
-    AUTRE = 'Autre', 'جهة أخرى'
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
+class StatutExecution(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
-class TypeAudience(models.TextChoices):
-    MISE_EN_ETAT = 'Mise en état', 'جلسة تعيين/تهيئة'
-    PLAIDOIRIE = 'Plaidoirie', 'مرافعة'
-    DEBAT = 'Débat', 'مناقشة'
-    DELIBERE = 'Délibéré', 'مداولة'
-    PRONONCE = 'Prononcé', 'جلسة النطق'
-    REFERES = 'Référé', 'استعجالي'
-    INJONCTION = 'Injonction', 'أمر بالأداء/إنذار'
-    AUTRE = 'Autre', 'أخرى'
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_statutexecution_libelle_alive",
+            )
+        ]
 
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
-class ResultatAudience(models.TextChoices):
-    REPORT = 'Report', 'تأجيل'
-    MESURE = 'Mesure ordonnée', 'اتخاذ إجراء'
-    CLOTURE_PLAIDOIRIES = 'Clôture plaidoiries', 'اختتام المرافعات'
-    JUGEMENT = 'Jugement prononcé', 'صدر الحكم'
-    SANS_SUITE = 'Sans suite', 'بدون متابعة'
+class TypeExecution(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typeexecution_libelle_alive",
+            )
+        ]
 
-class TypeMesure(models.TextChoices):
-    ENQUETE = 'Enquête', 'بحث'
-    EXPERTISE = 'Expertise', 'خبرة'
-    INSPECTION = 'Inspection', 'معاينة'
-    INTERROGATOIRE = 'Interrogatoire', 'استجواب'
-    TEMOIGNAGE = 'Témoignage', 'شهادة'
-    CONFRONTATION = 'Confrontation', 'مواجهة'
-    AUTRE = 'Autre', 'إجراء آخر'
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
+class StatutRecours(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
-class StatutMesure(models.TextChoices):
-    ORDONNEE = 'Ordonnée', 'مأمور بها'
-    EN_COURS = 'En cours', 'جارٍ'
-    DEPOSEE = 'Déposée', 'أودِع التقرير'
-    CONTRE_EXPERTISE = 'Contre-expertise', 'خبرة مضادّة'
-    CLOTUREE = 'Clôturée', 'مختتمة'
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_statutrecours_libelle_alive",
+            )
+        ]
 
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
-class TypeRecours(models.TextChoices):
-    APPEL = 'Appel', 'استئناف'
-    OPPOSITION = 'Opposition', 'تعرض'
-    CASSATION = 'Cassation', 'نقض'
-    RETRACTATION = 'Rétractation', 'مراجعة'
-    AUTRE = 'Autre', 'طعن آخر'
+class TypeRecours(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typerecours_libelle_alive",
+            )
+        ]
 
-class StatutRecours(models.TextChoices):
-    EN_COURS = 'En cours', 'جارٍ'
-    REJETE = 'Rejeté', 'مرفوض'
-    RECU = 'Reçu', 'مقبول شكلاً'
-    JUGE = 'Jugé', 'محكوم'
-    CLOTURE = 'Clôturé', 'مختتم'
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
+class StatutMesure(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
-class TypeExecution(models.TextChoices):
-    MONETAIRE = 'Monétaire', 'تنفيذ مالي'
-    EXPULSION = 'Expulsion/Évacuation', 'إفراغ/إخلاء'
-    SAISIE = 'Saisie', 'حجز'
-    AUTRE = 'Autre', 'تنفيذ آخر'
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_statutmesure_libelle_alive",
+            )
+        ]
 
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
-class StatutExecution(models.TextChoices):
-    EN_ATTENTE = 'En attente', 'بانتظار'
-    EN_COURS = 'En cours', 'جارٍ'
-    SUSPENDU = 'Suspendu', 'موقوف'
-    ACHEVE = 'Achevé', 'منتهٍ'
-    INFRUCTUEUX = 'Infructueux', 'متعذّر'
+class TypeMesure(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typemesure_libelle_alive",
+            )
+        ]
 
-class TypeDepense(models.TextChoices):
-    FRAIS_JUSTICE = 'Frais de justice', 'رسوم قضائية'
-    HUISSIER = 'Huissier', 'مفوض قضائي'
-    EXPERTISE = 'Expertise', 'خبرة'
-    DEPLACEMENT = 'Déplacement', 'تنقل'
-    FRAIS_DOSSIER = 'Frais de dossier', 'مصاريف ملف'
-    AUTRE = 'Autre', 'أخرى'
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
+class TypeAudience(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
-class TypeRecette(models.TextChoices):
-    PROVISION = 'Provision', 'تسبيق'
-    HONORAIRES = 'Honoraires', 'أتعاب'
-    REMBOURSEMENT = 'Remboursement frais', 'استرجاع مصاريف'
-    CONDAMNATION = 'Condamnation', 'مبالغ محكوم بها'
-    AUTRE = 'Autre', 'أخرى'
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typeaudience_libelle_alive",
+            )
+        ]
 
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
-class RoleUtilisateur(models.TextChoices):
-    ADMIN = 'Admin', 'مدير'
-    AVOCAT = 'Avocat', 'محامٍ'
-    ASSISTANT = 'Assistant', 'مساعد'
-    STAGIAIRE = 'Stagiaire', 'متدرّب'
-    LECTEUR = 'Lecteur', 'قارىء'
+class DegreJuridiction(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_degrejuridiction_libelle_alive",
+            )
+        ]
 
-class StatutTache(models.TextChoices):
-    A_FAIRE = 'A faire', 'للتنفيذ'
-    EN_COURS = 'En cours', 'جارٍ'
-    EN_ATTENTE = 'En attente', 'بانتظار'
-    TERMINE = 'Terminé', 'منجز'
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
 
+class ResultatAudience(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
-class TypeAlerte(models.TextChoices):
-    AUDIENCE = 'Audience', 'جلسة'
-    ECHEANCE_RECOURS = 'Echéance recours', 'أجل الطعن'
-    EXECUTION = 'Exécution', 'تنفيذ'
-    DEPENSE = 'Dépense', 'مصاريف'
-    AUTRE = 'Autre', 'أخرى'
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_resultataudience_libelle_alive",
+            )
+        ]
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+class TypeJuridiction(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typejuridiction_libelle_alive",
+            )
+        ]
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+class StatutAffaire(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_statutaffaire_libelle_alive",
+            )
+        ]
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+class TypeDepense(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typedepense_libelle_alive",
+            )
+        ]
+
+class TypeRecette(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typerecette_libelle_alive",
+            )
+        ]
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+class RoleUtilisateur(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_roleutilisateur_libelle_alive",
+            )
+        ]
+
+class StatutTache(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    def __str__(self):
+        s = self.libelle
+        return f"{s} (محذوف)" if self.is_deleted else s
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_statuttache_libelle_alive",
+            )
+        ]
+
+class TypeAlerte(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+
+    def __str__(self):
+        return f"{self.libelle} (محذوف)" if self.is_deleted else self.libelle
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typealerte_libelle_alive",
+            )
+        ]
 
 
 # =============================================
 # النماذج — أسماء الحقول الفرنسية؛ التسميات الظاهرة بالعربية
 # =============================================
-class Juridiction(models.Model):
+class Juridiction(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     nom = models.CharField(max_length=180, verbose_name='اسم الجهة', validators=[arabic_text_validator])
     ville = models.CharField(max_length=120, verbose_name='المدينة', validators=[arabic_text_validator])
-    type = models.CharField(max_length=40, choices=TypeJuridiction.choices, verbose_name='النوع')
+    type = models.ForeignKey(TypeJuridiction, on_delete= DO_NOTHING, verbose_name='نوع المحكمة')
+    degre = models.ForeignKey(DegreJuridiction, on_delete= DO_NOTHING, verbose_name='مستوى المحكمة')
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
+                               related_name="juridictions_filles", verbose_name="تنتمي إلى")
 
     class Meta:
         db_table = 'juridiction'
@@ -185,14 +395,30 @@ class Juridiction(models.Model):
     def __str__(self):
         return f"{self.nom} - {self.ville}"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:juridiction_detail", kwargs={"pk": self.pk})
 
-class Avocat(models.Model):
+class Barreau(TimeStampedSoftDeleteModel):
+    nom = models.CharField(max_length=150, verbose_name="الهيئة")
+    juridiction_appel = models.ForeignKey(Juridiction, null=True, blank=True, on_delete=models.SET_NULL,
+                                         verbose_name="محكمة الاستئناف (اختياري)")
+    class Meta:
+        db_table = 'barreau'
+        verbose_name = 'هيئة المحامين'
+        verbose_name_plural = 'هيئات المحامين'
+    def __str__(self):
+        return self.nom
+
+    def get_absolute_url(self):
+        return reverse("cabinet:barreau_detail", kwargs={"pk": self.pk})
+
+class Avocat(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     nom = models.CharField(max_length=120, verbose_name='اسم المحامي', validators=[arabic_name_validator])
-    barreau = models.CharField(max_length=120, null=True, blank=True, verbose_name='هيئة الانتماء', validators=[arabic_text_validator])
     telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
     email = models.EmailField(max_length=120, null=True, blank=True, verbose_name='بريد إلكتروني')
     taux_horaire = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='تعريفة بالساعة', validators=[MinValueValidator(0)])
+    barreau = models.ForeignKey(Barreau, on_delete= DO_NOTHING, verbose_name="الهيئة")
 
     class Meta:
         db_table = 'avocat'
@@ -202,23 +428,27 @@ class Avocat(models.Model):
     def __str__(self):
         return self.nom
 
+    def get_absolute_url(self):
+        return reverse("cabinet:avocat_detail", kwargs={"pk": self.pk})
 
-class Affaire(models.Model):
+
+class Affaire(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     reference_interne = models.CharField(max_length=50, verbose_name='مرجع داخلي', unique=True)
     reference_tribunal = models.CharField(max_length=100, null=True, blank=True, verbose_name='مرجع المحكمة')
-    type_affaire = models.CharField(max_length=30, choices=TypeAffaire.choices, verbose_name='نوع القضية')
-    statut_affaire = models.CharField(max_length=20, choices=StatutAffaire.choices, default=StatutAffaire.OUVERTE, verbose_name='حالة القضية')
-    juridiction = models.ForeignKey(Juridiction, on_delete=models.PROTECT, verbose_name='المحكمة')
+
+    type_affaire = models.ForeignKey(TypeAffaire, on_delete= DO_NOTHING, verbose_name="نوع القضية")
+    statut_affaire = models.ForeignKey(StatutAffaire, on_delete= DO_NOTHING, verbose_name="حالة القضية")
+
+    juridiction = models.ForeignKey(Juridiction, on_delete= DO_NOTHING, verbose_name='المحكمة')
     date_ouverture = models.DateField(verbose_name='تاريخ الفتح')
     objet = models.TextField(null=True, blank=True, verbose_name='موضوع الدعوى', validators=[arabic_text_validator])
     valeur_litige = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, verbose_name='قيمة النزاع', validators=[MinValueValidator(0)])
     priorite = models.CharField(max_length=10, choices=[('Haute','مرتفعة'),('Normale','عادية'),('Basse','منخفضة')], default='Normale', verbose_name='الأولوية')
-    avocat_responsable = models.ForeignKey('Avocat', on_delete=models.PROTECT, related_name='affaires_responsable', verbose_name='المحامي المسؤول')
+    avocat_responsable = models.ForeignKey('Avocat', on_delete= DO_NOTHING, related_name='affaires_responsable', verbose_name='المحامي المسؤول')
     notes = models.TextField(null=True, blank=True, verbose_name='ملاحظات', validators=[arabic_text_validator])
 
     avocats = models.ManyToManyField(Avocat, through='AffaireAvocat', related_name='affaires', verbose_name='محامون')
-
     class Meta:
         db_table = 'affaire'
         verbose_name = 'قضية'
@@ -232,8 +462,13 @@ class Affaire(models.Model):
     def __str__(self):
         return f"{self.reference_interne} ({self.get_type_affaire_display()})"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:affaire_detail", kwargs={"pk": self.pk})
 
-class Partie(models.Model):
+    def has_decision(self) -> bool:
+        return self.decision_set.exists()  # adapte si related_name différent
+
+class Partie(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     type_partie = models.CharField(max_length=20, choices=[
         ('Demandeur','مدعٍ'),('Défendeur','مدعى عليه'),('Plagnant','شاكي'),('Prévenu','متّهم'),
@@ -256,8 +491,11 @@ class Partie(models.Model):
     def __str__(self):
         return f"{self.nom_complet} — {self.get_type_partie_display()}"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:partie_detail", kwargs={"pk": self.pk})
 
-class AffairePartie(models.Model):
+
+class AffairePartie(TimeStampedSoftDeleteModel):
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE)
     partie = models.ForeignKey(Partie, on_delete=models.CASCADE)
     role_dans_affaire = models.CharField(max_length=20, choices=[
@@ -271,8 +509,13 @@ class AffairePartie(models.Model):
         verbose_name_plural = 'أطراف القضايا'
         unique_together = ('affaire','partie','role_dans_affaire')
 
+    def __str__(self):
+        return f"{self.partie.nom_complet} في {self.affaire.reference_interne} كـ {self.get_role_dans_affaire_display()}"
 
-class AffaireAvocat(models.Model):
+    def get_absolute_url(self):
+        return reverse("cabinet:affaire_partie_detail", kwargs={"pk": self.pk})
+
+class AffaireAvocat(TimeStampedSoftDeleteModel):
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE)
     avocat = models.ForeignKey(Avocat, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=[
@@ -285,13 +528,19 @@ class AffaireAvocat(models.Model):
         verbose_name_plural = 'محامو القضايا'
         unique_together = ('affaire','avocat','role')
 
+    def __str__(self):
+        return f"{self.avocat.nom} في {self.affaire.reference_interne} كـ {self.get_role_display()}"
 
-class Audience(models.Model):
+    def get_absolute_url(self):
+        return reverse("cabinet:affaire_avocat_detail", kwargs={"pk": self.pk})
+
+
+class Audience(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_audience = models.CharField(max_length=20, choices=TypeAudience.choices, verbose_name='نوع الجلسة')
+    type_audience = models.ForeignKey(TypeAudience, on_delete= DO_NOTHING, verbose_name="نوع الجلسة")
     date_audience = models.DateTimeField(verbose_name='تاريخ الجلسة')
-    resultat = models.CharField(max_length=30, choices=ResultatAudience.choices, null=True, blank=True, verbose_name='النتيجة')
+    resultat = models.ForeignKey(ResultatAudience, on_delete= DO_NOTHING, verbose_name="النتيجة")
     proces_verbal = models.TextField(null=True, blank=True, verbose_name='محضر الجلسة', validators=[arabic_text_validator])
 
     class Meta:
@@ -303,22 +552,28 @@ class Audience(models.Model):
 
     def __str__(self):
         return f"{self.affaire.reference_interne} @ {self.date_audience:%Y-%m-%d}"
+    def get_absolute_url(self):
+        return reverse("cabinet:audience_detail", kwargs={"pk": self.pk})
 
 
-class Mesure(models.Model):
+class Mesure(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     audience = models.ForeignKey(Audience, on_delete=models.CASCADE, verbose_name='الجلسة')
-    type_mesure = models.CharField(max_length=20, choices=TypeMesure.choices, verbose_name='نوع الإجراء')
-    statut = models.CharField(max_length=20, choices=StatutMesure.choices, default=StatutMesure.ORDONNEE, verbose_name='حالة الإجراء')
+    type_mesure = models.ForeignKey(TypeMesure, on_delete= DO_NOTHING, verbose_name="نوع الإجراء")
+    statut = models.ForeignKey(StatutMesure, on_delete= DO_NOTHING, verbose_name="حالة الإجراء")
     notes = models.TextField(null=True, blank=True, verbose_name='ملاحظات', validators=[arabic_text_validator])
+    date_ordonnee = models.DateTimeField(verbose_name='تاريخ الأمر')
 
     class Meta:
         db_table = 'mesure'
         verbose_name = 'إجراء'
         verbose_name_plural = 'إجراءات'
 
+    def get_absolute_url(self):
+        return reverse("cabinet:mesure_detail", kwargs={"pk": self.pk})
 
-class Expertise(models.Model):
+
+class Expertise(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
     expert_nom = models.CharField(max_length=180, verbose_name='اسم الخبير', validators=[arabic_name_validator])
@@ -332,12 +587,18 @@ class Expertise(models.Model):
         verbose_name = 'خبرة'
         verbose_name_plural = 'خبرات'
 
+    def get_absolute_url(self):
+        return reverse("cabinet:expertise_detail", kwargs={"pk": self.pk})
 
-class Decision(models.Model):
+    def __str__(self):
+        return f"خبرة في {self.affaire.reference_interne} — {self.expert_nom}"
+
+
+class Decision(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
     numero_decision = models.CharField(max_length=80, verbose_name='رقم الحكم/القرار')
-    date_prononce = models.DateField(verbose_name='تاريخ النطق')
+    date_prononce = models.DateTimeField(verbose_name='تاريخ النطق')
     formation = models.CharField(max_length=120, null=True, blank=True, verbose_name='الهيئة/القاضي', validators=[arabic_text_validator])
     resumé = models.TextField(null=True, blank=True, verbose_name='ملخص', validators=[arabic_text_validator])
     susceptible_recours = models.BooleanField(default=True, verbose_name='قابل للطعن')
@@ -351,8 +612,11 @@ class Decision(models.Model):
     def __str__(self):
         return f"{self.numero_decision} — {self.date_prononce}"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:decision_detail", kwargs={"pk": self.pk})
 
-class Notification(models.Model):
+
+class Notification(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     decision = models.ForeignKey(Decision, on_delete=models.CASCADE, verbose_name='الحكم/القرار')
     demande_numero = models.CharField(max_length=80, verbose_name='رقم طلب التبليغ')
@@ -369,28 +633,40 @@ class Notification(models.Model):
         verbose_name_plural = 'تبليغات'
         indexes = [models.Index(fields=['date_signification'])]
 
+    def get_absolute_url(self):
+        return reverse("cabinet:notification_detail", kwargs={"pk": self.pk})
 
-class VoieDeRecours(models.Model):
+    def __str__(self):
+        return f"تبليغ لـ {self.decision.numero_decision}"
+
+
+class VoieDeRecours(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     decision = models.ForeignKey(Decision, on_delete=models.CASCADE, verbose_name='الحكم/القرار')
-    type_recours = models.CharField(max_length=20, choices=TypeRecours.choices, verbose_name='نوع الطعن')
+    type_recours = models.ForeignKey(TypeRecours, on_delete= DO_NOTHING, verbose_name="نوع الطعن")
+    statut = models.ForeignKey(StatutRecours, on_delete= DO_NOTHING, verbose_name="الحالة")
     date_depot = models.DateField(verbose_name='تاريخ الإيداع')
     numero_recours = models.CharField(max_length=80, null=True, blank=True, verbose_name='رقم ملف الطعن')
-    juridiction = models.ForeignKey(Juridiction, on_delete=models.PROTECT, verbose_name='الجهة الناظرة')
-    statut = models.CharField(max_length=15, choices=StatutRecours.choices, default=StatutRecours.EN_COURS, verbose_name='الحالة')
+    juridiction = models.ForeignKey(Juridiction, on_delete= DO_NOTHING, verbose_name='المحكمة')
 
     class Meta:
         db_table = 'voie_de_recours'
         verbose_name = 'طريق طعن'
         verbose_name_plural = 'طرق الطعن'
 
+    def get_absolute_url(self):
+        return reverse("cabinet:voie_de_recours_detail", kwargs={"pk": self.pk})
 
-class Execution(models.Model):
+    def __str__(self):
+        return f"طعن لـ {self.decision.numero_decision} — {self.get_type_recours_display()}"
+
+
+class Execution(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     decision = models.ForeignKey(Decision, on_delete=models.CASCADE, verbose_name='الحكم/القرار')
-    type_execution = models.CharField(max_length=30, choices=TypeExecution.choices, verbose_name='نوع التنفيذ')
+    type_execution = models.ForeignKey(TypeExecution, on_delete= DO_NOTHING, verbose_name="نوع التنفيذ")
+    statut = models.ForeignKey(StatutExecution, on_delete=DO_NOTHING, verbose_name="حالة التنفيذ")
     date_demande = models.DateField(verbose_name='تاريخ الطلب')
-    statut = models.CharField(max_length=15, choices=StatutExecution.choices, default=StatutExecution.EN_ATTENTE, verbose_name='حالة التنفيذ')
     depot_caisse_barreau = models.BooleanField(default=False, verbose_name='إيداع بصندوق الهيئة')
     date_demande_liquidation = models.DateField(null=True, blank=True, verbose_name='تاريخ طلب التصفية')
     proces_verbal_refus = models.CharField(max_length=120, null=True, blank=True, verbose_name='مرجع محضر الامتناع')
@@ -403,11 +679,17 @@ class Execution(models.Model):
         verbose_name = 'تنفيذ'
         verbose_name_plural = 'تنفيذات'
 
+    def get_absolute_url(self):
+        return reverse("cabinet:execution_detail", kwargs={"pk": self.pk})
 
-class Depense(models.Model):
+    def __str__(self):
+        return f"تنفيذ لـ {self.decision.numero_decision}"
+
+
+class Depense(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_depense = models.CharField(max_length=20, choices=TypeDepense.choices, verbose_name='نوع المصروف')
+    type_depense = models.ForeignKey(TypeDepense, on_delete= DO_NOTHING, verbose_name="نوع المصروف")
     montant = models.DecimalField(max_digits=18, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='المبلغ')
     date_depense = models.DateField(verbose_name='تاريخ الصرف')
     beneficiaire = models.CharField(max_length=180, null=True, blank=True, verbose_name='المستفيد', validators=[arabic_name_validator])
@@ -419,11 +701,16 @@ class Depense(models.Model):
         verbose_name_plural = 'مصاريف'
         indexes = [models.Index(fields=['date_depense'])]
 
+    def get_absolute_url(self):
+        return reverse("cabinet:depense_detail", kwargs={"pk": self.pk})
 
-class Recette(models.Model):
+    def __str__(self):
+        return f"مصروف في {self.affaire.reference_interne} — {self.montant} د.م."
+
+class Recette(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_recette = models.CharField(max_length=25, choices=TypeRecette.choices, verbose_name='نوع الدخل')
+    type_recette = models.ForeignKey(TypeRecette, on_delete= DO_NOTHING, verbose_name="نوع الدخل")
     montant = models.DecimalField(max_digits=18, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='المبلغ')
     date_recette = models.DateField(verbose_name='تاريخ التحصيل')
     source = models.CharField(max_length=180, null=True, blank=True, verbose_name='المصدر', validators=[arabic_text_validator])
@@ -435,8 +722,13 @@ class Recette(models.Model):
         verbose_name_plural = 'مداخيل'
         indexes = [models.Index(fields=['date_recette'])]
 
+    def get_absolute_url(self):
+        return reverse("cabinet:recette_detail", kwargs={"pk": self.pk})
 
-class PieceJointe(models.Model):
+    def __str__(self):
+        return f"دخل في {self.affaire.reference_interne} — {self.montant} د.م."
+
+class PieceJointe(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, related_name='pieces', verbose_name='القضية')
     titre = models.CharField(max_length=180, verbose_name='عنوان المرفق', validators=[arabic_text_validator])
@@ -449,11 +741,35 @@ class PieceJointe(models.Model):
         verbose_name = 'مرفق'
         verbose_name_plural = 'مرفقات'
 
+    def get_absolute_url(self):
+        return reverse("cabinet:piece_jointe_detail", kwargs={"pk": self.pk})
 
-class Utilisateur(models.Model):
+    def __str__(self):
+        return f"{self.titre} — {self.affaire.reference_interne}"
+
+class Expert(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     nom_complet = models.CharField(max_length=120, verbose_name='الاسم الكامل', validators=[arabic_name_validator])
-    role = models.CharField(max_length=10, choices=RoleUtilisateur.choices, verbose_name='الدور')
+    telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
+    email = models.EmailField(max_length=120, verbose_name='بريد إلكتروني', validators=[EmailValidator()])
+    adresse = models.CharField(max_length=120, verbose_name='العنوان', validators=[arabic_name_validator])
+    specialite = models.CharField(max_length=120, verbose_name='العنوان', validators=[arabic_name_validator])
+
+    class Meta:
+        db_table = 'expert'
+        verbose_name = 'خبير'
+        verbose_name_plural = 'خبراء'
+
+    def __str__(self):
+        return f"{self.nom_complet} ({self.get_role_display()})"
+
+    def get_absolute_url(self):
+        return reverse("cabinet:expert_detail", kwargs={"pk": self.pk})
+
+class Utilisateur(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    nom_complet = models.CharField(max_length=120, verbose_name='الاسم الكامل', validators=[arabic_name_validator])
+    role = models.ForeignKey(RoleUtilisateur, on_delete= DO_NOTHING, verbose_name="الدور")
     telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
     email = models.EmailField(max_length=120, verbose_name='بريد إلكتروني', validators=[EmailValidator()])
     actif = models.BooleanField(default=True, verbose_name='نشط')
@@ -467,15 +783,17 @@ class Utilisateur(models.Model):
     def __str__(self):
         return f"{self.nom_complet} ({self.get_role_display()})"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:utilisateur_detail", kwargs={"pk": self.pk})
 
-class Tache(models.Model):
+class Tache(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='القضية')
     titre = models.CharField(max_length=180, verbose_name='عنوان المهمة', validators=[arabic_text_validator])
     description = models.TextField(null=True, blank=True, verbose_name='وصف', validators=[arabic_text_validator])
     echeance = models.DateTimeField(null=True, blank=True, verbose_name='موعد الاستحقاق')
     assigne_a = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='مكلّف')
-    statut = models.CharField(max_length=12, choices=StatutTache.choices, default=StatutTache.A_FAIRE, verbose_name='الحالة')
+    statut = models.ForeignKey(StatutTache, on_delete= DO_NOTHING, verbose_name="الحالة")
 
     class Meta:
         db_table = 'tache'
@@ -483,10 +801,15 @@ class Tache(models.Model):
         verbose_name_plural = 'مهام'
         indexes = [models.Index(fields=['echeance'])]
 
+    def __str__(self):
+        return f"{self.titre} — {self.get_statut_display()}"
 
-class Alerte(models.Model):
+    def get_absolute_url(self):
+        return reverse("cabinet:tache_detail", kwargs={"pk": self.pk})
+
+class Alerte(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    type_alerte = models.CharField(max_length=20, choices=TypeAlerte.choices, verbose_name='نوع التنبيه')
+    type_alerte = models.ForeignKey(TypeAlerte, on_delete= DO_NOTHING, verbose_name="نوع التنبيه")
     reference_id = models.UUIDField(verbose_name='المعرّف المرتبط')
     date_alerte = models.DateTimeField(verbose_name='تاريخ التنبيه')
     moyen = models.CharField(max_length=10, choices=[('Email','Email'),('SMS','SMS'),('InApp','داخل النظام')], verbose_name='قناة الإشعار')
@@ -502,8 +825,10 @@ class Alerte(models.Model):
     def __str__(self):
         return f"{self.get_type_alerte_display()} — {self.date_alerte:%Y-%m-%d %H:%M}"
 
+    def get_absolute_url(self):
+        return reverse("cabinet:alerte_detail", kwargs={"pk": self.pk})
 
-class JournalActivite(models.Model):
+class JournalActivite(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     utilisateur = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, verbose_name='المستخدم')
     action = models.CharField(max_length=120, verbose_name='الإجراء')
@@ -521,12 +846,13 @@ class JournalActivite(models.Model):
     def __str__(self):
         return f"{self.action} — {self.objet} @ {self.date_action:%Y-%m-%d %H:%M}"
 
-
+    def get_absolute_url(self):
+        return reverse("cabinet:journal_activite_detail", kwargs={"pk": self.pk})
 
 # إذا كان لديك موديل Utilisateur هو الـUser الفعلي:
 # settings.AUTH_USER_MODEL يجب أن يشير إليه (مثلاً "avocat_app.Utilisateur")
 
-class AuthToken(models.Model):
+class AuthToken(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     # FK إلى المستخدم — اسم الحقل لديك "utilisateur"
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='المستخدم', related_name="tokens")
@@ -582,3 +908,8 @@ class AuthToken(models.Model):
         if self.is_active:
             self.is_active = False
             self.save(update_fields=["is_active"])
+
+
+
+
+

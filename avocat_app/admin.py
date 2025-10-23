@@ -1,6 +1,6 @@
 # =============================
 # FILE: admin.py
-# Admin en FR + libellés AR pour les colonnes affichées
+# Admin en FR + libelles AR pour les colonnes affichees
 # =============================
 from pathlib import Path
 
@@ -10,7 +10,9 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
-    Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte
+    Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte, TypeDepense,
+    TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte, StatutAffaire, TypeAffaire, TypeMesure,
+    TypeRecours, TypeExecution, TypeRecette, TypeAlerte, StatutRecours, StatutExecution,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -90,7 +92,7 @@ class AffaireAdmin(admin.ModelAdmin):
 
     @admin.display(description="العميل/المدعي")
     def _client_principal(self, obj: Affaire):
-        ap = AffairePartie.objects.filter(affaire=obj, role_dans_affaire__in=["Demandeur", "Plagnant", "Appelant"]).select_related("partie").first()
+        ap = AffairePartie.objects.filter(affaire=obj, role_dans_affaire__libelle__in=["Demandeur", "Plagnant", "Appelant"]).select_related("partie").first()
         return ap.partie.nom_complet if ap else "—"
 
     @admin.display(description="موضوع مختصر")
@@ -263,6 +265,59 @@ APPEAL_RULES = {
 # FILE: management/commands/generate_appeal_alerts.py
 # أمر دوري اختياري لإنشاء التنبيهات (مثلاً عبر cron) في حال تعطّل الإشارات
 # =============================
+
+# admin.py
+from .admin_mixins import SoftDeleteAdminMixin
+
+@admin.register(RoleUtilisateur)
+class RoleUtilisateurAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(StatutTache)
+class StatutTacheAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(StatutAffaire)
+class StatutAffaireAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeAffaire)
+class TypeAffaireAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeMesure)
+class TypeMesureAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeRecours)
+class TypeRecoursAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeExecution)
+class TypeExecutionAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeRecette)
+class TypeRecetteAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeAlerte)
+class TypeAlerteAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(StatutRecours)
+class StatutRecoursAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(StatutExecution)
+class StatutExecutionAdmin(SoftDeleteAdminMixin):
+    pass
+
+@admin.register(TypeDepense)
+class TypeDepenseAdmin(SoftDeleteAdminMixin):
+    pass
+
+
 """"Commande Django pour générer les alertes d'échéance 
 d'appel pour toutes les notifications signifiées."""
 

@@ -11,9 +11,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+import sys
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# True en prod/serveur web ; False pendant migrate/makemigrations/test/collectstatic
+AUDIT_ENABLED = not any(cmd in sys.argv for cmd in ("migrate", "makemigrations", "test", "collectstatic"))
+
 
 # === ملفات ثابتة (CSS / JS / صور) ===
 STATIC_URL = '/static/'
@@ -78,7 +82,6 @@ MIDDLEWARE = [
     "avocat_app.middleware.request_local.RequestLocalMiddleware", # <— جديد: يضع request في threadlocal
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'django.contrib.messages.middleware.MessageMiddleware',  # ✅ ici
 ]
 
 ROOT_URLCONF = 'avocat_yassine.urls'
@@ -91,9 +94,10 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",  # <— obligatoire
             ],
         },
     },
@@ -171,3 +175,14 @@ APPEAL_REMINDERS_DAYS = [7, 3, 1]      # تذكير قبل 7 و3 و1 يومًا
 ALERTE_CHANNELS = ['InApp']            # أو ['Email','SMS','InApp'] حسب تكاملك
 ALERTE_DEFAULT_RECIPIENT = 'Avocat responsable'
 
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.example.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'info@lrsmf.ma'
+    EMAIL_HOST_PASSWORD = 'your-email-password'

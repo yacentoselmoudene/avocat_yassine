@@ -6,9 +6,13 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from ..models import Notification
 from .alerts import create_appeal_alerts_for_notification
+from avocat_app.utils.audit import is_migration_command, log_audit_safe
+from django.conf import settings
 
 @receiver(post_save, sender=Notification)
-def notification_post_save(sender, instance: Notification, created, **kwargs):
+def notification_post_save(sender, instance, created, **kwargs):
+    if is_migration_command() or not settings.AUDIT_ENABLED:
+        return
     # عند إنشاء أو تعديل Notification مع تاريخ تبليغ
     if instance.date_signification:
         create_appeal_alerts_for_notification(instance)

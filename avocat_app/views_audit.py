@@ -1,6 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.generic import ListView, DetailView
-from .models_audit import AuditLog
+from .models import AuditLog
 
 class AuditLogList(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = "cabinet.view_auditlog"  # أنشئ صلاحية مخصصة لو أردت

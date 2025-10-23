@@ -3,11 +3,12 @@ from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
-
+from avocat_app.utils.audit import log_audit_safe
+from avocat_app.models import AuditAction  # juste l'enum
 from .forms import ArabicLoginForm
 from .models import AuthToken
 from .services.token_utils import set_token_cookie, clear_token_cookie
-from .models_audit import AuditLog, AuditAction  # إذا كنت فعّلت سجل التدقيق
+from .models import AuditLog, AuditAction  # إذا كنت فعّلت سجل التدقيق
 
 class LoginView(DjangoLoginView):
     template_name = "auth/login.html"
@@ -22,18 +23,22 @@ class LoginView(DjangoLoginView):
         set_token_cookie(response, token.token)
 
         # سجل تدقيق (اختياري)
+        print("تسجيل دخول المستخدم في سجل التدقيق")
+        print(f"المستخدم: {user}, المسار: {self.request.path}")
+        print(f"وكيل المستخدم: {self.request}")
         try:
-            AuditLog.objects.create(
-                actor=user, action=AuditAction.LOGIN,
-                app_label="auth", model="user", object_pk=str(user.pk),
-                object_repr=str(user), changes=None,
+            log_audit_safe(
+                actor=self.request.user, action=AuditAction.LOGIN,
+                app_label="auth", model="user", object_pk=str(self.request.user.pk),
+                object_repr=str(self.request.user), changes=None,
                 path=self.request.path, method=self.request.method,
                 ip=self.request.META.get("REMOTE_ADDR"),
-                user_agent=self.request.META.get("HTTP_USER_AGENT")[:256],
-                session_key=getattr(self.request, "session", None).session_key,
-                token_id=getattr(self.request, "auth_token_id", None)
+                user_agent=(self.request.META.get("HTTP_USER_AGENT") or "")[:256],
+                session_key=getattr(self.request, "session", None) and self.request.session.session_key,
+                token_id=getattr(self.request, "auth_token_id", None),
             )
-        except Exception:
+        except Exception as e:
+            print( "فشل تسجيل الدخول في سجل التدقيق" , e)
             pass
 
         messages.success(self.request, "تم تسجيل الدخول بنجاح.")
@@ -52,15 +57,15 @@ def logout_view(request):
 
     # سجل تدقيق (اختياري)
     try:
-        AuditLog.objects.create(
-            actor=request.user if request.user.is_authenticated else None, action=AuditAction.LOGOUT,
-            app_label="auth", model="user", object_pk=str(request.user.pk) if request.user.is_authenticated else None,
-            object_repr=str(request.user) if request.user.is_authenticated else "",
-            changes=None, path=request.path, method=request.method,
+        log_audit_safe(
+            actor=request.user, action=AuditAction.LOGIN,
+            app_label="auth", model="user", object_pk=str(request.user.pk),
+            object_repr=str(request.user), changes=None,
+            path=request.path, method=request.method,
             ip=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT")[:256],
-            session_key=getattr(request, "session", None).session_key,
-            token_id=getattr(request, "auth_token_id", None)
+            user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:256],
+            session_key=getattr(request, "session", None) and request.session.session_key,
+            token_id=getattr(request, "auth_token_id", None),
         )
     except Exception:
         pass
@@ -69,15 +74,13 @@ def logout_view(request):
     return response
 
 def log_email(request, obj, subject):
-    AuditLog.objects.create(
-        actor=request.user if request.user.is_authenticated else None,
-        action=AuditAction.EMAIL,
-        app_label=obj._meta.app_label, model=obj._meta.model_name,
-        object_pk=str(obj.pk), object_repr=str(obj),
-        changes={"subject": [None, subject]},
+    log_audit_safe(
+        actor=request.user, action=AuditAction.LOGIN,
+        app_label="auth", model="user", object_pk=str(request.user.pk),
+        object_repr=str(request.user), changes=None,
         path=request.path, method=request.method,
         ip=request.META.get("REMOTE_ADDR"),
-        user_agent=request.META.get("HTTP_USER_AGENT")[:256],
-        session_key=getattr(request, "session", None).session_key,
-        token_id=getattr(request, "auth_token_id", None)
+        user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:256],
+        session_key=getattr(request, "session", None) and request.session.session_key,
+        token_id=getattr(request, "auth_token_id", None),
     )
