@@ -56,9 +56,9 @@ class PieceJointeInline(admin.TabularInline):
 # ---- ModelAdmins ----
 @admin.register(Juridiction)
 class JuridictionAdmin(admin.ModelAdmin):
-    list_display = ("nom", "ville", "type")
-    search_fields = ("nom", "ville")
-    list_filter = ("type", "ville")
+    list_display = ("nomtribunal_ar", "villetribunal_ar", "type")
+    search_fields = ("nomtribunal_ar", "villetribunal_ar")
+    list_filter = ("type", "villetribunal_ar")
 
 
 @admin.register(Avocat)
@@ -86,7 +86,7 @@ class AffaireAdmin(admin.ModelAdmin):
         "_client_principal",
         "_resume_objet",
     )
-    list_filter = ("type_affaire", "statut_affaire", "juridiction__ville")
+    list_filter = ("type_affaire", "statut_affaire", "juridiction__villetribunal_ar")
     search_fields = ("reference_interne", "reference_tribunal", "objet")
     date_hierarchy = "date_ouverture"
 

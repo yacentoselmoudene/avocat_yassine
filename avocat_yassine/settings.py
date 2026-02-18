@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'avocat_app.apps.AvocatAppConfig',
+    'django_extensions',
 ]
 
 # === Audit switches & defaults ===

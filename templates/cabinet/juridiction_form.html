@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}نموذج محكمة{% endblock %}
+{% block page_title %}نموذج محكمة{% endblock %}
+{% block content %}
+  {% include "modals/_form.html" with action=request.path %}
+{% endblock %}

@@ -69,7 +69,7 @@ class AuditLog(models.Model):
 
 
 class TypeAffaire(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    code = models.CharField(max_length=4, unique=True, verbose_name='الرمز')
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -87,7 +87,6 @@ class TypeAffaire(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class StatutExecution(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -105,7 +104,6 @@ class StatutExecution(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeExecution(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -123,7 +121,7 @@ class TypeExecution(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class StatutRecours(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -141,7 +139,7 @@ class StatutRecours(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeRecours(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -159,7 +157,7 @@ class TypeRecours(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class StatutMesure(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -177,7 +175,7 @@ class StatutMesure(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeMesure(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -195,7 +193,7 @@ class TypeMesure(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeAudience(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -213,7 +211,7 @@ class TypeAudience(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class DegreJuridiction(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -231,7 +229,7 @@ class DegreJuridiction(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class ResultatAudience(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -249,8 +247,11 @@ class ResultatAudience(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeJuridiction(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    code_type = models.CharField(max_length=180, verbose_name='الرمز', validators=[arabic_text_validator])
+    niveau = models.CharField(max_length=180, verbose_name='المستوى', validators=[arabic_text_validator])
+    description = models.CharField(max_length=580, verbose_name='الوصف', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
     class Meta:
@@ -267,7 +268,7 @@ class TypeJuridiction(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class StatutAffaire(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -285,7 +286,7 @@ class StatutAffaire(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class TypeDepense(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -303,7 +304,7 @@ class TypeDepense(TimeStampedSoftDeleteModel):
         ]
 
 class TypeRecette(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -321,7 +322,7 @@ class TypeRecette(TimeStampedSoftDeleteModel):
         return f"{s} (محذوف)" if self.is_deleted else s
 
 class RoleUtilisateur(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -339,7 +340,7 @@ class RoleUtilisateur(TimeStampedSoftDeleteModel):
         ]
 
 class StatutTache(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -356,8 +357,9 @@ class StatutTache(TimeStampedSoftDeleteModel):
             )
         ]
 
+
+
 class TypeAlerte(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
 
@@ -378,22 +380,27 @@ class TypeAlerte(TimeStampedSoftDeleteModel):
 # النماذج — أسماء الحقول الفرنسية؛ التسميات الظاهرة بالعربية
 # =============================================
 class Juridiction(TimeStampedSoftDeleteModel):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    nom = models.CharField(max_length=180, verbose_name='اسم الجهة', validators=[arabic_text_validator])
-    ville = models.CharField(max_length=120, verbose_name='المدينة', validators=[arabic_text_validator])
+
+    code = models.CharField(max_length=180, verbose_name='الرمز')
+    nomtribunal_fr = models.CharField(max_length=180,null=True,blank=True, verbose_name='الاسم بالفرنسية')
+    nomtribunal_ar = models.CharField(max_length=180,null=True,blank=True, verbose_name='الاسم بالعربية', validators=[arabic_text_validator])
+    adressetribunal_fr = models.CharField(max_length=180,null=True,blank=True, verbose_name='العنوان بالفرنسية')
+    adressetribunal_ar = models.CharField(max_length=180,null=True,blank=True, verbose_name='العنوان بالعربية', validators=[arabic_text_validator])
+    villetribunal_fr = models.CharField(max_length=180,null=True,blank=True, verbose_name='المدينة بالفرنسية')
+    villetribunal_ar = models.CharField(max_length=180,null=True,blank=True, verbose_name='المدينة بالعربية', validators=[arabic_text_validator])
+    telephonetribunal = models.CharField(max_length=180,null=True,blank=True, verbose_name='رقم الهاتف')
     type = models.ForeignKey(TypeJuridiction, on_delete= DO_NOTHING, verbose_name='نوع المحكمة')
-    degre = models.ForeignKey(DegreJuridiction, on_delete= DO_NOTHING, verbose_name='مستوى المحكمة')
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
+    TribunalParent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
                                related_name="juridictions_filles", verbose_name="تنتمي إلى")
 
     class Meta:
         db_table = 'juridiction'
-        verbose_name = 'جهة قضائية'
-        verbose_name_plural = 'جهات قضائية'
-        indexes = [models.Index(fields=['ville'])]
+        verbose_name = 'محكمة'
+        verbose_name_plural = 'محاكم'
+        indexes = [models.Index(fields=['villetribunal_ar'])]
 
     def __str__(self):
-        return f"{self.nom} - {self.ville}"
+        return f"{self.nomtribunal_ar} - {self.villetribunal_ar}"
 
     def get_absolute_url(self):
         return reverse("cabinet:juridiction_detail", kwargs={"pk": self.pk})

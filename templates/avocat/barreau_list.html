@@ -1,0 +1,33 @@
+{# FILE: templates/avocat/barreau_list.html #}
+{% extends "base.html" %}
+{% block title %}هيئة المحامين{% endblock %}
+{% block page_title %}هيئة المحامين{% endblock %}
+
+{% block header_actions %}
+<form class="input-group me-2 js-live-search" style="max-width:360px"
+      hx-get="{% url 'cabinet:barreau_list' %}"
+      hx-target="#ref-list"
+      hx-push-url="true"
+      hx-trigger="keyup changed delay:300ms, search"
+      hx-include="[name='q']">
+  <input type="search" class="form-control" name="q"
+         placeholder="ابحث بالاسم، الهيئة"
+         value="{{ query|default:'' }}" autocomplete="off">
+  <button class="btn btn-outline-secondary" type="submit">
+    <i class="bi bi-search"></i>
+  </button>
+</form>
+
+<a href="#" class="btn btn-primary"
+   data-bs-toggle="modal" data-bs-target="#mainModal"
+   hx-get="{% url 'cabinet:barreau_create' %}" hx-target="#modalBody">
+  <i class="bi bi-plus-circle ms-1"></i> إضافة هيئة المحامين
+</a>
+{% endblock %}
+
+{% block content %}
+  <div id="ref-list">
+    {% include "avocat/barreau_table.html" %}
+  </div>
+{% endblock %}
+

@@ -1,25 +1,16 @@
-{# templates/modals/_form.html #}
 <form method="post"
       action="{{ action_url|default:request.path }}"
       hx-post="{{ action_url|default:request.path }}"
-      hx-target="#modalBody"
-      hx-swap="outerHTML">
+      hx-target="#modalBody" hx-swap="outerHTML">
   {% csrf_token %}
-
-  {% if form.non_field_errors %}
-    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-  {% endif %}
-
+  {{ form.non_field_errors }}
   {% for field in form.visible_fields %}
     <div class="mb-3">
       <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}
-      {% if field.errors %}
-        <div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>
-      {% endif %}
+      {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
     </div>
   {% endfor %}
-
   <div class="d-flex justify-content-end gap-2">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
     <button type="submit" class="btn btn-primary">حفظ</button>

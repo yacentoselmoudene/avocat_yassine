@@ -63,11 +63,11 @@
 {% block content %}
   <div class="d-lg-none">{# Cards for small screens #}
     {% for obj in object_list %}
-      {% with _fields=(('المدينة', obj.ville), ('النوع', obj.get_type_display)) %}
+      {% with _fields=(('المدينة', obj.villetribunal_ar), ('النوع', obj.get_type_display)) %}
         {% include '_partials/_cards_grid.html' with items=[{
           'pk': obj.pk,
           'card_title': obj.nom,
-          'card_subtitle': obj.ville,
+          'card_subtitle': obj.villetribunal_ar,
           'badge': obj.get_type_display,
           'card_fields': _fields,
         }] detail_url_name='cabinet:juridiction_detail' edit_url_name='cabinet:juridiction_update' delete_url_name='cabinet:juridiction_delete' %}
@@ -82,7 +82,7 @@
         {% for obj in object_list %}
           <tr>
             <td>{{ obj.nom }}</td>
-            <td>{{ obj.ville }}</td>
+            <td>{{ obj.villetribunal_ar }}</td>
             <td>{{ obj.get_type_display }}</td>
             <td class="text-center">
               <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:juridiction_detail' obj.pk %}"><i class="bi bi-eye"></i></a>

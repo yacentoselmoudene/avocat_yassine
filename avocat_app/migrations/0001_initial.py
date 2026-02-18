@@ -221,8 +221,8 @@ class Migration(migrations.Migration):
                 ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='juridictions_filles', to='avocat_app.juridiction', verbose_name='تنتمي إلى')),
             ],
             options={
-                'verbose_name': 'جهة قضائية',
-                'verbose_name_plural': 'جهات قضائية',
+                'verbose_name': 'محكمة',
+                'verbose_name_plural': 'محاكم',
                 'db_table': 'juridiction',
             },
         ),

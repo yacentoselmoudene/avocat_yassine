@@ -1,11 +1,13 @@
-{# FILE: templates/modals/_confirm.html #}
-<form method="post" action="{{ action }}" hx-post="{{ action }}" hx-target="#modalBody" hx-swap="innerHTML">
+{# templates/modals/_confirm.html #}
+<form method="post"
+      action="{{ action_url|default:request.path }}"     {# ⬅️ /ref/degres-juridiction/<pk>/delete/ #}
+      hx-post="{{ action_url|default:request.path }}"    {# idem en HTMX #}
+      hx-target="#modalBody" hx-swap="outerHTML">
   {% csrf_token %}
-  <div class="mb-3">
-    <p class="mb-0">هل أنت متأكد من تنفيذ هذه العملية؟</p>
-  </div>
-  <div class="d-flex justify-content-between">
-    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
-    <button type="submit" class="btn btn-danger"><i class="bi bi-trash ms-1"></i> تأكيد الحذف</button>
+  <h5 class="mb-3">{{ title|default:"تأكيد" }}</h5>
+  <p class="mb-4">{{ question|default:"هل تريد المتابعة؟" }}</p>
+  <div class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+    <button type="submit" class="btn btn-danger">حذف</button>
   </div>
 </form>

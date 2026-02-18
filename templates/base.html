@@ -1,8 +1,7 @@
-
 {# ============================================================= #}
-{# FILE: templates/base.html                                         #}
-{# Bootstrap 5 RTL, واجهة عربية حديثة، كتل قابلة للامتداد           #}
-{# Blocks: title, extra_css, header, content, extra_js, footer       #}
+{# FILE: templates/base.html                                    #}
+{# Bootstrap 5 RTL + HTMX + Select2, واجهة عربية نظيفة           #}
+{# Blocks: title, extra_css, header, content, extra_js, footer   #}
 {# ============================================================= #}
 {% load static %}
 <!doctype html>
@@ -11,20 +10,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}لوحة تسيير مكتب المحاماة{% endblock %}</title>
-    <!-- Bootstrap 5 RTL -->
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
-      rel="stylesheet" >
-      <!-- Icons -->
+    <!-- Bootstrap RTL + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- خط عربي مناسب -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<!-- Thème Bootstrap 5 (optionnel pour un meilleur rendu) -->
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-      <style>
+    <!-- Police arabe -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Select2 CSS + thème Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+    <style>
       body { font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
       .navbar-brand img { height: 36px; }
       .brand-subtitle { font-size: .8rem; opacity:.75; }
@@ -35,33 +33,33 @@
       .page-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
       .page-header .breadcrumb { --bs-breadcrumb-divider: '›'; }
       .card-hover:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.08); }
-    .select2-container--bootstrap-5 .select2-selection {
-  border-radius: 0.75rem;
-  min-height: calc(2.25rem + 2px);
-  text-align: right;
-}
-.select2-selection__choice__remove {
-  float: left; /* place la croix à gauche dans le mode RTL */
-}
 
-/* style.css */
-.select2-container--bootstrap-5 .select2-selection__choice {
-  padding-right: .75rem;
-}
-.select2-container--bootstrap-5 .select2-selection__choice__remove {
-  margin-left: .5rem; /* espace pour RTL */
-  font-size: 1rem;
-}
-      </style>
+      /* Select2 esthétique RTL (n’activer que sur .js-select2) */
+      .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 0.75rem;
+        min-height: calc(2.25rem + 2px);
+        text-align: right;
+      }
+      .select2-container--bootstrap-5 .select2-selection__choice {
+        padding-right: .75rem;
+      }
+      .select2-container--bootstrap-5 .select2-selection__choice__remove {
+        margin-left: .5rem; /* espace pour RTL */
+        font-size: 1rem;
+        float: left;        /* croix à gauche en RTL */
+      }
+      .select2-container { width: 100% !important; }
+    </style>
+
     {% block extra_css %}{% endblock %}
   </head>
   <body class="bg-light">
     <div class="app-shell">
+
       {% block header %}
       <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
         <div class="container-fluid">
           <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-            <!-- مكان شعار رئيسي -->
             <img src="{% static 'img/logo-primary.png' %}" alt="Logo" onerror="this.style.display='none'">
             <div class="d-flex flex-column lh-1">
               <strong>مكتب المحاماة</strong>
@@ -71,49 +69,48 @@
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
+
           <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="paramDropdown"
-                     role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-gear ms-1"></i> الإعدادات
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-end text-end" aria-labelledby="paramDropdown">
-                    <li><a class="dropdown-item" href="{% url 'cabinet:typedepense_list' %}">
-                      <i class="bi bi-cash-coin ms-1 text-secondary"></i> أنواع المصاريف
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'cabinet:typerecette_list' %}">
-                      <i class="bi bi-wallet2 ms-1 text-success"></i> أنواع المداخيل
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'cabinet:roleutilisateur_list' %}">
-                      <i class="bi bi-person-badge ms-1 text-primary"></i> أدوار المستخدمين
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'cabinet:statuttache_list' %}">
-                      <i class="bi bi-list-check ms-1 text-warning"></i> حالات المهام
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'cabinet:typealerte_list' %}">
-                      <i class="bi bi-bell ms-1 text-danger"></i> أنواع التنبيهات
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-muted" href="#">
-                      <i class="bi bi-gear-wide-connected ms-1"></i> إعدادات أخرى (لاحقًا)
-                    </a></li>
-                  </ul>
-                </li>
 
-                <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  القضايا
+              <!-- Paramétrage (référentiels génériques) -->
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="paramDropdown"
+                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="bi bi-gear ms-1"></i> الإعدادات
                 </a>
+                <ul class="dropdown-menu dropdown-menu-end text-end" aria-labelledby="paramDropdown">
+                  <!--li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'degres-juridiction' %}"><i class="bi bi-diagram-3 ms-1"></i> درجات المحاكم</a></--li-->
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typejuridiction' %}"><i class="bi bi-building ms-1"></i> أنواع المحاكم</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typeaffaire' %}"><i class="bi bi-journal-text ms-1"></i> أنواع القضايا</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'statutaffaire' %}"><i class="bi bi-flag ms-1"></i> حالات القضايا</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typeaudience' %}"><i class="bi bi-calendar3 ms-1"></i> أنواع الجلسات</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'resultataudience' %}"><i class="bi bi-check2-square ms-1"></i> نتائج الجلسات</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typerecours' %}"><i class="bi bi-arrow-90deg-left ms-1"></i> أنواع الطعون</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'statuts-tache' %}"><i class="bi bi-list-check ms-1"></i> حالات المهام</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typeexecution' %}"><i class="bi bi-gear ms-1"></i> أنواع التنفيذ</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'statutexecution' %}"><i class="bi bi-clipboard2-check ms-1"></i> حالات التنفيذ</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typedepenses' %}"><i class="bi bi-cash-coin ms-1"></i> أنواع المصاريف</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typerecettes' %}"><i class="bi bi-wallet2 ms-1"></i> أنواع المداخيل</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'roles' %}"><i class="bi bi-person-badge ms-1"></i> أدوار المستخدمين</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'types-alerte' %}"><i class="bi bi-bell ms-1"></i> أنواع التنبيهات</a></li>
+                </ul>
+              </li>
+
+              <!-- Dossiers -->
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">القضايا</a>
                 <ul class="dropdown-menu">
                   <li><a class="dropdown-item" href="{% url 'cabinet:affaire_list' %}"><i class="bi bi-journal-text ms-1"></i> لائحة القضايا</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:affaire_create' %}"><i class="bi bi-plus-circle ms-1"></i> إضافة قضية</a></li>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:affaire_create' %}" hx-target="#modalBody"><i class="bi bi-plus-circle ms-1"></i> إضافة قضية</a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:audience_list' %}"><i class="bi bi-calendar3 ms-1"></i> الجلسات</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:decision_list' %}"><i class="bi bi-hammer ms-1"></i> الأحكام</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:notification_list' %}"><i class="bi bi-envelope-paper ms-1"></i> التبليغات</a></li>
                 </ul>
               </li>
+
+              <!-- Finance -->
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">المالية</a>
                 <ul class="dropdown-menu">
@@ -121,6 +118,8 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:recette_list' %}"><i class="bi bi-coin ms-1"></i> المداخيل</a></li>
                 </ul>
               </li>
+
+              <!-- Exécution / Recours -->
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">التنفيذ والطعن</a>
                 <ul class="dropdown-menu">
@@ -128,19 +127,22 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:voiederecours_list' %}"><i class="bi bi-arrow-90deg-left ms-1"></i> طرق الطعن</a></li>
                 </ul>
               </li>
+
+              <!-- Référentiel “archives” -->
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">الأرشيف والمرجع</a>
                 <ul class="dropdown-menu">
                   <li><a class="dropdown-item" href="{% url 'cabinet:piecejointe_list' %}"><i class="bi bi-folder2-open ms-1"></i> المرفقات</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:juridiction_list' %}"><i class="bi bi-building ms-1"></i> المحاكم</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:avocat_list' %}"><i class="bi bi-person-vcard ms-1"></i> المحامون</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:barreau_list' %}"><i class="bi bi-people ms-1"></i> هيئة المحامين</a></li>
                 </ul>
               </li>
             </ul>
 
+            <!-- Profil -->
             <ul class="navbar-nav mb-2 mb-lg-0">
               <li class="nav-item me-3 d-none d-lg-flex align-items-center">
-                <!-- مكان شعار ثانوي (هيئة المحامين مثلاً) -->
                 <img src="{% static 'img/logo-barreau.png' %}" alt="Barreau" style="height:28px" onerror="this.style.display='none'">
               </li>
               <li class="nav-item dropdown">
@@ -154,7 +156,7 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:alerte_list' %}"><i class="bi bi-bell ms-1"></i> التنبيهات</a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="/admin/"><i class="bi bi-speedometer2 ms-1"></i> إدارة النظام</a></li>
-                    <li><a class="dropdown-item" href="{% url 'authui:logout' %}"><i class="bi bi-box-arrow-left ms-1"></i> خروج</a></li>
+                  <li><a class="dropdown-item" href="{% url 'authui:logout' %}"><i class="bi bi-box-arrow-left ms-1"></i> خروج</a></li>
                 </ul>
               </li>
             </ul>
@@ -164,7 +166,6 @@
       {% endblock header %}
 
       <main class="container my-4">
-        <!-- رسائل النظام -->
         {% if messages %}
           <div class="mb-3">
             {% for message in messages %}
@@ -176,7 +177,6 @@
           </div>
         {% endif %}
 
-        <!-- رأس الصفحة (عنوان + فتات التنقل + أزرار سريعة) -->
         <div class="page-header mb-3">
           <div>
             <h1 class="h4 m-0">{% block page_title %}العنوان{% endblock %}</h1>
@@ -210,7 +210,6 @@
             </div>
             <div class="col-12 col-md-4">
               <h6 class="mb-2">العناوين ووسائل الاتصال</h6>
-              <!-- أماكن العنوان/الهاتف/البريد -->
               <ul class="list-unstyled small m-0">
                 <li class="mb-1"><i class="bi bi-geo-alt ms-1"></i> العنوان: شارع …، المدينة …</li>
                 <li class="mb-1"><i class="bi bi-telephone ms-1"></i> الهاتف: 05xx-xx-xx-xx</li>
@@ -232,151 +231,123 @@
       </footer>
       {% endblock footer %}
     </div>
-{% include '_partials/_toast_container.html' %}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    {% block extra_js %}
-     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+    {% include "_partials/_toast_container.html" %}
+
+    <!-- jQuery (Select2 a besoin de jQuery) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <!-- Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+
+    <!-- Modal global unique -->
     <div class="modal fade" id="mainModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="modalTitle">—</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title">—</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
           </div>
-          <div class="modal-body" id="modalBody"></div>
+          <div class="modal-body" id="modalBody"><!-- HTMX injecte ici --></div>
         </div>
       </div>
     </div>
-        <script>
-    document.body.addEventListener('htmx:afterRequest', function (evt) {
-      try {
-        const xhr = evt.detail.xhr;
-        const contentType = xhr.getResponseHeader('Content-Type') || '';
-        if (contentType.includes('application/json')) {
-          const data = JSON.parse(xhr.responseText);
-          if (data.ok) {
-            // success toast
-            const msg = (data.html && (new DOMParser()).parseFromString(data.html, 'text/html').querySelector('#hx-success-payload')?.dataset.message) || 'تمت العملية بنجاح.';
-            const el = document.querySelector('#toastBody');
-            if (el) { el.textContent = msg; }
-            const toastEl = document.querySelector('#liveToast');
-            if (toastEl) new bootstrap.Toast(toastEl).show();
-            // redirect or partial refresh
-            if (data.redirect) {
-              window.location.assign(data.redirect);
-            } else if (data.refreshTarget && data.refreshUrl) {
-              htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
-            }
-            // close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
-            if (modal) modal.hide();
-          }
-        }
-      } catch (e) { /* ignore */ }
-    });
-  </script>
 
-<script>
-  document.body.addEventListener('htmx:afterRequest', function (evt) {
-    try {
-      const xhr = evt.detail.xhr;
-      const type = (xhr.getResponseHeader('Content-Type')||'');
-      if (type.includes('application/json')) {
-        const data = JSON.parse(xhr.responseText||'{}');
-        if (data.ok) {
-          // Toast
-          const payload = (data.html && (new DOMParser()).parseFromString(data.html,'text/html').querySelector('#hx-success-payload')) || null;
-          const msg = payload?.dataset.message || 'تمت العملية بنجاح.';
-          const tb = document.querySelector('#toastBody'); if (tb) tb.textContent = msg;
-          const toastEl = document.querySelector('#liveToast'); if (toastEl) new bootstrap.Toast(toastEl).show();
-          // تحديث جزء محدد أو إعادة توجيه
-          if (data.redirect) {
-            window.location.assign(data.redirect);
-          } else if (data.refreshTarget && data.refreshUrl) {
-            htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
-          }
-          // إغلاق المودال
-          const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
-          if (modal) modal.hide();
-        }
-      }
-    } catch (e) {}
-  });
-</script>
+    {% block extra_js %}
         <script>
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-  }
-  document.body.addEventListener('htmx:configRequest', function (evt) {
-    const token = getCookie('csrftoken');
-    if (token) evt.detail.headers['X-CSRFToken'] = token;
-  });
-</script>
-        <script>
-  // Si le middleware renvoie 401/redirect (AJAX/HTMX), on redirige vers /auth/login/
-  document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
-    if (evt.detail.xhr && evt.detail.xhr.status === 401) {
-      try {
-        const data = JSON.parse(evt.detail.xhr.responseText || "{}");
-        if (data.redirect) window.location.href = data.redirect;
-      } catch (e) {}
+  // Touche ESC pour effacer rapidement le champ de recherche
+  document.addEventListener('input', function(e){
+    const el = e.target;
+    if (el.matches('.js-live-search input[name="q"]')) {
+      // rien à faire: HTMX gère le delay:300ms et déclenche la requête
     }
   });
-
-  // Après réponse HTMX OK, on traite le JSON de succès (toast/refresh…)
-  document.body.addEventListener('htmx:afterOnLoad', function (evt) {
-    try {
-      const json = JSON.parse(evt.detail.xhr.responseText || "{}");
-      if (json && json.ok) {
-        const msg = json.message || json.html || "تمت العملية.";
-        // TODO: afficher ton toast ici si tu veux
-        if (json.refreshTarget && json.refreshUrl) {
-          htmx.ajax('GET', json.refreshUrl, { target: json.refreshTarget, swap: 'outerHTML' });
-        }
-        if (json.redirect) window.location.href = json.redirect;
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      const q = document.querySelector('.js-live-search input[name="q"]');
+      if (q && q.value) {
+        q.value = '';
+        const form = q.closest('form');
+        if (form) form.dispatchEvent(new Event('change', {bubbles:true}));
       }
-    } catch (e) {}
+    }
   });
 </script>
-        <script>
-// Initialisation lors du chargement initial
-document.addEventListener("DOMContentLoaded", function() {
-  initSelect2(document);
-});
-
-// Réinitialisation automatique après tout échange HTMX
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-  initSelect2(evt.target);
-});
-
-function initSelect2(context){
-  $(context).find('select').each(function(){
-    const $el = $(this);
-    if ($el.data('select2')) return; // ← empêche double init
-    $el.select2({
-      theme:'bootstrap-5', dir:'rtl', width:'100%',
-      allowClear:true, placeholder:$el.attr('placeholder')||'اختر...',
-      closeOnSelect: !$el.prop('multiple'),
-      language:{ noResults:()=>"لا توجد نتائج", searching:()=>"جاري البحث..." }
-    });
-  });
-}
-document.addEventListener('DOMContentLoaded', ()=> initSelect2(document));
-document.body.addEventListener('htmx:afterSwap', (e)=> initSelect2(e.target));
-
+<script>
+  document.body.addEventListener('htmx:beforeRequest', ()=> document.body.style.cursor='wait');
+  document.body.addEventListener('htmx:afterRequest',  ()=> document.body.style.cursor='auto');
 </script>
-
-
-
     {% endblock %}
-  <!-- jQuery (nécessaire pour Select2) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+    <script>
+      // CSRF pour HTMX
+      function getCookie(name){
+        const v=`; ${document.cookie}`; const p=v.split(`; ${name}=`); if(p.length===2) return p.pop().split(';').shift();
+      }
+      document.body.addEventListener('htmx:configRequest', function (evt) {
+        const token = getCookie('csrftoken'); if (token) evt.detail.headers['X-CSRFToken'] = token;
+      });
 
+      // Traiter réponses JSON standardisées {ok:true, message?, refreshTarget?, refreshUrl?, closeModal?}
+      document.body.addEventListener('htmx:afterOnLoad', function (evt) {
+        const xhr = evt.detail.xhr; if (!xhr) return;
+        let data = null; try { data = JSON.parse(xhr.responseText || '{}'); } catch(e) { return; }
+        if (!data || !data.ok) return;
+
+        if (data.refreshTarget && data.refreshUrl) {
+          htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
+        }
+        if (data.closeModal) {
+          const el = document.getElementById('mainModal');
+          if (el) (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).hide();
+        }
+        // Toast simple
+        if (data.message) {
+          const tb = document.querySelector('#toastBody'); if (tb) tb.textContent = data.message;
+          const toastEl = document.querySelector('#liveToast'); if (toastEl) new bootstrap.Toast(toastEl).show();
+        }
+      });
+
+      // Nettoyage des backdrops orphelins (évite écran grisé)
+      document.addEventListener('hidden.bs.modal', function () {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+      });
+
+      // Redirection login si 401 pendant une requête HTMX
+      document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
+        const xhr = evt.detail.xhr;
+        if (xhr && xhr.status === 401) {
+          try {
+            const data = JSON.parse(xhr.responseText || "{}");
+            if (data.redirect) window.location.href = data.redirect;
+          } catch (e) { window.location.href = "/auth/login/"; }
+        }
+      });
+
+      // Initialisation Select2 sur .js-select2 uniquement
+      function initSelect2(context){
+        $(context).find('select.js-select2').each(function(){
+          const $el = $(this);
+          if ($el.data('select2')) return; // empêche double init
+          $el.select2({
+            theme:'bootstrap-5',
+            dir:'rtl',
+            width:'100%',
+            allowClear:true,
+            placeholder:$el.attr('placeholder')||'اختر...',
+            closeOnSelect: !$el.prop('multiple'),
+            language:{ noResults:()=>"لا توجد نتائج", searching:()=>"جاري البحث..." }
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', ()=> initSelect2(document));
+      document.body.addEventListener('htmx:afterSwap', (e)=> initSelect2(e.target));
+    </script>
   </body>
 </html>
 {# ============================================================= #}

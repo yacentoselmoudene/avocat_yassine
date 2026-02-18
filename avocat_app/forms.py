@@ -10,7 +10,7 @@ from .models import (
     TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte,
     TypeAffaire, StatutAffaire, TypeMesure, TypeAudience,
     TypeExecution, StatutExecution,
-    StatutMesure
+    StatutMesure, StatutRecours, ResultatAudience, TypeRecours, Barreau, TypeJuridiction, DegreJuridiction
 )
 
 # ---------- Base mixin: RTL + Bootstrap + تنظيف مدخلات ----------
@@ -129,7 +129,9 @@ class ArabicLoginForm(AuthenticationForm):
 class AvocatForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Avocat
+        # fileds "__all__" without created_at, updated_at et is_deleted
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {
             "nom": "الاسم الكامل",
             "barreau": "هيئة الانتماء",
@@ -146,6 +148,8 @@ class AffaireForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Affaire
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {
             "reference_interne": "المرجع الداخلي",
             "reference_tribunal": "مرجع المحكمة",
@@ -174,12 +178,14 @@ class JuridictionForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Juridiction
         fields = "__all__"
-        labels = {"nom": "الاسم", "ville": "المدينة", "type": "النوع"}
+        exclude = ["created_at", "updated_at", "is_deleted"]
+        labels = {"nomtribunal_ar": "الاسم", "villetribunal_ar": "المدينة", "type": "النوع"}
 
 class PartieForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Partie
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {
             "nom_complet": "الاسم الكامل",
             "type_partie": "الصفة",
@@ -187,6 +193,15 @@ class PartieForm(ArabicBootstrapFormMixin):
             "adresse": "العنوان",
             "telephone": "الهاتف",
             "email": "البريد",
+        }
+
+class BarreauForm(ArabicBootstrapFormMixin):
+    class Meta:
+        model = Barreau
+        fields = ["nom", "juridiction_appel"]
+        labels = {
+            "nom": "الاسم الكامل",
+            "juridiction_appel": "محكمة الاستئناف",
         }
 
 class AudienceForm(ArabicBootstrapFormMixin):
@@ -205,6 +220,7 @@ class MesureForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Mesure
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"audience": "الجلسة", "type_mesure": "نوع الإجراء", "statut": "الحالة", "notes": "ملاحظات", "date_ordonnee": "تاريخ الأمر"}
         widgets = {"date_ordonnee": forms.DateInput(attrs={"type": "date"})}
 
@@ -212,6 +228,7 @@ class ExpertiseForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Expertise
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {
             "affaire": "القضية", "expert_nom": "اسم الخبير",
             "date_ordonnee": "تاريخ الأمر", "date_depot": "تاريخ الإيداع",
@@ -236,6 +253,7 @@ class NotificationForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Notification
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {
             "decision": "الحكم", "demande_numero": "رقم طلب التبليغ",
             "date_depot_demande": "تاريخ إيداع الطلب", "huissier_nom": "اسم المفوض",
@@ -251,6 +269,7 @@ class VoieDeRecoursForm(ArabicBootstrapFormMixin):
     class Meta:
         model = VoieDeRecours
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"decision": "الحكم", "type_recours": "نوع الطعن", "date_depot": "تاريخ الإيداع", "juridiction": "المحكمة", "statut": "الحالة"}
         widgets = {"date_depot": forms.DateInput(attrs={"type": "date"})}
 
@@ -258,6 +277,7 @@ class ExecutionForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Execution
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"decision": "الحكم", "type_execution": "نوع التنفيذ", "date_demande": "تاريخ الطلب", "statut": "الحالة", "depot_caisse_barreau": "إحالة للهيئة"}
         widgets = {"date_demande": forms.DateInput(attrs={"type": "date"})}
 
@@ -265,6 +285,7 @@ class DepenseForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Depense
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"affaire": "القضية", "type_depense": "النوع", "montant": "المبلغ", "date_depense": "التاريخ", "beneficiaire": "المستفيد"}
         widgets = {"date_depense": forms.DateInput(attrs={"type": "date"})}
 
@@ -272,6 +293,7 @@ class RecetteForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Recette
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"affaire": "القضية", "type_recette": "النوع", "montant": "المبلغ", "date_recette": "التاريخ", "source": "المصدر"}
         widgets = {"date_recette": forms.DateInput(attrs={"type": "date"})}
 
@@ -279,6 +301,7 @@ class PieceJointeForm(ArabicBootstrapFormMixin):
     class Meta:
         model = PieceJointe
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"affaire": "القضية", "titre": "العنوان", "type_piece": "النوع", "fichier": "الملف", "date_ajout": "تاريخ الإضافة"}
         widgets = {"date_ajout": forms.DateInput(attrs={"type": "date"})}
 
@@ -286,12 +309,14 @@ class UtilisateurForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Utilisateur
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"nom_complet": "الاسم", "role": "الدور", "email": "البريد", "actif": "نشط"}
 
 class TacheForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Tache
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"titre": "العنوان", "description": "الوصف", "affaire": "القضية", "assigne_a": "المكلّف", "echeance": "الأجل", "statut": "الحالة"}
         widgets = {"echeance": forms.DateInput(attrs={"type": "date"})}
 
@@ -299,12 +324,14 @@ class ExpertForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Expert
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"nom_complet": "الاسم", "email": "البريد", "telephone": "الهاتف", "specialite": "التخصص", "adresse": "العنوان"}
 
 class AlerteForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Alerte
         fields = "__all__"
+        exclude = ["created_at", "updated_at", "is_deleted"]
         labels = {"type_alerte": "النوع", "reference_id": "المعرّف", "date_alerte": "التاريخ", "moyen": "القناة", "destinataire": "المرسل إليه", "message": "النص"}
         widgets = {"date_alerte": forms.DateInput(attrs={"type": "date"})}
 
@@ -366,3 +393,24 @@ class StatutExecutionForm(LibelleForm):
 class StatutMesureForm(LibelleForm):
     class Meta(LibelleForm.Meta):
         model = StatutMesure
+
+
+class StatutRecoursForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = StatutRecours
+
+class ResultatAudienceForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = ResultatAudience
+
+class TypeRecoursForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeRecours
+
+class TypeJuridictionForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = TypeJuridiction
+
+class DegreJuridictionForm(LibelleForm):
+    class Meta(LibelleForm.Meta):
+        model = DegreJuridiction

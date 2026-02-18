@@ -11,9 +11,9 @@ urlpatterns = [
     # ====== Juridiction ======
     path("juridictions/", views.JuridictionList.as_view(), name="juridiction_list"),
     path("juridictions/create/", views.JuridictionCreate.as_view(), name="juridiction_create"),
-    path("juridictions/<uuid:pk>/", views.JuridictionDetail.as_view(), name="juridiction_detail"),
-    path("juridictions/<uuid:pk>/update/", views.JuridictionUpdate.as_view(), name="juridiction_update"),
-    path("juridictions/<uuid:pk>/delete/", views.JuridictionDelete.as_view(), name="juridiction_delete"),
+    path("juridictions/<int:pk>/", views.JuridictionDetail.as_view(), name="juridiction_detail"),
+    path("juridictions/<int:pk>/update/", views.JuridictionUpdate.as_view(), name="juridiction_update"),
+    path("juridictions/<int:pk>/delete/", views.JuridictionDelete.as_view(), name="juridiction_delete"),
 
     # ====== Avocat ======
     path("avocats/", views.AvocatList.as_view(), name="avocat_list"),
@@ -155,6 +155,13 @@ urlpatterns = [
     path("alertes/<uuid:pk>/", views.AlerteDetail.as_view(), name="alerte_detail"),
     path("alertes/<uuid:pk>/update/", views.AlerteUpdate.as_view(), name="alerte_update"),
     path("alertes/<uuid:pk>/delete/", views.AlerteDelete.as_view(), name="alerte_delete"),
+
+    path("barreaux/", views.BarreauList.as_view(), name="barreau_list"),
+    path("barreaux/create/", views.BarreauCreate.as_view(), name="barreau_create"),
+
+    path("barreaux/<slug:pk>/", views.BarreauDetail.as_view(), name="barreau_detail"),
+    path("barreaux/<slug:pk>/update/", views.BarreauUpdate.as_view(), name="barreau_update"),
+    path("barreaux/<slug:pk>/delete/", views.BarreauDelete.as_view(), name="barreau_delete"),
 
     path("audit/", views_audit.AuditLogList.as_view(), name="audit_list"),
     path("audit/<uuid:pk>/", views_audit.AuditLogDetail.as_view(), name="audit_detail"),

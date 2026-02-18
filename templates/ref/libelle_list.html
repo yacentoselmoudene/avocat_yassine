@@ -5,11 +5,10 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div></div>
   <button class="btn btn-primary"
-          data-bs-toggle="modal" data-bs-target="#mainModal"
-          hx-get="{{ create_url }}"
-          hx-target="#modalBody">
-    + إضافة
-  </button>
+        data-bs-toggle="modal" data-bs-target="#mainModal"
+        hx-get="{{ create_url }}" hx-target="#modalBody">
+  + إضافة
+</button>
 </div>
 
 <div id="ref-list" class="card shadow-sm">
@@ -30,11 +29,11 @@
             <td class="text-end">
               <button class="btn btn-sm btn-outline-primary"
                       data-bs-toggle="modal" data-bs-target="#mainModal"
-                      hx-get="{% url update_name it.pk %}"
+                      hx-get="{% url update_name refname it.pk %}"
                       hx-target="#modalBody">تعديل</button>
               <button class="btn btn-sm btn-outline-danger"
                       data-bs-toggle="modal" data-bs-target="#mainModal"
-                      hx-get="{% url delete_name it.pk %}"
+                      hx-get="{% url delete_name refname it.pk %}"
                       hx-target="#modalBody">حذف</button>
             </td>
           </tr>
