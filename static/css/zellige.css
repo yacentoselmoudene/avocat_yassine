@@ -1,0 +1,1182 @@
+/* ============================================================= */
+/* zellige.css — Moroccan Zellige-Inspired Theme                 */
+/* Law Firm Management Application                               */
+/* ============================================================= */
+
+/* ─── 1. CSS Custom Properties ─────────────────────────────── */
+:root {
+  /* Zellige Palette */
+  --z-cobalt:       #1B4F72;
+  --z-cobalt-light: #2E86C1;
+  --z-cobalt-dark:  #0E2F44;
+  --z-emerald:      #1A7A5C;
+  --z-terracotta:   #C0612B;
+  --z-gold:         #C9A84C;
+  --z-cream:        #F5F1EB;
+  --z-sand:         #E8E0D4;
+
+  /* Bootstrap overrides */
+  --bs-primary:     #1B4F72;
+  --bs-primary-rgb: 27, 79, 114;
+  --bs-success:     #1A7A5C;
+  --bs-success-rgb: 26, 122, 92;
+  --bs-warning:     #C0612B;
+  --bs-warning-rgb: 192, 97, 43;
+  --bs-info:        #2E86C1;
+  --bs-info-rgb:    46, 134, 193;
+  --bs-body-bg:     var(--z-cream);
+  --bs-body-font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+
+  /* Ornament stripe gradient */
+  --z-stripe: linear-gradient(90deg,
+    var(--z-cobalt) 0%, var(--z-cobalt) 25%,
+    var(--z-emerald) 25%, var(--z-emerald) 50%,
+    var(--z-terracotta) 50%, var(--z-terracotta) 75%,
+    var(--z-gold) 75%, var(--z-gold) 100%);
+}
+
+
+/* ─── 2. Typography ────────────────────────────────────────── */
+body {
+  font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  color: var(--z-cobalt-dark);
+}
+
+.navbar-brand strong,
+.zellige-section-header {
+  font-family: 'Amiri', 'Cairo', serif;
+}
+
+
+/* ─── 3. SVG Geometric Star Pattern (subtle body bg) ───────── */
+.zellige-body {
+  background-color: var(--z-cream);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 25 L55 30 L35 35 L30 55 L25 35 L5 30 L25 25 Z' fill='%23C9A84C' fill-opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+
+/* ─── 4. Global Layout ─────────────────────────────────────── */
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+
+/* ─── 5. Navbar ────────────────────────────────────────────── */
+.zellige-navbar {
+  background-color: var(--z-cobalt) !important;
+  border-bottom: none !important;
+  box-shadow: 0 2px 8px rgba(14, 47, 68, 0.3);
+  position: relative;
+}
+
+.zellige-navbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--z-stripe);
+}
+
+.zellige-navbar .navbar-brand strong {
+  color: #fff;
+}
+
+.zellige-navbar .brand-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+.zellige-navbar .nav-link {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.zellige-navbar .nav-link:hover,
+.zellige-navbar .nav-link:focus {
+  color: var(--z-gold) !important;
+}
+
+.zellige-navbar .nav-link.show,
+.zellige-navbar .nav-link.active {
+  color: #fff !important;
+}
+
+.zellige-navbar .dropdown-menu {
+  border: 1px solid var(--z-sand);
+  border-top: 3px solid var(--z-gold);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.zellige-navbar .dropdown-item:hover {
+  background-color: rgba(27, 79, 114, 0.08);
+  color: var(--z-cobalt);
+}
+
+.zellige-navbar .dropdown-item i {
+  color: var(--z-cobalt-light);
+}
+
+.zellige-navbar .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.zellige-navbar .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+
+/* ─── 6. Page Header & Breadcrumbs ─────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header h1,
+.page-header .h4 {
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.page-header h1::after,
+.page-header .h4::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 60px;
+  height: 3px;
+  background: var(--z-gold);
+  border-radius: 2px;
+}
+
+.page-header .breadcrumb {
+  --bs-breadcrumb-divider: '◆';
+  font-size: 0.85rem;
+}
+
+.page-header .breadcrumb a {
+  color: var(--z-cobalt-light);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.page-header .breadcrumb a:hover {
+  color: var(--z-cobalt);
+}
+
+
+/* ─── 7. Cards ─────────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--z-sand);
+  border-radius: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.5rem rgba(14, 47, 68, 0.1);
+}
+
+.card-header {
+  background-color: rgba(27, 79, 114, 0.04);
+  border-bottom: 2px solid var(--z-gold);
+  font-family: 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  color: var(--z-cobalt-dark);
+}
+
+.zellige-detail-card {
+  border-top: 4px solid var(--z-cobalt);
+}
+
+.zellige-sidebar-card {
+  border-top: 4px solid var(--z-gold);
+}
+
+.zellige-sidebar-card h6 {
+  color: var(--z-cobalt);
+  border-bottom: 2px solid var(--z-gold);
+  padding-bottom: 0.5rem;
+}
+
+.zellige-list-card {
+  border-top: 4px solid var(--z-cobalt);
+}
+
+.zellige-form-card {
+  border-top: 4px solid var(--z-emerald);
+}
+
+.zellige-form-card .card-footer {
+  background-color: rgba(27, 79, 114, 0.03);
+  border-top: 1px solid var(--z-sand);
+}
+
+.zellige-finance-card {
+  border-top: 4px solid var(--z-emerald);
+}
+
+
+/* ─── 8. Tables ────────────────────────────────────────────── */
+.table {
+  --bs-table-hover-bg: rgba(27, 79, 114, 0.04);
+}
+
+.table thead {
+  background-color: rgba(27, 79, 114, 0.06);
+}
+
+.table thead th {
+  color: var(--z-cobalt-dark);
+  font-family: 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-bottom: 2px solid var(--z-gold);
+  padding: 0.75rem;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--z-sand);
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(27, 79, 114, 0.04);
+}
+
+.table-light {
+  --bs-table-bg: rgba(27, 79, 114, 0.06);
+  --bs-table-border-color: var(--z-sand);
+}
+
+
+/* ─── 9. Badges ────────────────────────────────────────────── */
+.badge.bg-primary {
+  background-color: var(--z-cobalt) !important;
+}
+
+.badge.bg-success {
+  background-color: var(--z-emerald) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--z-terracotta) !important;
+  color: #fff !important;
+}
+
+.badge.bg-info {
+  background-color: var(--z-cobalt-light) !important;
+  color: #fff !important;
+}
+
+.badge.bg-secondary {
+  background-color: #6B7C93 !important;
+}
+
+.badge.bg-danger {
+  background-color: #B03A2E !important;
+}
+
+
+/* ─── 10. Buttons ──────────────────────────────────────────── */
+.btn-primary {
+  background-color: var(--z-cobalt);
+  border-color: var(--z-cobalt);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--z-cobalt-light);
+  border-color: var(--z-cobalt-light);
+}
+
+.btn-primary:active {
+  background-color: var(--z-cobalt-dark);
+  border-color: var(--z-cobalt-dark);
+}
+
+.btn-outline-primary {
+  color: var(--z-cobalt);
+  border-color: var(--z-cobalt);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--z-cobalt);
+  border-color: var(--z-cobalt);
+  color: #fff;
+}
+
+.btn-success {
+  background-color: var(--z-emerald);
+  border-color: var(--z-emerald);
+}
+
+.btn-success:hover,
+.btn-success:focus {
+  background-color: #158a66;
+  border-color: #158a66;
+}
+
+.btn-warning {
+  background-color: var(--z-terracotta);
+  border-color: var(--z-terracotta);
+  color: #fff;
+}
+
+.btn-warning:hover,
+.btn-warning:focus {
+  background-color: #a8532a;
+  border-color: #a8532a;
+  color: #fff;
+}
+
+.btn-outline-secondary {
+  color: #6B7C93;
+  border-color: var(--z-sand);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--z-sand);
+  border-color: var(--z-sand);
+  color: var(--z-cobalt-dark);
+}
+
+.btn {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+
+/* ─── 11. Modals (mahakim.ma inspired) ────────────────────── */
+.zellige-modal-header {
+  background: linear-gradient(135deg, #295bac, var(--m-blue, #3b82f6));
+  color: #fff;
+  border-bottom: 3px solid var(--z-gold);
+  padding: 0.75rem 1.25rem;
+}
+
+.zellige-modal-header .modal-title {
+  font-family: 'Noto Kufi Arabic', 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.zellige-modal-header .btn-close {
+  filter: invert(1);
+  opacity: 0.8;
+}
+
+.zellige-modal-header .btn-close:hover {
+  opacity: 1;
+}
+
+.modal-content {
+  border: none;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+}
+
+.modal-body {
+  padding: 1.25rem;
+  background: #fff;
+}
+
+
+/* ─── 12. Forms & Select2 — mahakim.ma inspired ──────────── */
+
+/* DroidArabicKufi for form headers (mahakim.ma style) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;600;700&display=swap');
+
+/* Mahakim.ma accents — blended with zellige palette */
+:root {
+  --m-blue:       #3b82f6;
+  --m-blue-dark:  #295bac;
+  --m-blue-light: #dbeafe;
+  --m-blue-focus: #BFDBFE;
+  --m-surface:    #eff3f8;
+  --m-hover:      #f6f9fc;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--m-blue);
+  box-shadow: 0 0 0 .2rem var(--m-blue-focus);
+}
+
+.form-control,
+.form-select {
+  border-color: #dee2e6;
+  border-radius: 6px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.form-control:hover,
+.form-select:hover {
+  border-color: var(--m-blue);
+}
+
+.form-label {
+  font-weight: 600;
+  color: var(--z-cobalt-dark);
+  font-size: 0.875rem;
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+}
+
+/* ─── Form Section Headers (mahakim.ma judicial style) ───── */
+.mahakim-section-header,
+form h6.text-primary {
+  font-family: 'Noto Kufi Arabic', 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--m-blue-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--m-blue-light);
+  margin-bottom: 0.75rem !important;
+}
+
+form h6.text-primary i,
+.mahakim-section-header i {
+  color: var(--m-blue);
+  font-size: 1rem;
+}
+
+form h6.text-secondary {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+/* ─── Form Sections Styling ──────────────────────────────── */
+form .border-bottom {
+  border-color: var(--m-surface) !important;
+  padding-bottom: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* ─── Form Buttons (mahakim.ma accent) ───────────────────── */
+form .btn-primary {
+  background: linear-gradient(135deg, var(--m-blue), var(--m-blue-dark));
+  border: none;
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  transition: all .2s;
+}
+
+form .btn-primary:hover {
+  background: linear-gradient(135deg, var(--m-blue-dark), #204887);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+form .btn-outline-secondary {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+/* ─── Required asterisk styling ──────────────────────────── */
+form .text-danger {
+  color: #ef4444 !important;
+  font-weight: 700;
+}
+
+/* ─── Mahakim-style input group (reference fields) ───────── */
+.mahakim-ref-group {
+  background: var(--m-surface);
+  border: 1px solid var(--m-blue-light);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.mahakim-ref-group .form-control {
+  background: #fff;
+  font-family: 'Roboto', 'Cairo', monospace;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.mahakim-ref-group .form-label {
+  font-size: 0.8rem;
+  color: var(--m-blue-dark);
+}
+
+/* ─── Select2 integration (mahakim.ma blue accent) ───────── */
+.select2-container--bootstrap-5 .select2-selection {
+  border-color: #dee2e6;
+  border-radius: 6px;
+  min-height: calc(2.25rem + 2px);
+  text-align: right;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.select2-container--bootstrap-5 .select2-selection:hover {
+  border-color: var(--m-blue);
+}
+
+.select2-container--bootstrap-5 .select2-selection--single:focus,
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+  border-color: var(--m-blue);
+  box-shadow: 0 0 0 .2rem var(--m-blue-focus);
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+  border-color: #dee2e6;
+  border-top: 3px solid var(--m-blue);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+  background-color: var(--m-blue) !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.select2-container--bootstrap-5 .select2-search__field {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  border-radius: 4px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection__choice {
+  background-color: var(--m-blue-light);
+  border-color: var(--m-blue);
+  color: var(--m-blue-dark);
+  padding-right: 0.75rem;
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  border-radius: 4px;
+}
+
+.select2-container--bootstrap-5 .select2-selection__choice__remove {
+  margin-left: 0.5rem;
+  font-size: 1rem;
+  float: left;
+}
+
+.select2-container { width: 100% !important; }
+
+/* ─── Small Select2 (for sm forms) ───────────────────────── */
+.select2-container--bootstrap-5 .select2-selection--single {
+  font-size: 0.875rem;
+}
+
+/* ─── Form inside modal — compact spacing ────────────────── */
+.modal-body form .row.g-2 > [class*="col-"] {
+  margin-bottom: 0.25rem;
+}
+
+/* ─── Invalid field highlight ────────────────────────────── */
+.invalid-feedback {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-size: 0.78rem;
+  color: #ef4444;
+}
+
+.is-invalid,
+.form-control.is-invalid,
+.form-select.is-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 .2rem rgba(239, 68, 68, 0.15);
+}
+
+/* ─── Mahakim Sync Page ──────────────────────────────────── */
+.mahakim-sync-badge {
+  font-family: 'Noto Kufi Arabic', 'Cairo', sans-serif;
+  font-size: 0.75rem;
+}
+
+
+/* ─── 13. Dashboard KPI Cards ──────────────────────────────── */
+.zellige-kpi-card {
+  border: 1px solid var(--z-sand);
+  border-top: 4px solid var(--z-gold);
+  border-radius: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.zellige-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1.5rem rgba(14, 47, 68, 0.12);
+}
+
+.zellige-kpi-card .fs-3 {
+  color: var(--z-cobalt-dark);
+}
+
+.zellige-kpi-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+}
+
+.zellige-kpi-icon.icon-cobalt {
+  background-color: rgba(27, 79, 114, 0.12);
+  color: var(--z-cobalt);
+}
+
+.zellige-kpi-icon.icon-terracotta {
+  background-color: rgba(192, 97, 43, 0.12);
+  color: var(--z-terracotta);
+}
+
+.zellige-kpi-icon.icon-danger {
+  background-color: rgba(176, 58, 46, 0.12);
+  color: #B03A2E;
+}
+
+.zellige-kpi-icon.icon-emerald {
+  background-color: rgba(26, 122, 92, 0.12);
+  color: var(--z-emerald);
+}
+
+
+/* ─── 14. Section Headers ──────────────────────────────────── */
+.zellige-section-header {
+  font-family: 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  color: var(--z-cobalt-dark);
+  position: relative;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.zellige-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 50px;
+  height: 3px;
+  background: var(--z-gold);
+  border-radius: 2px;
+}
+
+
+/* ─── 15. Phase Progress Indicator ──────────────────────────── */
+.zellige-phase-indicator {
+  background: linear-gradient(135deg, rgba(27,79,114,0.03), rgba(201,168,76,0.05));
+  border: 1px solid var(--z-sand);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.phase-step {
+  min-width: 60px;
+}
+
+.phase-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--z-sand);
+  border: 2px solid var(--z-sand);
+  transition: all 0.3s ease;
+}
+
+.phase-step.completed .phase-dot {
+  background-color: var(--z-emerald);
+  border-color: var(--z-emerald);
+}
+
+.phase-step.active .phase-dot {
+  background-color: var(--z-gold);
+  border-color: var(--z-gold);
+  box-shadow: 0 0 0 4px rgba(201,168,76,0.25);
+}
+
+.phase-label {
+  color: #999;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.phase-step.completed .phase-label {
+  color: var(--z-emerald);
+}
+
+.phase-step.active .phase-label {
+  color: var(--z-cobalt-dark);
+  font-weight: 700;
+}
+
+.phase-line {
+  height: 2px;
+  background-color: var(--z-sand);
+  min-width: 20px;
+  margin-top: -1rem;
+  transition: background-color 0.3s ease;
+}
+
+.phase-line.filled {
+  background-color: var(--z-emerald);
+}
+
+
+/* ─── 15b. Vertical Timeline (RTL with zellige styling) ────── */
+.zellige-timeline {
+  position: relative;
+  padding-right: 1.5rem;
+}
+
+.zellige-timeline::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--z-gold), var(--z-cobalt-light), var(--z-emerald));
+  border-radius: 2px;
+}
+
+.zellige-timeline .timeline-item {
+  position: relative;
+  padding-right: 2rem;
+  padding-bottom: 1.5rem;
+  border-right: none;
+}
+
+.zellige-timeline .timeline-item::before {
+  display: none;
+}
+
+.zellige-timeline .timeline-dot {
+  position: absolute;
+  right: -1.75rem;
+  top: 0.25rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--z-gold);
+  border: 2px solid var(--z-cream);
+  z-index: 1;
+}
+
+.zellige-timeline .timeline-dot.dot-terracotta { background-color: var(--z-terracotta); }
+.zellige-timeline .timeline-dot.dot-warning { background-color: var(--z-terracotta); }
+.zellige-timeline .timeline-dot.dot-primary { background-color: var(--z-cobalt); }
+.zellige-timeline .timeline-dot.dot-dark { background-color: #343a40; }
+.zellige-timeline .timeline-dot.dot-secondary { background-color: #6B7C93; }
+.zellige-timeline .timeline-dot.dot-info { background-color: var(--z-cobalt-light); }
+.zellige-timeline .timeline-dot.dot-success { background-color: var(--z-emerald); }
+.zellige-timeline .timeline-dot.dot-light { background-color: var(--z-sand); }
+
+.zellige-timeline .timeline-content {
+  background: #fff;
+  border: 1px solid var(--z-sand);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.zellige-timeline .timeline-content:hover {
+  box-shadow: 0 2px 8px rgba(14,47,68,0.08);
+}
+
+.zellige-timeline .timeline-phase-marker {
+  position: relative;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+.zellige-timeline .phase-diamond {
+  width: 20px;
+  height: 20px;
+  background: var(--z-gold);
+  transform: rotate(45deg);
+  margin: 0 auto;
+  position: relative;
+  right: -0.5rem;
+}
+
+.zellige-timeline .phase-marker-label {
+  display: inline-block;
+  background: var(--z-cobalt);
+  color: #fff;
+  padding: 0.15rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+.badge.text-bg-terracotta {
+  background-color: var(--z-terracotta) !important;
+  color: #fff !important;
+}
+
+.badge-sm {
+  font-size: 0.7rem;
+  padding: 0.2em 0.5em;
+}
+
+
+/* ─── 16. Pagination ───────────────────────────────────────── */
+.page-link {
+  color: var(--z-cobalt);
+  border-color: var(--z-sand);
+}
+
+.page-link:hover {
+  color: var(--z-cobalt-dark);
+  background-color: rgba(27, 79, 114, 0.06);
+  border-color: var(--z-sand);
+}
+
+.page-item.active .page-link {
+  background-color: var(--z-cobalt);
+  border-color: var(--z-cobalt);
+}
+
+.page-item.disabled .page-link {
+  color: #adb5bd;
+  border-color: var(--z-sand);
+}
+
+
+/* ─── 17. Footer ───────────────────────────────────────────── */
+.zellige-footer {
+  background-color: var(--z-cobalt-dark);
+  color: #fff;
+  position: relative;
+}
+
+.zellige-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--z-stripe);
+}
+
+.zellige-footer h6 {
+  color: var(--z-gold);
+  font-family: 'Amiri', 'Cairo', serif;
+}
+
+.zellige-footer .footer-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.zellige-footer .footer-link:hover {
+  color: var(--z-gold);
+}
+
+.zellige-footer .text-secondary {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.zellige-footer i {
+  color: var(--z-gold);
+  opacity: 0.7;
+}
+
+
+/* ─── 18. Login Page ───────────────────────────────────────── */
+.zellige-login-bg {
+  background-color: var(--z-cobalt-dark);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 25 L55 30 L35 35 L30 55 L25 35 L5 30 L25 25 Z' fill='%23C9A84C' fill-opacity='0.05'/%3E%3C/svg%3E");
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zellige-login-card {
+  max-width: 420px;
+  width: 100%;
+  border: none;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+}
+
+.zellige-login-card::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: var(--z-stripe);
+}
+
+.zellige-login-card .brand {
+  font-family: 'Amiri', 'Cairo', serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--z-cobalt);
+}
+
+.zellige-login-card .card-footer {
+  background-color: rgba(27, 79, 114, 0.04);
+  border-top: 1px solid var(--z-sand);
+}
+
+.zellige-login-card .btn-primary {
+  background-color: var(--z-cobalt);
+  border-color: var(--z-cobalt);
+  font-weight: 700;
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+}
+
+.zellige-login-card .btn-primary:hover {
+  background-color: var(--z-cobalt-light);
+  border-color: var(--z-cobalt-light);
+}
+
+
+/* ─── 19. Empty States ─────────────────────────────────────── */
+.empty-state-icon {
+  color: var(--z-sand);
+}
+
+.list-group-item.text-muted i {
+  color: var(--z-sand);
+}
+
+
+/* ─── 20. Alerts & Toasts ──────────────────────────────────── */
+.alert-success {
+  background-color: rgba(26, 122, 92, 0.1);
+  border-color: rgba(26, 122, 92, 0.2);
+  color: var(--z-emerald);
+}
+
+.alert-danger {
+  background-color: rgba(176, 58, 46, 0.1);
+  border-color: rgba(176, 58, 46, 0.2);
+  color: #B03A2E;
+}
+
+.alert-warning {
+  background-color: rgba(192, 97, 43, 0.1);
+  border-color: rgba(192, 97, 43, 0.2);
+  color: var(--z-terracotta);
+}
+
+.alert-info {
+  background-color: rgba(46, 134, 193, 0.1);
+  border-color: rgba(46, 134, 193, 0.2);
+  color: var(--z-cobalt);
+}
+
+.toast {
+  border: 1px solid var(--z-sand);
+  border-radius: 0.5rem;
+}
+
+
+/* ─── 21. List Groups ──────────────────────────────────────── */
+.list-group-item {
+  border-color: var(--z-sand);
+}
+
+.list-group-item-action:hover {
+  background-color: rgba(27, 79, 114, 0.04);
+}
+
+.list-group-item i.text-primary {
+  color: var(--z-cobalt) !important;
+}
+
+.list-group-item i.text-success {
+  color: var(--z-emerald) !important;
+}
+
+
+/* ─── 21b. Person Clickable Links & Popup ─────────────────── */
+.person-link {
+  color: var(--z-cobalt);
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1px dashed var(--z-cobalt-light);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.person-link:hover {
+  color: var(--z-cobalt-light);
+  border-bottom-color: var(--z-cobalt);
+  text-decoration: none;
+}
+
+.person-link i {
+  font-size: 0.8em;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.person-link:hover i {
+  opacity: 1;
+}
+
+.person-popup-card {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.person-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--z-cobalt), var(--z-cobalt-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.person-avatar i {
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+.person-popup-card dl dt {
+  color: var(--z-cobalt-dark);
+  font-weight: 600;
+}
+
+
+/* ─── 22. Links ────────────────────────────────────────────── */
+a {
+  color: var(--z-cobalt-light);
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--z-cobalt);
+}
+
+
+/* ─── 23. Scrollbar (WebKit) ───────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--z-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--z-sand);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #c4b9ab;
+}
+
+
+/* ─── 24. Responsive Adjustments ───────────────────────────── */
+@media (max-width: 768px) {
+  .zellige-kpi-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .zellige-kpi-icon i {
+    font-size: 1.2rem !important;
+  }
+
+  .zellige-kpi-card .fs-3 {
+    font-size: 1.4rem !important;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header .d-flex.gap-2 {
+    width: 100%;
+  }
+
+  .zellige-footer .row {
+    text-align: center;
+  }
+
+  .zellige-footer .d-flex.align-items-center {
+    justify-content: center;
+  }
+
+  .zellige-login-card {
+    margin: 1rem;
+  }
+
+  .zellige-navbar .navbar-brand strong {
+    font-size: 0.95rem;
+  }
+
+  .zellige-section-header::after {
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+
+@media (max-width: 576px) {
+  .zellige-kpi-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .btn-group .btn {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .card-header {
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+  }
+}
+
+
+/* ─── 25. Print Styles ─────────────────────────────────────── */
+@media print {
+  .zellige-navbar,
+  .zellige-footer,
+  .btn,
+  .page-header .d-flex.gap-2 {
+    display: none !important;
+  }
+
+  .card {
+    border: 1px solid #ddd;
+    box-shadow: none !important;
+  }
+
+  .zellige-body {
+    background: #fff;
+    background-image: none;
+  }
+}
