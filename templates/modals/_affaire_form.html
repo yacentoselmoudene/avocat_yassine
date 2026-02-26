@@ -1,0 +1,168 @@
+{# FILE: templates/modals/_affaire_form.html #}
+{# نموذج القضية — stepper multi-étapes #}
+{% load form_extras %}
+{% include '_partials/_stepper.html' %}
+
+<form method="post" id="affaireStepperForm"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3" style="border-right: 4px solid #ef4444;">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# Stepper nav #}
+  <div class="stepper-nav">
+    <div class="step-indicator active"><span class="step-num">1</span> المرجع</div>
+    <div class="step-indicator"><span class="step-num">2</span> التصنيف</div>
+    <div class="step-indicator"><span class="step-num">3</span> المحكمة</div>
+    <div class="step-indicator"><span class="step-num">4</span> التفاصيل</div>
+  </div>
+
+  {# === Step 1: المرجع الداخلي + مرجع المحكمة === #}
+  <div class="step-panel active" data-step="0">
+    <h6 class="text-primary mb-3"><i class="bi bi-hash ms-1"></i> المرجع الداخلي</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-12">
+        <label class="form-label small fw-bold">{{ form.reference_interne.label }} <span class="text-danger">*</span></label>
+        {{ form.reference_interne|add_class:'form-control form-control-sm' }}
+        {% if form.reference_interne.errors %}<div class="invalid-feedback d-block">{{ form.reference_interne.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    <h6 class="text-primary mb-3"><i class="bi bi-bank2 ms-1"></i> مرجع المحكمة <small class="fw-normal text-secondary">(mahakim.ma)</small></h6>
+    <div class="mahakim-ref-group">
+      <div class="row g-2 align-items-end">
+        <div class="col-3">
+          <label class="form-label small fw-bold text-center d-block">{{ form.numero_dossier.label }}</label>
+          {{ form.numero_dossier|add_class:'form-control form-control-sm text-center' }}
+          {% if form.numero_dossier.errors %}<div class="invalid-feedback d-block">{{ form.numero_dossier.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
+        <div class="col-5">
+          <label class="form-label small fw-bold text-center d-block">{{ form.code_categorie.label }}</label>
+          {{ form.code_categorie }}
+          {% if form.code_categorie.errors %}<div class="invalid-feedback d-block">{{ form.code_categorie.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
+        <div class="col-2">
+          <label class="form-label small fw-bold text-center d-block">{{ form.annee_dossier.label }}</label>
+          {{ form.annee_dossier|add_class:'form-control form-control-sm text-center' }}
+          {% if form.annee_dossier.errors %}<div class="invalid-feedback d-block">{{ form.annee_dossier.errors|join:", " }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="text-center mt-2">
+        <small class="text-secondary"><i class="bi bi-info-circle ms-1"></i> رقم الملف / رمز الصنف / السنة</small>
+      </div>
+    </div>
+  </div>
+
+  {# === Step 2: التصنيف والمرحلة === #}
+  <div class="step-panel" data-step="1">
+    <h6 class="text-primary mb-3"><i class="bi bi-tags ms-1"></i> التصنيف والمرحلة</h6>
+    <div class="row g-2">
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.type_affaire.label }} <span class="text-danger">*</span></label>
+        {{ form.type_affaire }}
+        {% if form.type_affaire.errors %}<div class="invalid-feedback d-block">{{ form.type_affaire.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.statut_affaire.label }} <span class="text-danger">*</span></label>
+        {{ form.statut_affaire }}
+        {% if form.statut_affaire.errors %}<div class="invalid-feedback d-block">{{ form.statut_affaire.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.phase.label }}</label>
+        {{ form.phase }}
+        {% if form.phase.errors %}<div class="invalid-feedback d-block">{{ form.phase.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.juridiction.label }} <span class="text-danger">*</span></label>
+        {{ form.juridiction }}
+        {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.avocat_responsable.label }} <span class="text-danger">*</span></label>
+        {{ form.avocat_responsable }}
+        {% if form.avocat_responsable.errors %}<div class="invalid-feedback d-block">{{ form.avocat_responsable.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Step 3: التاريخ والتفاصيل المالية === #}
+  <div class="step-panel" data-step="2">
+    <h6 class="text-primary mb-3"><i class="bi bi-calendar3 ms-1"></i> التاريخ والتفاصيل</h6>
+    <div class="row g-2">
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.date_ouverture.label }} <span class="text-danger">*</span></label>
+        {{ form.date_ouverture|add_class:'form-control form-control-sm' }}
+        {% if form.date_ouverture.errors %}<div class="invalid-feedback d-block">{{ form.date_ouverture.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.priorite.label }}</label>
+        {{ form.priorite }}
+        {% if form.priorite.errors %}<div class="invalid-feedback d-block">{{ form.priorite.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.valeur_litige.label }}</label>
+        <div class="input-group input-group-sm">
+          {{ form.valeur_litige|add_class:'form-control form-control-sm' }}
+          <span class="input-group-text" style="background: var(--m-blue-light, #e0efff); color: var(--m-blue-dark, #1565c0); font-weight: 600;">د.م.</span>
+        </div>
+        {% if form.valeur_litige.errors %}<div class="invalid-feedback d-block">{{ form.valeur_litige.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Step 4: الموضوع والملاحظات === #}
+  <div class="step-panel" data-step="3">
+    <h6 class="text-primary mb-3"><i class="bi bi-journal-text ms-1"></i> الموضوع والملاحظات</h6>
+    <div class="mb-2">
+      <label class="form-label small fw-bold">{{ form.objet.label }}</label>
+      {{ form.objet|add_class:'form-control form-control-sm' }}
+      {% if form.objet.errors %}<div class="invalid-feedback d-block">{{ form.objet.errors|join:", " }}</div>{% endif %}
+    </div>
+    <div>
+      <label class="form-label small fw-bold">{{ form.notes.label }}</label>
+      {{ form.notes|add_class:'form-control form-control-sm' }}
+      {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors|join:", " }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# === Navigation === #}
+  <div class="stepper-buttons mt-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm stepper-prev" style="display:none;">
+      <i class="bi bi-arrow-right ms-1"></i> السابق
+    </button>
+    <div class="d-flex gap-2 me-auto">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إلغاء
+      </button>
+      <button type="button" class="btn btn-primary btn-sm stepper-next">
+        التالي <i class="bi bi-arrow-left me-1"></i>
+      </button>
+      <button type="submit" class="btn btn-primary btn-sm stepper-submit" style="display:none;">
+        <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var f = document.getElementById('affaireStepperForm');
+  if (f) initStepper(f);
+});
+// Also handle HTMX re-renders
+document.body.addEventListener('htmx:afterSwap', function() {
+  var f = document.getElementById('affaireStepperForm');
+  if (f) initStepper(f);
+});
+</script>

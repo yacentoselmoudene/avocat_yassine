@@ -1,106 +1,265 @@
+{# FILE: templates/dashboard/index.html #}
 {% extends "base.html" %}
 {% block title %}لوحة التحكم{% endblock %}
 {% block page_title %}لوحة التحكم{% endblock %}
+
+{% block extra_css %}
+<style>
+  .phase-link:hover { background: rgba(var(--bs-primary-rgb), .08); }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-  <div class="row g-3">
 
-    <!-- بطاقات الإحصاءات -->
-    <div class="col-12 col-md-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small">عدد القضايا الكلي</div>
-            <div class="fs-3 fw-bold">{{ stats.affaires_total }}</div>
+  {# ── KPI Stat Cards ── #}
+  <div class="row g-3 mb-4">
+
+    {# عدد القضايا #}
+    <div class="col-6 col-md-3">
+      <a href="{% url 'cabinet:affaire_list' %}" class="text-decoration-none">
+        <div class="card zellige-kpi-card shadow-sm overflow-hidden card-hover" style="cursor:pointer;">
+          <div class="card-body position-relative">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="text-secondary small mb-1">عدد القضايا</div>
+                <div class="fs-3 fw-bold">{{ stats.affaires_total }}</div>
+              </div>
+              <div class="zellige-kpi-icon icon-cobalt">
+                <i class="bi bi-folder2-open fs-4"></i>
+              </div>
+            </div>
           </div>
-          <i class="bi bi-folder2-open fs-1 text-primary"></i>
         </div>
-      </div>
+      </a>
     </div>
 
-    <div class="col-12 col-md-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small">قضايا جارية</div>
-            <div class="fs-3 fw-bold">{{ stats.affaires_ouvertes }}</div>
+    {# جلسات قادمة #}
+    <div class="col-6 col-md-3">
+      <a href="{% url 'cabinet:audience_list' %}" class="text-decoration-none">
+        <div class="card zellige-kpi-card shadow-sm overflow-hidden card-hover" style="cursor:pointer;">
+          <div class="card-body position-relative">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="text-secondary small mb-1">جلسات قادمة</div>
+                <div class="fs-3 fw-bold">{{ stats.audiences_a_venir }}</div>
+              </div>
+              <div class="zellige-kpi-icon icon-terracotta">
+                <i class="bi bi-calendar-event fs-4"></i>
+              </div>
+            </div>
           </div>
-          <i class="bi bi-activity fs-1 text-success"></i>
         </div>
-      </div>
+      </a>
     </div>
 
-    <div class="col-12 col-md-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-muted small">جلسات قادمة (14 يوم)</div>
-            <div class="fs-3 fw-bold">{{ stats.audiences_a_venir }}</div>
+    {# مصاريف الشهر #}
+    <div class="col-6 col-md-3">
+      <a href="{% url 'cabinet:depense_list' %}" class="text-decoration-none">
+        <div class="card zellige-kpi-card shadow-sm overflow-hidden card-hover" style="cursor:pointer;">
+          <div class="card-body position-relative">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="text-secondary small mb-1">مصاريف الشهر</div>
+                <div class="fs-3 fw-bold">{{ finance.depenses_mois }} <span class="fs-6 fw-normal">درهم</span></div>
+              </div>
+              <div class="zellige-kpi-icon icon-danger">
+                <i class="bi bi-cash-coin fs-4"></i>
+              </div>
+            </div>
           </div>
-          <i class="bi bi-calendar-event fs-1 text-warning"></i>
         </div>
-      </div>
+      </a>
     </div>
 
-    <!-- الجلسات القادمة -->
+    {# إيرادات الشهر #}
+    <div class="col-6 col-md-3">
+      <a href="{% url 'cabinet:recette_list' %}" class="text-decoration-none">
+        <div class="card zellige-kpi-card shadow-sm overflow-hidden card-hover" style="cursor:pointer;">
+          <div class="card-body position-relative">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="text-secondary small mb-1">إيرادات الشهر</div>
+                <div class="fs-3 fw-bold">{{ finance.recettes_mois }} <span class="fs-6 fw-normal">درهم</span></div>
+              </div>
+              <div class="zellige-kpi-icon icon-emerald">
+                <i class="bi bi-wallet2 fs-4"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+
+  {# ── Quick Actions ── #}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'cabinet:affaire_create' %}" class="btn btn-primary">
+          <i class="bi bi-plus-circle ms-1"></i> إضافة قضية
+        </a>
+        <a href="{% url 'cabinet:affaire_list' %}" class="btn btn-outline-primary">
+          <i class="bi bi-journal-text ms-1"></i> لائحة القضايا
+        </a>
+        <a href="{% url 'cabinet:juridiction_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-building ms-1"></i> المحاكم
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Two-Column Section: Audiences + Recent Affaires ── #}
+  <div class="row g-3 mb-4">
+
+    {# الجلسات القادمة #}
     <div class="col-12 col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-light fw-bold">الجلسات القادمة</div>
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-calendar3 ms-1 text-primary"></i> الجلسات القادمة
+        </div>
         <ul class="list-group list-group-flush">
           {% for a in next_audiences %}
           <li class="list-group-item d-flex justify-content-between align-items-center">
             <span>
               <i class="bi bi-calendar3 ms-1 text-primary"></i>
-              {{ a.get_type_audience_display }} — {{ a.affaire.reference_interne }}
+              {{ a.type_audience }} — {{ a.affaire.reference_interne }}
             </span>
             <span class="badge bg-secondary">{{ a.date_audience }}</span>
           </li>
           {% empty %}
-          <li class="list-group-item text-muted text-center">لا توجد جلسات قريبة</li>
+          <li class="list-group-item text-muted text-center py-4">
+            <i class="bi bi-calendar-x fs-4 d-block mb-2"></i>
+            لا توجد جلسات قريبة
+          </li>
           {% endfor %}
         </ul>
       </div>
     </div>
 
-    <!-- القضايا الأخيرة -->
+    {# أحدث القضايا #}
     <div class="col-12 col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-light fw-bold">أحدث القضايا</div>
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-folder2 ms-1 text-success"></i> أحدث القضايا
+        </div>
         <ul class="list-group list-group-flush">
           {% for f in recent_affaires %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{% url 'cabinet:affaire_detail' f.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
             <span>
-              <i class="bi bi-folder2 text-success ms-1"></i>
-              {{ f.reference_interne }} — {{ f.juridiction.nom }}
+              <i class="bi bi-folder2 ms-1 text-success"></i>
+              {{ f.reference_interne }} — {{ f.juridiction }}
             </span>
-            <span class="badge bg-info">{{ f.get_type_affaire_display }}</span>
-          </li>
+            <span class="badge bg-info">{{ f.type_affaire }}</span>
+          </a>
           {% empty %}
-          <li class="list-group-item text-muted text-center">لا توجد قضايا حديثة</li>
+          <li class="list-group-item text-muted text-center py-4">
+            <i class="bi bi-folder-x fs-4 d-block mb-2"></i>
+            لا توجد قضايا حديثة
+          </li>
           {% endfor %}
         </ul>
       </div>
     </div>
 
-    <!-- ملخص مالي -->
+  </div>
+
+  {# ── Approaching Deadlines ── #}
+  {% if approaching_deadlines %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0" style="border-top: 4px solid var(--z-terracotta) !important;">
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-exclamation-triangle ms-1 text-warning"></i> آجال قريبة (خلال 7 أيام)
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for d in approaching_deadlines %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <span class="badge {% if d.jours <= 3 %}bg-danger{% elif d.jours <= 5 %}bg-warning{% else %}bg-info{% endif %} ms-1">{{ d.type }}</span>
+              {{ d.title }} — <a href="{% url 'cabinet:affaire_detail' d.affaire_pk %}">{{ d.affaire }}</a>
+            </span>
+            <span>
+              <span class="badge {% if d.jours <= 3 %}bg-danger{% elif d.jours <= 5 %}bg-warning{% else %}bg-success{% endif %}">
+                {% if d.jours <= 0 %}انتهى{% else %}{{ d.jours }} يوم{% endif %}
+              </span>
+              <span class="small text-secondary me-2">{{ d.echeance }}</span>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Phase Distribution ── #}
+  {% if phase_distribution %}
+  <div class="row g-3 mb-4">
     <div class="col-12">
       <div class="card shadow-sm border-0">
-        <div class="card-header bg-light fw-bold">الملخص المالي (الشهر الحالي)</div>
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-pie-chart ms-1"></i> توزيع القضايا حسب المرحلة
+        </div>
         <div class="card-body">
           <div class="row text-center">
-            <div class="col-md-6 mb-2">
-              <div class="text-muted small">المصاريف</div>
-              <div class="fs-4 text-danger">{{ finance.depenses_mois }} درهم</div>
+            {% for p in phase_distribution %}
+            <div class="col">
+              <a href="{% url 'cabinet:affaire_list' %}?phase={{ p.phase_code }}" class="text-decoration-none d-block phase-link rounded p-2">
+                <div class="fs-4 fw-bold" style="color: var(--z-cobalt-dark);">{{ p.count }}</div>
+                <div class="small text-secondary">{{ p.phase }}</div>
+              </a>
             </div>
-            <div class="col-md-6 mb-2">
-              <div class="text-muted small">الإيرادات</div>
-              <div class="fs-4 text-success">{{ finance.recettes_mois }} درهم</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Finance Summary with month navigation ── #}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 zellige-finance-card">
+        <div class="card-header zellige-section-header fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-bar-chart-line ms-1"></i> الملخص المالي</span>
+          <div class="d-flex align-items-center gap-2">
+            <a href="?fy={{ fin_prev_y }}&fm={{ fin_prev_m }}" class="btn btn-sm btn-outline-secondary" title="الشهر السابق">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+            <span class="fw-bold small">{{ fin_month_label }} {{ fin_year }}</span>
+            {% if not fin_is_current %}
+            <a href="?fy={{ fin_next_y }}&fm={{ fin_next_m }}" class="btn btn-sm btn-outline-secondary" title="الشهر التالي">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="btn btn-sm btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i></span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-4 mb-2">
+              <div class="text-secondary small mb-1">مصاريف الشهر</div>
+              <div class="fs-3 fw-bold text-danger">{{ finance.depenses_mois }} <span class="fs-5 fw-normal">درهم</span></div>
+            </div>
+            <div class="col-md-4 mb-2">
+              <div class="text-secondary small mb-1">إيرادات الشهر</div>
+              <div class="fs-3 fw-bold text-success">{{ finance.recettes_mois }} <span class="fs-5 fw-normal">درهم</span></div>
+            </div>
+            <div class="col-md-4 mb-2">
+              <div class="text-secondary small mb-1">الصافي</div>
+              <div class="fs-3 fw-bold {% if finance.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ finance.net }} <span class="fs-5 fw-normal">درهم</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
+
 </div>
 {% endblock %}

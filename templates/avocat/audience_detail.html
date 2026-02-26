@@ -1,0 +1,64 @@
+{# FILE: templates/avocat/audience_detail.html #}
+{% extends 'generic/detail.html' %}
+
+{% block title %}تفاصيل الجلسة{% endblock %}
+{% block page_title %}تفاصيل الجلسة{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:audience_list' %}">الجلسات</a></li>
+  <li class="breadcrumb-item active" aria-current="page">تفاصيل</li>
+{% endblock %}
+
+{% block header_actions %}
+  <a class="btn btn-primary" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:audience_update' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-pencil ms-1"></i> تعديل
+  </a>
+  <a class="btn btn-outline-secondary" href="{% url 'cabinet:audience_list' %}">
+    <i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع
+  </a>
+{% endblock %}
+
+{% block detail_body %}
+  <dl class="row mb-0">
+    <dt class="col-sm-4 text-secondary">القضية</dt>
+    <dd class="col-sm-8">
+      <a href="{% url 'cabinet:affaire_detail' object.affaire.pk %}">{{ object.affaire.reference_interne }}</a>
+    </dd>
+
+    <dt class="col-sm-4 text-secondary">نوع الجلسة</dt>
+    <dd class="col-sm-8">{{ object.type_audience }}</dd>
+
+    <dt class="col-sm-4 text-secondary">التاريخ</dt>
+    <dd class="col-sm-8">{{ object.date_audience|date:"Y-m-d H:i" }}</dd>
+
+    <dt class="col-sm-4 text-secondary">النتيجة</dt>
+    <dd class="col-sm-8">
+      <span class="badge bg-info text-dark">{{ object.resultat }}</span>
+    </dd>
+  </dl>
+
+  {% if object.proces_verbal %}
+    <hr>
+    <h6 class="text-secondary mb-2">محضر الجلسة</h6>
+    <div class="bg-light p-3 rounded">{{ object.proces_verbal|linebreaksbr }}</div>
+  {% endif %}
+{% endblock %}
+
+{% block detail_actions %}
+  <a class="btn btn-sm btn-outline-primary w-100 mb-2" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:audience_update' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-pencil ms-1"></i> تعديل
+  </a>
+  <a class="btn btn-sm btn-outline-danger w-100 mb-2" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:audience_delete' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-trash ms-1"></i> حذف
+  </a>
+  <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'cabinet:audience_list' %}">
+    <i class="bi bi-list-ul ms-1"></i> العودة للقائمة
+  </a>
+{% endblock %}

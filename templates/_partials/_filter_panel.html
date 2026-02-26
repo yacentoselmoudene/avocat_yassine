@@ -1,0 +1,79 @@
+{# _partials/_filter_panel.html — Panneau de filtres avancés repliable #}
+{% if filter %}
+<div class="mb-3">
+  <button class="btn btn-outline-secondary btn-sm" type="button"
+          data-bs-toggle="collapse" data-bs-target="#filterPanel"
+          aria-expanded="{% if active_filter_count %}true{% else %}false{% endif %}">
+    <i class="bi bi-funnel ms-1"></i> تصفية متقدمة
+    {% if active_filter_count %}
+      <span class="badge bg-primary rounded-pill">{{ active_filter_count }}</span>
+    {% endif %}
+  </button>
+
+  <div class="collapse {% if active_filter_count %}show{% endif %}" id="filterPanel">
+    <div class="card card-body mt-2 shadow-sm border-0">
+      <form method="get" id="filterForm">
+        {# Préserver le param de recherche texte #}
+        {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+        {# Préserver le mode d'affichage si applicable #}
+        {% if view_mode %}<input type="hidden" name="view" value="{{ view_mode }}">{% endif %}
+
+        <div class="row g-2">
+          {% for field in filter.form %}
+          <div class="col-lg-3 col-md-4 col-sm-6">
+            <label class="form-label small fw-bold mb-1">{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+          <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-circle ms-1"></i> مسح الكل
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var panel = document.getElementById('filterPanel');
+    var form = document.getElementById('filterForm');
+    if (!panel || !form) return;
+
+    // Re-init Select2 quand le panneau s'ouvre
+    panel.addEventListener('shown.bs.collapse', function() {
+      if (typeof initSelect2 === 'function') initSelect2(panel);
+      // Rebind les events Select2 après init
+      bindAutoSubmit();
+    });
+
+    function bindAutoSubmit() {
+      // Auto-submit sur changement de select natif ou Select2
+      form.querySelectorAll('select').forEach(function(sel) {
+        // Select2 émet 'change' quand l'utilisateur choisit
+        $(sel).off('change.autofilter').on('change.autofilter', function() {
+          form.submit();
+        });
+      });
+      // Auto-submit sur changement de champ date
+      form.querySelectorAll('input[type="date"]').forEach(function(inp) {
+        inp.removeEventListener('change', autoSubmitHandler);
+        inp.addEventListener('change', autoSubmitHandler);
+      });
+      // Auto-submit sur changement de champ nombre (avec debounce)
+      form.querySelectorAll('input[type="number"]').forEach(function(inp) {
+        inp.removeEventListener('change', autoSubmitHandler);
+        inp.addEventListener('change', autoSubmitHandler);
+      });
+    }
+
+    function autoSubmitHandler() { form.submit(); }
+
+    // Bind initial (si panel déjà ouvert)
+    bindAutoSubmit();
+  });
+</script>
+{% endif %}

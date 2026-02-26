@@ -17,6 +17,7 @@ from .models import (
     TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte,
     TypeRecours, StatutExecution, TypeExecution, StatutAffaire, TypeAffaire,
     TypeAudience, ResultatAudience, DegreJuridiction, TypeJuridiction,
+    TypeAvertissement,
 )
 from .forms import ArabicModelForm  # base de tes ModelForms ar
 
@@ -98,7 +99,7 @@ REFS: Dict[str, RefConfig] = {
         model=TypeAlerte, fields=["libelle"],
         list_title="أنواع التنبيهات", form_title_create="إضافة نوع تنبيه", form_title_update="تعديل نوع تنبيه"),
     "typerecours": RefConfig(
-        model=TypeRecours, fields=["libelle"],
+        model=TypeRecours, fields=["libelle", "delai_legal_jours", "domaine"],
         list_title="أنواع الطعون", form_title_create="إضافة نوع طعن", form_title_update="تعديل نوع طعن"),
     "typeexecution": RefConfig(
         model=TypeExecution, fields=["libelle"],
@@ -124,6 +125,9 @@ REFS: Dict[str, RefConfig] = {
     "typejuridiction": RefConfig(
         model=TypeJuridiction, fields=["libelle"],
         list_title="أنواع المحاكم", form_title_create="إضافة نوع محكمة", form_title_update="تعديل نوع محكمة"),
+    "typeavertissement": RefConfig(
+        model=TypeAvertissement, fields=["libelle", "delai_legal_jours", "domaine", "base_legale"],
+        list_title="أنواع الإنذارات", form_title_create="إضافة نوع إنذار", form_title_update="تعديل نوع إنذار"),
 }
 
 # ---------------------------
@@ -164,15 +168,27 @@ class RefList(RefBase, ListView):
     permission_required = "cabinet.view_ref"  # ou spécifique
     template_name = "ref/libelle_list.html"
 
+    def get_template_names(self):
+        cfg = self.get_ref()
+        if len(cfg.fields) > 1:
+            return ["ref/libelle_list_extended.html"]
+        return ["ref/libelle_list.html"]
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         cfg = self.get_ref()
+        extra_fields = [f for f in cfg.fields if f != "libelle"]
+        from .ref_registry import REF_REGISTRY
+        reg_cfg = REF_REGISTRY.get(self.kwargs["refname"], {})
+        field_labels = reg_cfg.get("labels", {})
         ctx.update({
             "title": cfg.list_title,
             "create_url": reverse_lazy("cabinet_ref:ref_create", args=[self.kwargs["refname"]]),
             "update_name": "cabinet_ref:ref_update",
             "delete_name": "cabinet_ref:ref_delete",
             "refname": self.kwargs["refname"],
+            "extra_fields": extra_fields,
+            "field_labels": field_labels,
         })
         return ctx
 

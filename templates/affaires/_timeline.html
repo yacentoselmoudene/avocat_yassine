@@ -1,22 +1,52 @@
-<div id="timeline">
-  <div class="list-group list-group-flush">
-    {% if events %}
-      {% for ev in events %}
-      <div class="list-group-item d-flex justify-content-between align-items-start">
-        <div class="me-2">
-          <div class="fw-bold">
-            <span class="badge text-bg-{{ ev.badge|default:'secondary' }} ms-1">{{ ev.type }}</span>
-            {{ ev.title }}
-          </div>
-          {% if ev.meta %}
-            <div class="text-secondary small mt-1">{{ ev.meta }}</div>
-          {% endif %}
-        </div>
-        <div class="text-nowrap text-secondary small">{{ ev.date_str }}</div>
+<div id="timeline" class="zellige-timeline">
+  {% if events %}
+    {% for ev in events %}
+      {% if ev.is_phase_marker %}
+      <div class="timeline-phase-marker">
+        <div class="phase-diamond"></div>
+        <span class="phase-marker-label">{{ ev.type }}</span>
       </div>
-      {% endfor %}
-    {% else %}
-      <div class="list-group-item text-secondary">لا توجد أحداث بعد.</div>
-    {% endif %}
-  </div>
+      {% endif %}
+      <div class="timeline-item">
+        <div class="timeline-dot {% if ev.badge == 'terracotta' %}dot-terracotta{% elif ev.badge == 'warning' %}dot-warning{% elif ev.badge == 'primary' %}dot-primary{% elif ev.badge == 'dark' %}dot-dark{% elif ev.badge == 'secondary' %}dot-secondary{% elif ev.badge == 'info' %}dot-info{% elif ev.badge == 'success' %}dot-success{% else %}dot-light{% endif %}"></div>
+        <div class="timeline-content">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="me-2">
+              <div class="fw-bold">
+                <span class="badge text-bg-{{ ev.badge|default:'secondary' }} ms-1">{{ ev.type }}</span>
+                {{ ev.title }}
+              </div>
+              {% if ev.meta %}
+                <div class="text-secondary small mt-1">{{ ev.meta }}</div>
+              {% endif %}
+              {% if ev.deadline_info %}
+                <div class="mt-1">
+                  <span class="badge bg-{{ ev.deadline_badge|default:'secondary' }} badge-sm">
+                    <i class="bi bi-clock ms-1"></i> {{ ev.deadline_info }}
+                  </span>
+                </div>
+              {% endif %}
+            </div>
+            <div class="text-nowrap text-secondary small d-flex align-items-center gap-2">
+              {% if ev.has_file %}
+                <a href="#" class="text-info" title="معاينة الملف"
+                   data-bs-toggle="modal" data-bs-target="#mainModal"
+                   hx-get="{{ ev.viewer_url }}" hx-target="#modalBody">
+                  <i class="bi bi-eye-fill"></i>
+                </a>
+              {% else %}
+                <i class="bi bi-eye text-secondary" style="opacity:0.2;" title="لا يوجد ملف"></i>
+              {% endif %}
+              {{ ev.date_str }}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-secondary py-4">
+      <i class="bi bi-clock-history fs-3 d-block mb-2"></i>
+      لا توجد أحداث بعد.
+    </div>
+  {% endif %}
 </div>

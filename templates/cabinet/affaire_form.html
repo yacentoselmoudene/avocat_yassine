@@ -1,0 +1,306 @@
+{# FILE: templates/cabinet/affaire_form.html #}
+{# نموذج القضية — تصميم احترافي متجاوب #}
+{% extends 'base.html' %}
+{% load form_extras %}
+
+{% block title %}{% if form.instance.pk %}تعديل القضية{% else %}إضافة قضية جديدة{% endif %}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}تعديل القضية{% else %}إضافة قضية جديدة{% endif %}{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:affaire_list' %}">القضايا</a></li>
+  <li class="breadcrumb-item active">{% if form.instance.pk %}تعديل{% else %}إضافة{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-section {
+    background: #fff;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .form-section:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.06);
+  }
+  .form-section-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .form-section-header i {
+    font-size: 1.15rem;
+    color: #4f46e5;
+  }
+  .form-section-header h6 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1e293b;
+  }
+  .form-section-body {
+    padding: 1.25rem;
+  }
+  .form-floating-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #475569;
+    margin-bottom: 0.35rem;
+  }
+  .form-hint {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+  }
+  .priority-group .btn {
+    min-width: 90px;
+  }
+  .priority-group .btn-check:checked + .btn-haute {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+  }
+  .priority-group .btn-check:checked + .btn-normale {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
+  .priority-group .btn-check:checked + .btn-basse {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+  }
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem 1.25rem;
+    border-radius: 0 0 0.75rem 0.75rem;
+    z-index: 10;
+  }
+  .required-asterisk::after {
+    content: ' *';
+    color: #ef4444;
+    font-weight: 700;
+  }
+  @media (max-width: 767.98px) {
+    .form-section-body { padding: 1rem; }
+    .form-actions { position: relative; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data"
+      hx-post="{{ request.path }}" hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {# --- Non-field errors --- #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    {# ======================== COLUMN 1: Main Form ======================== #}
+    <div class="col-12 col-lg-8">
+
+      {# --- Section 1: References & Identification --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-hash"></i>
+          <h6>المراجع والتعريف</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label required-asterisk" for="{{ form.reference_interne.id_for_label }}">{{ form.reference_interne.label }}</label>
+              {{ form.reference_interne|add_class:'form-control' }}
+              {% if form.reference_interne.errors %}<div class="invalid-feedback d-block">{{ form.reference_interne.errors|join:", " }}</div>{% endif %}
+              <div class="form-hint">رمز فريد لتعريف القضية داخل المكتب</div>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label" for="{{ form.reference_tribunal.id_for_label }}">{{ form.reference_tribunal.label }}</label>
+              {{ form.reference_tribunal|add_class:'form-control' }}
+              {% if form.reference_tribunal.errors %}<div class="invalid-feedback d-block">{{ form.reference_tribunal.errors|join:", " }}</div>{% endif %}
+              <div class="form-hint">رقم الملف المسجل بالمحكمة</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# --- Section 2: Classification --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-tags"></i>
+          <h6>التصنيف</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label required-asterisk" for="{{ form.type_affaire.id_for_label }}">{{ form.type_affaire.label }}</label>
+              {{ form.type_affaire }}
+              {% if form.type_affaire.errors %}<div class="invalid-feedback d-block">{{ form.type_affaire.errors|join:", " }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label required-asterisk" for="{{ form.statut_affaire.id_for_label }}">{{ form.statut_affaire.label }}</label>
+              {{ form.statut_affaire }}
+              {% if form.statut_affaire.errors %}<div class="invalid-feedback d-block">{{ form.statut_affaire.errors|join:", " }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# --- Section 3: Court & Lawyer --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-building"></i>
+          <h6>المحكمة والمحامي</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label required-asterisk" for="{{ form.juridiction.id_for_label }}">{{ form.juridiction.label }}</label>
+              {{ form.juridiction }}
+              {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-floating-label required-asterisk" for="{{ form.avocat_responsable.id_for_label }}">{{ form.avocat_responsable.label }}</label>
+              {{ form.avocat_responsable }}
+              {% if form.avocat_responsable.errors %}<div class="invalid-feedback d-block">{{ form.avocat_responsable.errors|join:", " }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# --- Section 4: Subject & Notes --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-journal-text"></i>
+          <h6>الموضوع والملاحظات</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-floating-label" for="{{ form.objet.id_for_label }}">{{ form.objet.label }}</label>
+              {{ form.objet|add_class:'form-control' }}
+              {% if form.objet.errors %}<div class="invalid-feedback d-block">{{ form.objet.errors|join:", " }}</div>{% endif %}
+              <div class="form-hint">وصف مختصر لموضوع الدعوى</div>
+            </div>
+            <div class="col-12">
+              <label class="form-floating-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+              {{ form.notes|add_class:'form-control' }}
+              {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors|join:", " }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ======================== COLUMN 2: Sidebar ======================== #}
+    <div class="col-12 col-lg-4">
+
+      {# --- Date & Priority --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-calendar3"></i>
+          <h6>التاريخ والأولوية</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="mb-3">
+            <label class="form-floating-label required-asterisk" for="{{ form.date_ouverture.id_for_label }}">{{ form.date_ouverture.label }}</label>
+            {{ form.date_ouverture|add_class:'form-control' }}
+            {% if form.date_ouverture.errors %}<div class="invalid-feedback d-block">{{ form.date_ouverture.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-floating-label required-asterisk">{{ form.priorite.label }}</label>
+            <div class="priority-group btn-group w-100" role="group">
+              {% for val, label in form.priorite.field.choices %}
+                <input type="radio" class="btn-check" name="priorite" id="prio_{{ val }}" value="{{ val }}"
+                       {% if form.priorite.value == val or form.initial.priorite == val %}checked{% endif %}
+                       autocomplete="off">
+                <label class="btn btn-outline-secondary btn-{{ val|lower }}" for="prio_{{ val }}">
+                  {% if val == 'Haute' %}<i class="bi bi-arrow-up-circle ms-1"></i>{% elif val == 'Normale' %}<i class="bi bi-dash-circle ms-1"></i>{% else %}<i class="bi bi-arrow-down-circle ms-1"></i>{% endif %}
+                  {{ label }}
+                </label>
+              {% endfor %}
+            </div>
+            {% if form.priorite.errors %}<div class="invalid-feedback d-block">{{ form.priorite.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# --- Financial --- #}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-cash-coin"></i>
+          <h6>الجانب المالي</h6>
+        </div>
+        <div class="form-section-body">
+          <div class="mb-0">
+            <label class="form-floating-label" for="{{ form.valeur_litige.id_for_label }}">{{ form.valeur_litige.label }}</label>
+            <div class="input-group">
+              {{ form.valeur_litige|add_class:'form-control' }}
+              <span class="input-group-text">د.م.</span>
+            </div>
+            {% if form.valeur_litige.errors %}<div class="invalid-feedback d-block">{{ form.valeur_litige.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# --- Summary (only on edit) --- #}
+      {% if form.instance.pk %}
+      <div class="form-section">
+        <div class="form-section-header">
+          <i class="bi bi-info-circle"></i>
+          <h6>معلومات</h6>
+        </div>
+        <div class="form-section-body">
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-secondary">المعرّف</dt>
+            <dd class="col-7"><code class="small">{{ form.instance.pk|truncatechars:13 }}</code></dd>
+            <dt class="col-5 text-secondary">تاريخ الإنشاء</dt>
+            <dd class="col-7">{{ form.instance.created_at|date:"Y-m-d" }}</dd>
+            <dt class="col-5 text-secondary">آخر تحديث</dt>
+            <dd class="col-7">{{ form.instance.updated_at|date:"Y-m-d H:i" }}</dd>
+          </dl>
+        </div>
+      </div>
+      {% endif %}
+
+      {# --- Actions (sticky on desktop) --- #}
+      <div class="form-section">
+        <div class="form-section-body">
+          <button class="btn btn-primary w-100 mb-2" type="submit">
+            <i class="bi bi-check2-circle ms-1"></i>
+            {% if form.instance.pk %}تحديث القضية{% else %}حفظ القضية{% endif %}
+          </button>
+          <a href="{% url 'cabinet:affaire_list' %}" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-x-lg ms-1"></i> إلغاء
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  // Auto-initialize Select2 on this page
+  document.addEventListener('DOMContentLoaded', function() {
+    initSelect2(document);
+  });
+</script>
+{% endblock %}

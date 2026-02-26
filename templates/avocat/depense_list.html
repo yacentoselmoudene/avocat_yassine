@@ -1,10 +1,182 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{# FILE: templates/avocat/depense_list.html #}
+{% extends 'base.html' %}
+{% load form_extras %}
+{% block title %}المصاريف{% endblock %}
+{% block page_title %}المصاريف{% endblock %}
 
-</body>
-</html>
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item active">المصاريف</li>
+{% endblock %}
+
+{% block header_actions %}
+  <div class="input-group me-2" style="max-width: 320px;">
+    <input type="text" class="form-control" name="q" placeholder="بحث…" value="{{ query }}"
+           onkeydown="if(event.key==='Enter'){window.location='?q='+this.value}">
+    <button class="btn btn-outline-secondary" onclick="window.location='?q='+this.previousElementSibling.value">
+      <i class="bi bi-search"></i>
+    </button>
+  </div>
+  <a href="{% url 'cabinet:print_documents' %}?source=depense&{{ request.GET.urlencode }}"
+     target="_blank" class="btn btn-outline-info me-2">
+    <i class="bi bi-printer ms-1"></i> طباعة المستندات
+  </a>
+  <a href="{% url 'cabinet:depense_create' %}" class="btn btn-primary"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:depense_create' %}" hx-target="#modalBody">
+    <i class="bi bi-plus-circle ms-1"></i> إضافة مصروف
+  </a>
+{% endblock %}
+
+{% block content %}
+  {% include '_partials/_filter_panel.html' %}
+
+  {# === إحصائيات المصاريف === #}
+  <div class="mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button"
+            data-bs-toggle="collapse" data-bs-target="#statsPanel"
+            aria-expanded="false">
+      <i class="bi bi-bar-chart ms-1"></i> إحصائيات المصاريف
+    </button>
+    <div class="collapse" id="statsPanel">
+      <div class="row g-3 mt-2">
+        {# Total #}
+        <div class="col-12">
+          <div class="card border-0 bg-danger bg-opacity-10">
+            <div class="card-body py-2 text-center">
+              <div class="text-danger fw-bold fs-5">{{ depense_total|floatformat:2 }} د.م.</div>
+              <div class="small text-secondary">إجمالي المصاريف (حسب الفلتر الحالي)</div>
+            </div>
+          </div>
+        </div>
+
+        {# By type #}
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2">
+              <strong class="small"><i class="bi bi-tags ms-1"></i> حسب النوع</strong>
+            </div>
+            <div class="card-body p-0">
+              {% if stats_by_type %}
+              <table class="table table-sm mb-0">
+                <tbody>
+                {% for s in stats_by_type %}
+                <tr>
+                  <td class="small">{{ s.label }}</td>
+                  <td class="text-danger fw-bold small text-start" style="width:120px;">{{ s.total|floatformat:2 }} د.م.</td>
+                  <td style="width:40%;">
+                    {% widthratio s.total depense_total 100 as pct %}
+                    <div class="progress" style="height:6px;">
+                      <div class="progress-bar bg-danger" style="width:{% widthratio s.total depense_total 100 %}%"></div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <div class="text-center text-secondary small py-3">لا توجد بيانات</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {# By beneficiary #}
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2">
+              <strong class="small"><i class="bi bi-people ms-1"></i> حسب المستفيد</strong>
+            </div>
+            <div class="card-body p-0">
+              {% if stats_by_beneficiaire %}
+              <table class="table table-sm mb-0">
+                <tbody>
+                {% for s in stats_by_beneficiaire %}
+                <tr>
+                  <td class="small">{{ s.label }}</td>
+                  <td class="text-danger fw-bold small text-start" style="width:120px;">{{ s.total|floatformat:2 }} د.م.</td>
+                  <td style="width:40%;">
+                    <div class="progress" style="height:6px;">
+                      <div class="progress-bar bg-warning" style="width:{% widthratio s.total depense_total 100 %}%"></div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <div class="text-center text-secondary small py-3">لا توجد بيانات</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>القضية</th>
+            <th>النوع</th>
+            <th>المبلغ</th>
+            <th>التاريخ</th>
+            <th>المستفيد</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for obj in object_list %}
+        <tr>
+          <td class="fw-bold">{{ obj.affaire.reference_interne }}</td>
+          <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ obj.type_depense }}</span></td>
+          <td class="fw-bold text-danger">{{ obj.montant }} د.م.</td>
+          <td class="small text-secondary">{{ obj.date_depense }}</td>
+          <td>{{ obj.beneficiaire }}</td>
+          <td class="text-center">
+            <div class="btn-group btn-group-sm">
+              {% if obj.piece %}
+              <a class="btn btn-outline-info" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
+                 hx-get="{% url 'cabinet:document_viewer' %}?model=depense&pk={{ obj.pk }}" hx-target="#modalBody" title="معاينة الملف">
+                <i class="bi bi-eye-fill"></i>
+              </a>
+              {% else %}
+              <span class="btn btn-outline-secondary disabled" style="opacity:0.25;" title="لا يوجد ملف مرفق">
+                <i class="bi bi-eye"></i>
+              </span>
+              {% endif %}
+              <a class="btn btn-outline-secondary" href="{% url 'cabinet:depense_detail' obj.pk %}" title="عرض"><i class="bi bi-info-circle"></i></a>
+              <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:depense_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+              <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:depense_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="6">{% include '_partials/_empty_state.html' %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Pagination #}
+  {% if is_paginated %}
+  <nav class="mt-3" aria-label="تنقل">
+    <ul class="pagination pagination-sm justify-content-center">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?{% query_string page=page_obj.previous_page_number %}">السابق</a></li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <a class="page-link" href="?{% query_string page=num %}">{{ num }}</a>
+        </li>
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?{% query_string page=page_obj.next_page_number %}">التالي</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+{% endblock %}

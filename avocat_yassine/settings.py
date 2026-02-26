@@ -12,8 +12,17 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import sys
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Read .env file
+env = environ.Env(
+    DEBUG=(bool, False),
+    ALLOWED_HOSTS=(list, []),
+)
+environ.Env.read_env(BASE_DIR / '.env')
 
 # True en prod/serveur web ; False pendant migrate/makemigrations/test/collectstatic
 AUDIT_ENABLED = not any(cmd in sys.argv for cmd in ("migrate", "makemigrations", "test", "collectstatic"))
@@ -39,12 +48,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-y*vg0lu+2jz9q8l-yb0!l6$*!!^36fu%p9c$gj8d13&i69%plc'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 
 # Application definition
@@ -58,6 +67,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'avocat_app.apps.AvocatAppConfig',
     'django_extensions',
+    'django_filters',
+    'axes',
 ]
 
 # === Audit switches & defaults ===
@@ -79,11 +90,23 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "avocat_app.middleware.idle_token.IdleTokenAuthMiddleware",  # لديك مسبقاً
-    "avocat_app.middleware.request_local.RequestLocalMiddleware", # <— جديد: يضع request في threadlocal
     "django.contrib.messages.middleware.MessageMiddleware",
+    "avocat_app.middleware.idle_token.IdleTokenAuthMiddleware",
+    "avocat_app.middleware.request_local.RequestLocalMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# === django-axes: brute force protection ===
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # 1 hour lockout
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
+AXES_RESET_ON_SUCCESS = True
 
 ROOT_URLCONF = 'avocat_yassine.urls'
 
@@ -114,11 +137,11 @@ WSGI_APPLICATION = 'avocat_yassine.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'avocat_db',
-        'USER': 'root',
-        'PASSWORD': 'Bismillah@99',
-        'HOST':'localhost',
-        'PORT':'3306',
+        'NAME': env('DB_NAME', default='avocat_db'),
+        'USER': env('DB_USER', default='root'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'use_unicode': True,
@@ -136,6 +159,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 12},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -149,13 +173,18 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ar'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Casablanca'
 
 USE_I18N = True
-
+USE_L10N = True
 USE_TZ = True
+
+LANGUAGES = [
+    ('ar', 'العربية'),
+    ('fr', 'Français'),
+]
 
 
 # Static files (CSS, JavaScript, Images)
@@ -185,5 +214,5 @@ else:
     EMAIL_HOST = 'smtp.example.com'
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = 'info@lrsmf.ma'
-    EMAIL_HOST_PASSWORD = 'your-email-password'
+    EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')

@@ -1,0 +1,10 @@
+{# FILE: templates/cabinet/avertissement_form.html #}
+{% extends "generic/form.html" %}
+{% block title %}{% if object %}تعديل الإنذار{% else %}إضافة إنذار{% endif %}{% endblock %}
+{% block page_title %}{% if object %}تعديل الإنذار{% else %}إضافة إنذار{% endif %}{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:avertissement_list' %}">الإنذارات</a></li>
+  <li class="breadcrumb-item active">{% if object %}تعديل{% else %}إضافة{% endif %}</li>
+{% endblock %}

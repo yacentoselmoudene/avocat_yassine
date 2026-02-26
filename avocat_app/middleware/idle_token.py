@@ -48,8 +48,8 @@ class IdleTokenAuthMiddleware:
         try:
             with transaction.atomic():
                 try:
-                    token = (AuthToken.objects.select_for_update().get(user=user, token=token_value))
-                except Exception:
+                    token = AuthToken.objects.select_for_update().get(user=user, token=token_value)
+                except (AuthToken.DoesNotExist, DatabaseError):
                     token = AuthToken.objects.filter(user=user, token=token_value).first()
 
                 if not token:

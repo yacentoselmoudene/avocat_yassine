@@ -1,86 +1,218 @@
 {# FILE: templates/affaires/detail.html #}
 {% extends 'generic/detail.html' %}
-{% block title %}تفاصيل القضية{% endblock %}
+{% block title %}{{ object.reference_interne }} — تفاصيل القضية{% endblock %}
 {% block page_title %}تفاصيل القضية{% endblock %}
 
-{% block header_actions %}
-  <div class="btn-group me-2" role="group">
-    <a href="?view=table" class="btn btn-outline-secondary">جدول</a>
-    <a href="?view=cards" class="btn btn-outline-secondary">بطاقات</a>
-  </div>
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:affaire_list' %}">القضايا</a></li>
+  <li class="breadcrumb-item active">{{ object.reference_interne }}</li>
+{% endblock %}
 
-  <!-- تعديل القضية (يفتح نموذج التعديل) -->
-  <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mainModal"
+{% block header_actions %}
+  <!-- تعديل القضية -->
+  <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:affaire_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
 
-  <!-- + جلسة -->
-  <a href="#" class="btn btn-warning {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:audience_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-calendar-plus ms-1"></i> جلسة
-  </a>
+  {# Workflow buttons — حسب مرحلة القضية #}
+  <div class="btn-group btn-group-sm" role="group">
+    <!-- + إنذار -->
+    <a href="#" class="btn btn-outline-warning {% if not can_add_avertissement %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:avertissement_create_for_affaire' object.pk %}" hx-target="#modalBody" title="إنذار جديد">
+      <i class="bi bi-exclamation-triangle ms-1"></i> إنذار
+    </a>
 
-  <!-- + إجراء -->
-  <a href="#" class="btn btn-outline-primary {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:mesure_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-list-check ms-1"></i> إجراء
-  </a>
+    <!-- + جلسة -->
+    <a href="#" class="btn btn-outline-warning {% if not can_add_audience %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:audience_create' object.pk %}" hx-target="#modalBody" title="جلسة جديدة">
+      <i class="bi bi-calendar-plus ms-1"></i> جلسة
+    </a>
 
-  <!-- + خبرة -->
-  <a href="#" class="btn btn-outline-dark {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:expertise_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-eyeglasses ms-1"></i> خبرة
-  </a>
+    <!-- + إجراء -->
+    <a href="#" class="btn btn-outline-primary {% if not can_add_audience %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:mesure_create' object.pk %}" hx-target="#modalBody" title="إجراء جديد">
+      <i class="bi bi-list-check ms-1"></i> إجراء
+    </a>
 
-  <!-- + حكم -->
-  <a href="#" class="btn btn-outline-secondary {% if lock_postdecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:decision_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-hammer ms-1"></i> حكم
-  </a>
+    <!-- + خبرة -->
+    <a href="#" class="btn btn-outline-dark {% if not can_add_audience %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:expertise_create' object.pk %}" hx-target="#modalBody" title="خبرة جديدة">
+      <i class="bi bi-eyeglasses ms-1"></i> خبرة
+    </a>
 
-  <!-- + تبليغ -->
-  <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:notification_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-envelope-paper ms-1"></i> تبليغ
-  </a>
+    <!-- + حكم -->
+    <a href="#" class="btn btn-outline-secondary {% if not can_add_decision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:decision_create' object.pk %}" hx-target="#modalBody" title="حكم جديد">
+      <i class="bi bi-hammer ms-1"></i> حكم
+    </a>
+  </div>
 
-  <!-- + طعن -->
-  <a href="#" class="btn btn-outline-success {% if lock_predecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:voiederecours_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-arrow-90deg-left ms-1"></i> طعن
-  </a>
+  <div class="btn-group btn-group-sm" role="group">
+    <!-- + تبليغ -->
+    <a href="#" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:notification_create' object.pk %}" hx-target="#modalBody" title="تبليغ جديد">
+      <i class="bi bi-envelope-paper ms-1"></i> تبليغ
+    </a>
 
-  <!-- + تنفيذ -->
-  <a href="#" class="btn btn-outline-success {% if lock_predecision %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
-     hx-get="{% url 'cabinet:execution_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-gear ms-1"></i> تنفيذ
-  </a>
+    <!-- + طعن -->
+    <a href="#" class="btn btn-outline-success {% if not can_add_recours %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:voiederecours_create' object.pk %}" hx-target="#modalBody" title="طعن جديد">
+      <i class="bi bi-arrow-90deg-left ms-1"></i> طعن
+    </a>
+
+    <!-- + تنفيذ -->
+    <a href="#" class="btn btn-outline-success {% if not can_add_execution %}disabled pe-none opacity-50{% endif %}" data-bs-toggle="modal" data-bs-target="#mainModal"
+       hx-get="{% url 'cabinet:execution_create' object.pk %}" hx-target="#modalBody" title="تنفيذ جديد">
+      <i class="bi bi-gear ms-1"></i> تنفيذ
+    </a>
+  </div>
+
+  {# Mahakim.ma sync button #}
+  {% if object.numero_dossier and object.code_categorie and object.annee_dossier %}
+  <button class="btn btn-sm btn-outline-primary"
+          hx-post="{% url 'cabinet:affaire_sync_mahakim' object.pk %}"
+          hx-swap="none"
+          title="مزامنة مع بوابة محاكم">
+    <i class="bi bi-cloud-download ms-1"></i> محاكم
+  </button>
+  {% endif %}
 {% endblock %}
 
 {% block detail_body %}
-  <dl class="row">
-    <dt class="col-sm-3">المرجع</dt><dd class="col-sm-9">{{ object.reference_interne }}</dd>
-    <dt class="col-sm-3">نوع القضية</dt><dd class="col-sm-9">{{ object.get_type_affaire_display }}</dd>
-    <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">{{ object.get_statut_affaire_display }}</dd>
-    <dt class="col-sm-3">المحكمة</dt><dd class="col-sm-9">{{ object.juridiction }}</dd>
-    <dt class="col-sm-3">تاريخ الفتح</dt><dd class="col-sm-9">{{ object.date_ouverture }}</dd>
-  </dl>
-  <div
-  hx-get="{% url 'cabinet:affaire_timeline' object.pk %}"
-  hx-trigger="load"
-  hx-target="this"
-  hx-swap="outerHTML">
-  <!-- placeholder pendant le chargement -->
-  <div class="text-center text-secondary py-3">جاري تحميل الجدول الزمني…</div>
-</div>
+  {# --- Phase Progress Indicator --- #}
+  {% if phase_steps %}
+  <div class="zellige-phase-indicator mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+      {% for step in phase_steps %}
+        <div class="phase-step text-center {% if step.status == 'active' %}active{% elif step.status == 'completed' %}completed{% endif %}">
+          <div class="phase-dot mx-auto mb-1"></div>
+          <div class="phase-label small">{{ step.label }}</div>
+        </div>
+        {% if not forloop.last %}
+          <div class="phase-line flex-grow-1 {% if step.status == 'completed' %}filled{% endif %}"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% if workflow_path %}
+    <div class="text-center mt-2">
+      <span class="badge bg-light text-dark border"><i class="bi bi-signpost ms-1"></i> {{ workflow_path }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# --- Case Info Card --- #}
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-4 text-secondary">المرجع الداخلي</dt>
+        <dd class="col-sm-8 fw-bold">{{ object.reference_interne }}</dd>
+
+        <dt class="col-sm-4 text-secondary">مرجع المحكمة</dt>
+        <dd class="col-sm-8">{{ object.reference_tribunal_compose|default:"—" }}</dd>
+
+        {% if object.code_categorie %}
+        <dt class="col-sm-4 text-secondary">صنف القضية</dt>
+        <dd class="col-sm-8"><span class="badge bg-light text-dark border">{{ object.code_categorie }}</span></dd>
+        {% endif %}
+
+        <dt class="col-sm-4 text-secondary">نوع القضية</dt>
+        <dd class="col-sm-8"><span class="badge bg-primary-subtle text-primary-emphasis">{{ object.type_affaire }}</span></dd>
+
+        <dt class="col-sm-4 text-secondary">الحالة</dt>
+        <dd class="col-sm-8"><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ object.statut_affaire }}</span></dd>
+
+        <dt class="col-sm-4 text-secondary">المرحلة</dt>
+        <dd class="col-sm-8"><span class="badge bg-info">{{ object.get_phase_display }}</span></dd>
+      </dl>
+    </div>
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-4 text-secondary">المحكمة</dt>
+        <dd class="col-sm-8">{{ object.juridiction }}</dd>
+
+        <dt class="col-sm-4 text-secondary">المحامي</dt>
+        <dd class="col-sm-8">
+          {% if object.avocat_responsable %}
+          <a href="#" class="person-link" data-bs-toggle="modal" data-bs-target="#mainModal"
+             hx-get="{% url 'cabinet:avocat_popup' object.avocat_responsable.pk %}" hx-target="#modalBody">
+            <i class="bi bi-briefcase-fill ms-1"></i> {{ object.avocat_responsable }}
+          </a>
+          {% else %}—{% endif %}
+        </dd>
+
+        <dt class="col-sm-4 text-secondary">تاريخ الفتح</dt>
+        <dd class="col-sm-8">{{ object.date_ouverture }}</dd>
+
+        <dt class="col-sm-4 text-secondary">الأولوية</dt>
+        <dd class="col-sm-8">
+          <span class="badge {% if object.priorite == 'Haute' %}bg-danger{% elif object.priorite == 'Basse' %}bg-success{% else %}bg-info{% endif %}">
+            {{ object.get_priorite_display }}
+          </span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  {% if object.objet %}
+  <div class="mb-3 p-3 bg-light rounded">
+    <strong class="text-secondary d-block mb-1">موضوع الدعوى</strong>
+    <p class="mb-0">{{ object.objet }}</p>
+  </div>
+  {% endif %}
+
+  {% if object.valeur_litige %}
+  <div class="d-inline-block px-3 py-2 bg-warning bg-opacity-10 rounded mb-3">
+    <i class="bi bi-cash-coin ms-1 text-warning"></i>
+    <strong>قيمة النزاع:</strong> {{ object.valeur_litige }} د.م.
+  </div>
+  {% endif %}
+
+  {# --- Mahakim Sync Result --- #}
+  {% if last_mahakim_sync %}
+  <div class="mb-3 p-3 rounded {% if last_mahakim_sync.success %}bg-success bg-opacity-10 border border-success border-opacity-25{% else %}bg-danger bg-opacity-10 border border-danger border-opacity-25{% endif %}">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong class="text-secondary"><i class="bi bi-cloud-check ms-1"></i> آخر مزامنة مع محاكم</strong>
+      <small class="text-secondary">{{ last_mahakim_sync.date_sync|date:"Y-m-d H:i" }}</small>
+    </div>
+    {% if last_mahakim_sync.success %}
+    <div class="row g-2 small">
+      {% if last_mahakim_sync.statut_mahakim %}
+      <div class="col-auto"><span class="badge bg-info">{{ last_mahakim_sync.statut_mahakim }}</span></div>
+      {% endif %}
+      {% if last_mahakim_sync.prochaine_audience %}
+      <div class="col-auto"><i class="bi bi-calendar3 ms-1"></i> الجلسة: {{ last_mahakim_sync.prochaine_audience }}</div>
+      {% endif %}
+      {% if last_mahakim_sync.juge %}
+      <div class="col-auto"><i class="bi bi-person ms-1"></i> {{ last_mahakim_sync.juge }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="small text-danger mb-0">{{ last_mahakim_sync.error_message|default:"فشلت المزامنة" }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# --- Timeline --- #}
+  <h6 class="mt-4 mb-3 border-bottom pb-2"><i class="bi bi-clock-history ms-1"></i> الجدول الزمني</h6>
+  <div id="timeline"
+    hx-get="{% url 'cabinet:affaire_timeline' object.pk %}"
+    hx-trigger="load"
+    hx-target="this"
+    hx-swap="innerHTML">
+    <div class="text-center text-secondary py-3">
+      <div class="spinner-border spinner-border-sm ms-2" role="status"></div>
+      جاري تحميل الجدول الزمني...
+    </div>
+  </div>
 {% endblock %}
 
 {% block detail_actions %}
-  <!-- زر إضافة خطوة سريعة (جلسة كافتراض) -->
   <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#mainModal"
           hx-get="{% url 'cabinet:audience_create' object.pk %}" hx-target="#modalBody">
-    <i class="bi bi-plus-circle ms-1"></i> إضافة خطوة سريعة
+    <i class="bi bi-plus-circle ms-1"></i> إضافة جلسة
   </button>
 
   <button class="btn btn-outline-primary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#mainModal"
@@ -92,4 +224,30 @@
           hx-get="{% url 'cabinet:affaire_delete' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-trash ms-1"></i> حذف
   </button>
+
+  {% if doc_checklist %}
+  <hr>
+  <h6 class="text-secondary"><i class="bi bi-file-earmark-check ms-1"></i> الوثائق المطلوبة</h6>
+  <ul class="list-unstyled small">
+    {% for doc in doc_checklist %}
+    <li class="mb-1">
+      {% if doc.present %}
+        <i class="bi bi-check-circle-fill text-success ms-1"></i>
+      {% elif doc.obligatoire %}
+        <i class="bi bi-x-circle-fill text-danger ms-1"></i>
+      {% else %}
+        <i class="bi bi-circle text-secondary ms-1"></i>
+      {% endif %}
+      {{ doc.nom }}
+      {% if doc.obligatoire %}<span class="text-danger">*</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if object.notes %}
+  <hr>
+  <h6 class="text-secondary"><i class="bi bi-sticky ms-1"></i> ملاحظات</h6>
+  <p class="small text-secondary mb-0">{{ object.notes }}</p>
+  {% endif %}
 {% endblock %}

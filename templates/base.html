@@ -15,49 +15,23 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Police arabe -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Polices arabes -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
     <!-- Select2 CSS + thème Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-    <style>
-      body { font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
-      .navbar-brand img { height: 36px; }
-      .brand-subtitle { font-size: .8rem; opacity:.75; }
-      .app-shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-      .app-footer { background: #0f172a; color: #fff; }
-      .footer-link { color: #cbd5e1; text-decoration: none; }
-      .footer-link:hover { color: #fff; }
-      .page-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-      .page-header .breadcrumb { --bs-breadcrumb-divider: '›'; }
-      .card-hover:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.08); }
-
-      /* Select2 esthétique RTL (n’activer que sur .js-select2) */
-      .select2-container--bootstrap-5 .select2-selection {
-        border-radius: 0.75rem;
-        min-height: calc(2.25rem + 2px);
-        text-align: right;
-      }
-      .select2-container--bootstrap-5 .select2-selection__choice {
-        padding-right: .75rem;
-      }
-      .select2-container--bootstrap-5 .select2-selection__choice__remove {
-        margin-left: .5rem; /* espace pour RTL */
-        font-size: 1rem;
-        float: left;        /* croix à gauche en RTL */
-      }
-      .select2-container { width: 100% !important; }
-    </style>
+    <!-- Zellige Theme + Mahakim.ma design -->
+    <link href="{% static 'css/zellige.css' %}?v=2" rel="stylesheet">
 
     {% block extra_css %}{% endblock %}
   </head>
-  <body class="bg-light">
+  <body class="zellige-body">
     <div class="app-shell">
 
       {% block header %}
-      <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+      <nav class="navbar navbar-expand-lg navbar-dark zellige-navbar">
         <div class="container-fluid">
           <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <img src="{% static 'img/logo-primary.png' %}" alt="Logo" onerror="this.style.display='none'">
@@ -94,6 +68,7 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typerecettes' %}"><i class="bi bi-wallet2 ms-1"></i> أنواع المداخيل</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'roles' %}"><i class="bi bi-person-badge ms-1"></i> أدوار المستخدمين</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'types-alerte' %}"><i class="bi bi-bell ms-1"></i> أنواع التنبيهات</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typeavertissement' %}"><i class="bi bi-exclamation-triangle ms-1"></i> أنواع الإنذارات</a></li>
                 </ul>
               </li>
 
@@ -107,6 +82,7 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:audience_list' %}"><i class="bi bi-calendar3 ms-1"></i> الجلسات</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:decision_list' %}"><i class="bi bi-hammer ms-1"></i> الأحكام</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:notification_list' %}"><i class="bi bi-envelope-paper ms-1"></i> التبليغات</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:avertissement_list' %}"><i class="bi bi-exclamation-triangle ms-1"></i> الإنذارات</a></li>
                 </ul>
               </li>
 
@@ -126,6 +102,13 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:execution_list' %}"><i class="bi bi-gear ms-1"></i> التنفيذ</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:voiederecours_list' %}"><i class="bi bi-arrow-90deg-left ms-1"></i> طرق الطعن</a></li>
                 </ul>
+              </li>
+
+              <!-- Mahakim.ma -->
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'cabinet:mahakim_sync' %}">
+                  <i class="bi bi-cloud-download ms-1"></i> محاكم
+                </a>
               </li>
 
               <!-- Référentiel “archives” -->
@@ -155,6 +138,7 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:tache_list' %}"><i class="bi bi-check2-square ms-1"></i> مهامي</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:alerte_list' %}"><i class="bi bi-bell ms-1"></i> التنبيهات</a></li>
                   <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:user_guide' %}" target="_blank"><i class="bi bi-book ms-1"></i> دليل الاستعمال</a></li>
                   <li><a class="dropdown-item" href="/admin/"><i class="bi bi-speedometer2 ms-1"></i> إدارة النظام</a></li>
                   <li><a class="dropdown-item" href="{% url 'authui:logout' %}"><i class="bi bi-box-arrow-left ms-1"></i> خروج</a></li>
                 </ul>
@@ -197,7 +181,7 @@
       </main>
 
       {% block footer %}
-      <footer class="app-footer mt-auto py-4">
+      <footer class="app-footer zellige-footer mt-auto py-4">
         <div class="container">
           <div class="row g-4 align-items-start">
             <div class="col-12 col-md-4">
@@ -247,7 +231,7 @@
     <div class="modal fade" id="mainModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-          <div class="modal-header">
+          <div class="modal-header zellige-modal-header">
             <h5 class="modal-title">—</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
           </div>
@@ -297,12 +281,17 @@
         let data = null; try { data = JSON.parse(xhr.responseText || '{}'); } catch(e) { return; }
         if (!data || !data.ok) return;
 
-        if (data.refreshTarget && data.refreshUrl) {
-          htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
-        }
         if (data.closeModal) {
           const el = document.getElementById('mainModal');
           if (el) (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).hide();
+        }
+        // Redirect (e.g. after affaire create → detail page)
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        if (data.refreshTarget && data.refreshUrl) {
+          htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
         }
         // Toast simple
         if (data.message) {
@@ -330,19 +319,35 @@
       });
 
       // Initialisation Select2 sur .js-select2 uniquement
+      // Custom matcher: recherche par sous-chaîne (contains) au lieu de starts-with
+      function containsMatcher(params, data) {
+        if ($.trim(params.term) === '') return data;
+        if (typeof data.text === 'undefined') return null;
+        if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) return data;
+        return null;
+      }
+
       function initSelect2(context){
         $(context).find('select.js-select2').each(function(){
           const $el = $(this);
           if ($el.data('select2')) return; // empêche double init
-          $el.select2({
+          // Si le select est dans un modal, attacher le dropdown au modal
+          // pour éviter que le focus trap du modal bloque la saisie
+          const $modal = $el.closest('.modal');
+          const opts = {
             theme:'bootstrap-5',
             dir:'rtl',
             width:'100%',
             allowClear:true,
             placeholder:$el.attr('placeholder')||'اختر...',
             closeOnSelect: !$el.prop('multiple'),
+            matcher: containsMatcher,
             language:{ noResults:()=>"لا توجد نتائج", searching:()=>"جاري البحث..." }
-          });
+          };
+          if ($modal.length) {
+            opts.dropdownParent = $modal;
+          }
+          $el.select2(opts);
         });
       }
       document.addEventListener('DOMContentLoaded', ()=> initSelect2(document));

@@ -1,0 +1,130 @@
+{# FILE: templates/modals/_execution_form.html #}
+{# نموذج التنفيذ — stepper multi-étapes #}
+{% load form_extras %}
+{% include '_partials/_stepper.html' %}
+
+<form method="post" id="executionStepperForm"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# Stepper nav #}
+  <div class="stepper-nav">
+    <div class="step-indicator active"><span class="step-num">1</span> الحكم</div>
+    <div class="step-indicator"><span class="step-num">2</span> التفاصيل</div>
+    <div class="step-indicator"><span class="step-num">3</span> المتابعة</div>
+  </div>
+
+  {# === Step 1: الحكم والنوع والحالة === #}
+  <div class="step-panel active" data-step="0">
+    <h6 class="text-primary mb-3"><i class="bi bi-hammer ms-1"></i> الحكم والنوع</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.decision.label }} <span class="text-danger">*</span></label>
+        {{ form.decision }}
+        {% if form.decision.errors %}<div class="invalid-feedback d-block">{{ form.decision.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.type_execution.label }} <span class="text-danger">*</span></label>
+        {{ form.type_execution }}
+        {% if form.type_execution.errors %}<div class="invalid-feedback d-block">{{ form.type_execution.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.statut.label }} <span class="text-danger">*</span></label>
+        {{ form.statut }}
+        {% if form.statut.errors %}<div class="invalid-feedback d-block">{{ form.statut.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_demande.label }} <span class="text-danger">*</span></label>
+        {{ form.date_demande|add_class:'form-control form-control-sm' }}
+        {% if form.date_demande.errors %}<div class="invalid-feedback d-block">{{ form.date_demande.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Step 2: التفاصيل === #}
+  <div class="step-panel" data-step="1">
+    <h6 class="text-primary mb-3"><i class="bi bi-info-circle ms-1"></i> التفاصيل</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <div class="form-check form-switch mt-4">
+          {{ form.depot_caisse_barreau }}
+          <label class="form-check-label" for="{{ form.depot_caisse_barreau.id_for_label }}">{{ form.depot_caisse_barreau.label }}</label>
+        </div>
+        {% if form.depot_caisse_barreau.errors %}<div class="invalid-feedback d-block">{{ form.depot_caisse_barreau.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_demande_liquidation.label }}</label>
+        {{ form.date_demande_liquidation|add_class:'form-control form-control-sm' }}
+        {% if form.date_demande_liquidation.errors %}<div class="invalid-feedback d-block">{{ form.date_demande_liquidation.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Step 3: المتابعة === #}
+  <div class="step-panel" data-step="2">
+    <h6 class="text-primary mb-3"><i class="bi bi-clipboard-check ms-1"></i> المتابعة</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.proces_verbal_refus.label }}</label>
+        {{ form.proces_verbal_refus|add_class:'form-control form-control-sm' }}
+        {% if form.proces_verbal_refus.errors %}<div class="invalid-feedback d-block">{{ form.proces_verbal_refus.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_pv_refus.label }}</label>
+        {{ form.date_pv_refus|add_class:'form-control form-control-sm' }}
+        {% if form.date_pv_refus.errors %}<div class="invalid-feedback d-block">{{ form.date_pv_refus.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.contrainte_par_corps_num.label }}</label>
+        {{ form.contrainte_par_corps_num|add_class:'form-control form-control-sm' }}
+        {% if form.contrainte_par_corps_num.errors %}<div class="invalid-feedback d-block">{{ form.contrainte_par_corps_num.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_contrainte.label }}</label>
+        {{ form.date_contrainte|add_class:'form-control form-control-sm' }}
+        {% if form.date_contrainte.errors %}<div class="invalid-feedback d-block">{{ form.date_contrainte.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Navigation === #}
+  <div class="stepper-buttons mt-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm stepper-prev" style="display:none;">
+      <i class="bi bi-arrow-right ms-1"></i> السابق
+    </button>
+    <div class="d-flex gap-2 me-auto">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إلغاء
+      </button>
+      <button type="button" class="btn btn-primary btn-sm stepper-next">
+        التالي <i class="bi bi-arrow-left me-1"></i>
+      </button>
+      <button type="submit" class="btn btn-primary btn-sm stepper-submit" style="display:none;">
+        <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var f = document.getElementById('executionStepperForm');
+  if (f) initStepper(f);
+});
+document.body.addEventListener('htmx:afterSwap', function() {
+  var f = document.getElementById('executionStepperForm');
+  if (f) initStepper(f);
+});
+</script>

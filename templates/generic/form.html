@@ -1,31 +1,37 @@
 {# FILE: templates/generic/form.html                                  #}
-{# إنشاء/تعديل — حقول نموذج متوافقة مع Bootstrap                     #}
+{# إنشاء/تعديل — حقول نموذج متوافقة مع Bootstrap + mahakim style     #}
 {# ============================================================= #}
 
 {% load form_extras %}
 {% block title %}{{ page_title|default:'نموذج' }}{% endblock %}
 {% block page_title %}{{ page_title|default:'نموذج' }}{% endblock %}
 {% block content %}
-    <form method="post" enctype="multipart/form-data" class="card card-hover"
-      hx-post="{{ request.path }}" 
+    <form method="post" enctype="multipart/form-data" class="card card-hover zellige-form-card"
+      hx-post="{{ request.path }}"
       hx-target="#modalBody" hx-swap="outerHTML">
     <div class="card-body">
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        <div class="alert alert-danger" style="border-right: 4px solid #ef4444;">
+          <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+          {{ form.non_field_errors }}
+        </div>
       {% endif %}
       <div class="row g-3">
         {% for field in form %}
           <div class="col-12{% if field.field.widget.input_type != 'checkbox' %} col-md-6{% endif %}">
-            <label class="form-label">{{ field.label }}</label>
+            <label class="form-label small fw-bold">
+              {{ field.label }}
+              {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
             {{ field|add_class:'form-control' }}
-            {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+            {% if field.help_text %}<div class="form-text small">{{ field.help_text|safe }}</div>{% endif %}
             {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </div>
         {% endfor %}
       </div>
     </div>
-    <div class="card-footer d-flex justify-content-between">
+    <div class="card-footer d-flex justify-content-between" style="background: var(--m-surface, #eff3f8);">
       <a href="{{ cancel_url }}" class="btn btn-outline-secondary"><i class="bi bi-x-lg ms-1"></i> إلغاء</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle ms-1"></i> حفظ</button>
     </div>

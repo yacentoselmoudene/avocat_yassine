@@ -51,6 +51,16 @@ def build_alert_message(decision_num: str, affaire_ref: str, deadline: date) -> 
     )
 
 
+def _get_echeance_recours_type():
+    """Lookup the 'أجل الطعن' TypeAlerte from DB (cached per process)."""
+    if not hasattr(_get_echeance_recours_type, '_cached'):
+        _get_echeance_recours_type._cached, _ = TypeAlerte.objects.get_or_create(
+            libelle="أجل الطعن",
+            defaults={"libelle_fr": "Échéance recours"}
+        )
+    return _get_echeance_recours_type._cached
+
+
 @transaction.atomic
 def create_appeal_alerts_for_notification(notification: Notification) -> int:
     """ينشئ تنبيهات InApp/Email/SMS قبل الأجل وفق القنوات المضبوطة."""
@@ -59,8 +69,9 @@ def create_appeal_alerts_for_notification(notification: Notification) -> int:
 
     decision = notification.decision
     affaire = decision.affaire
-    days = get_appeal_days_for_affaire_type(affaire.type_affaire)
+    days = get_appeal_days_for_affaire_type(str(affaire.type_affaire))
     deadline = notification.date_signification + timedelta(days=days)
+    type_alerte = _get_echeance_recours_type()
 
     created = 0
     for d in APPEAL_REMINDERS_DAYS:
@@ -70,7 +81,7 @@ def create_appeal_alerts_for_notification(notification: Notification) -> int:
         dt = datetime(when.year, when.month, when.day, 9, 0, tzinfo=timezone.get_current_timezone())
         for channel in ALERTE_CHANNELS:
             alert, made = Alerte.objects.get_or_create(
-                type_alerte=TypeAlerte.ECHEANCE_RECOURS,
+                type_alerte=type_alerte,
                 reference_id=decision.id,
                 date_alerte=dt,
                 moyen=channel,
@@ -87,7 +98,7 @@ def create_appeal_alerts_for_notification(notification: Notification) -> int:
     dt_deadline = datetime(deadline.year, deadline.month, deadline.day, 9, 0, tzinfo=timezone.get_current_timezone())
     for channel in ALERTE_CHANNELS:
         alert, made = Alerte.objects.get_or_create(
-            type_alerte=TypeAlerte.ECHEANCE_RECOURS,
+            type_alerte=type_alerte,
             reference_id=decision.id,
             date_alerte=dt_deadline,
             moyen=channel,
@@ -104,8 +115,9 @@ def create_appeal_alerts_for_notification(notification: Notification) -> int:
 
 def remove_appeal_alerts_for_decision(decision_id: int) -> int:
     """Supprime toutes les alertes liées à une décision donnée."""
+    type_alerte = _get_echeance_recours_type()
     deleted, _ = Alerte.objects.filter(
-        type_alerte=TypeAlerte.ECHEANCE_RECOURS,
+        type_alerte=type_alerte,
         reference_id=decision_id
     ).delete()
     return deleted

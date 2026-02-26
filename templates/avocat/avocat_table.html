@@ -1,13 +1,13 @@
-{# FILE: templates/avocat/juridiction_table.html #}
+{# FILE: templates/avocat/avocat_table.html #}
 <div class="card card-hover">
   <div class="table-responsive">
     <table class="table align-middle">
       <thead class="table-light">
         <tr>
           <th>الاسم</th>
-            <th>الهيئة</th>
-            <th>الهاتف</th>
-            <th>البريد</th>
+          <th>الهيئة</th>
+          <th>الهاتف</th>
+          <th>البريد</th>
           <th class="text-center">إجراءات</th>
         </tr>
       </thead>
@@ -18,20 +18,18 @@
           <td>
             {% if obj.barreau %}{{ obj.barreau.nom }}{% else %}—{% endif %}
           </td>
-        <td>{{ obj.telephone|default:"—" }}</td>
-        <td>{{ obj.email|default:"—" }}</td>
-
-
+          <td>{{ obj.telephone|default:"—" }}</td>
+          <td>{{ obj.email|default:"—" }}</td>
           <td class="text-center">
-            <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:juridiction_detail' obj.pk %}">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'cabinet:avocat_detail' obj.pk %}">
               <i class="bi bi-eye"></i>
             </a>
             <a class="btn btn-sm btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
-               hx-get="{% url 'cabinet:juridiction_update' obj.pk %}" hx-target="#modalBody">
+               hx-get="{% url 'cabinet:avocat_update' obj.pk %}" hx-target="#modalBody">
               <i class="bi bi-pencil"></i>
             </a>
             <a class="btn btn-sm btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
-               hx-get="{% url 'cabinet:juridiction_delete' obj.pk %}" hx-target="#modalBody">
+               hx-get="{% url 'cabinet:avocat_delete' obj.pk %}" hx-target="#modalBody">
               <i class="bi bi-trash"></i>
             </a>
           </td>

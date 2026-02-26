@@ -1,0 +1,100 @@
+{# FILE: templates/modals/_notification_form.html #}
+{# نموذج التبليغ — تصميم منظم بأقسام #}
+{% load form_extras %}
+
+<form method="post"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      enctype="multipart/form-data"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# === Section 1: الحكم والطلب === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-hammer ms-1"></i> الحكم والطلب</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.decision.label }} <span class="text-danger">*</span></label>
+        {{ form.decision }}
+        {% if form.decision.errors %}<div class="invalid-feedback d-block">{{ form.decision.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.demande_numero.label }} <span class="text-danger">*</span></label>
+        {{ form.demande_numero|add_class:'form-control form-control-sm' }}
+        {% if form.demande_numero.errors %}<div class="invalid-feedback d-block">{{ form.demande_numero.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Section 2: التواريخ === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-calendar3 ms-1"></i> التواريخ</h6>
+    <div class="row g-2">
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.date_depot_demande.label }} <span class="text-danger">*</span></label>
+        {{ form.date_depot_demande|add_class:'form-control form-control-sm' }}
+        {% if form.date_depot_demande.errors %}<div class="invalid-feedback d-block">{{ form.date_depot_demande.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.date_remise_huissier.label }}</label>
+        {{ form.date_remise_huissier|add_class:'form-control form-control-sm' }}
+        {% if form.date_remise_huissier.errors %}<div class="invalid-feedback d-block">{{ form.date_remise_huissier.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.date_signification.label }}</label>
+        {{ form.date_signification|add_class:'form-control form-control-sm' }}
+        {% if form.date_signification.errors %}<div class="invalid-feedback d-block">{{ form.date_signification.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Section 3: المفوض === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-person-vcard ms-1"></i> المفوض القضائي</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.huissier_nom.label }}</label>
+        {{ form.huissier_nom|add_class:'form-control form-control-sm' }}
+        {% if form.huissier_nom.errors %}<div class="invalid-feedback d-block">{{ form.huissier_nom.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.dossier_notification_numero.label }}</label>
+        {{ form.dossier_notification_numero|add_class:'form-control form-control-sm' }}
+        {% if form.dossier_notification_numero.errors %}<div class="invalid-feedback d-block">{{ form.dossier_notification_numero.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Section 4: المرفقات === #}
+  {% if form.preuve %}
+  <div class="mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-paperclip ms-1"></i> المرفقات</h6>
+    <label class="form-label small fw-bold">{{ form.preuve.label }}</label>
+    {{ form.preuve|add_class:'form-control form-control-sm' }}
+    {% if form.preuve.errors %}<div class="invalid-feedback d-block">{{ form.preuve.errors|join:", " }}</div>{% endif %}
+    {% if form.instance.preuve %}
+      <div class="mt-1 small text-secondary">
+        <i class="bi bi-file-earmark ms-1"></i> ملف حالي: {{ form.instance.preuve.name|truncatechars:40 }}
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# === Actions === #}
+  <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+    </button>
+  </div>
+</form>

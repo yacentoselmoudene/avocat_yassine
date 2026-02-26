@@ -1,7 +1,7 @@
 # avocat_app/ref_registry.py
 from .models import (TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte, StatutExecution, StatutRecours,
                      StatutAffaire, TypeAudience, TypeRecours, TypeExecution, ResultatAudience, DegreJuridiction,
-                     TypeJuridiction, TypeAffaire)
+                     TypeJuridiction, TypeAffaire, TypeAvertissement)
 
 REF_REGISTRY = {
     # refname : config
@@ -84,8 +84,9 @@ REF_REGISTRY = {
     "typerecours": {
         "model": TypeRecours,
         "title": "أنواع الطعون",
-        "extra_fields": [],
+        "extra_fields": ["delai_legal_jours", "domaine"],
         "perm_prefix": "typerecours",
+        "labels": {"delai_legal_jours": "الأجل (أيام)", "domaine": "المجال"},
     },
     "typeexecution": {
         "model": TypeExecution,
@@ -101,5 +102,12 @@ REF_REGISTRY = {
     },
 
 
+    "typeavertissement": {
+        "model": TypeAvertissement,
+        "title": "أنواع الإنذارات",
+        "extra_fields": ["delai_legal_jours", "domaine", "base_legale"],
+        "perm_prefix": "typeavertissement",
+        "labels": {"delai_legal_jours": "الأجل (أيام)", "domaine": "المجال", "base_legale": "السند القانوني"},
+    },
 }
 # Vous pouvez ajouter d'autres références ici en suivant le même format.

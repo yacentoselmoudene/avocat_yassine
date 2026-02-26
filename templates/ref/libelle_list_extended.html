@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div></div>
+  <button class="btn btn-primary"
+        data-bs-toggle="modal" data-bs-target="#mainModal"
+        hx-get="{{ create_url }}" hx-target="#modalBody">
+  + إضافة
+</button>
+</div>
+
+<div id="ref-list" class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:60px;">#</th>
+          <th>الاسم</th>
+          {% for f in extra_fields %}
+            <th>{{ field_labels|default_if_none:"" }}{% for key, val in field_labels.items %}{% if key == f %}{{ val }}{% endif %}{% endfor %}{% if not field_labels %}{{ f }}{% endif %}</th>
+          {% endfor %}
+          <th style="width:150px;" class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ it.libelle }}</td>
+            {% for f in extra_fields %}
+              <td>
+                {% if f == "domaine" %}
+                  {{ it.get_domaine_display|default:"—" }}
+                {% else %}
+                  {% with val=it|default:"" %}
+                    {% firstof it.delai_legal_jours it.base_legale as extra_val %}
+                  {% endwith %}
+                  {% if f == "delai_legal_jours" %}{{ it.delai_legal_jours }} يوم{% elif f == "base_legale" %}{{ it.base_legale|default:"—" }}{% else %}—{% endif %}
+                {% endif %}
+              </td>
+            {% endfor %}
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary"
+                      data-bs-toggle="modal" data-bs-target="#mainModal"
+                      hx-get="{% url update_name refname it.pk %}"
+                      hx-target="#modalBody">تعديل</button>
+              <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#mainModal"
+                      hx-get="{% url delete_name refname it.pk %}"
+                      hx-target="#modalBody">حذف</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="{{ extra_fields|length|add:3 }}" class="text-center text-secondary py-4">لا توجد عناصر.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

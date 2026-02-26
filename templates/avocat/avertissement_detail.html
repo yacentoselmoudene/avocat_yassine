@@ -1,0 +1,129 @@
+{# FILE: templates/avocat/avertissement_detail.html #}
+{% extends 'generic/detail.html' %}
+{% block title %}{{ object.type_avertissement }} — إنذار{% endblock %}
+{% block page_title %}تفاصيل الإنذار{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:avertissement_list' %}">الإنذارات</a></li>
+  <li class="breadcrumb-item active">{{ object.type_avertissement }}</li>
+{% endblock %}
+
+{% block detail_body %}
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-4 text-secondary">القضية</dt>
+        <dd class="col-sm-8 fw-bold"><a href="{% url 'cabinet:affaire_detail' object.affaire.pk %}">{{ object.affaire.reference_interne }}</a></dd>
+
+        <dt class="col-sm-4 text-secondary">نوع الإنذار</dt>
+        <dd class="col-sm-8"><span class="badge bg-warning">{{ object.type_avertissement }}</span></dd>
+
+        <dt class="col-sm-4 text-secondary">تاريخ الإرسال</dt>
+        <dd class="col-sm-8">{{ object.date_envoi }}</dd>
+
+        <dt class="col-sm-4 text-secondary">تاريخ الأجل</dt>
+        <dd class="col-sm-8">
+          {{ object.date_echeance|default:"—" }}
+          {% if object.is_expired %}
+            <span class="badge bg-danger ms-1">انتهى</span>
+          {% elif object.jours_restants != None %}
+            {% if object.jours_restants <= 5 %}
+              <span class="badge bg-danger ms-1">{{ object.jours_restants }} يوم</span>
+            {% elif object.jours_restants <= 10 %}
+              <span class="badge bg-warning ms-1">{{ object.jours_restants }} يوم</span>
+            {% else %}
+              <span class="badge bg-success ms-1">{{ object.jours_restants }} يوم</span>
+            {% endif %}
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-4 text-secondary">المرسل إليه</dt>
+        <dd class="col-sm-8">{{ object.destinataire_nom }}</dd>
+
+        <dt class="col-sm-4 text-secondary">وسيلة الإرسال</dt>
+        <dd class="col-sm-8">{{ object.get_moyen_envoi_display }}</dd>
+
+        <dt class="col-sm-4 text-secondary">رقم التتبع</dt>
+        <dd class="col-sm-8">{{ object.numero_suivi|default:"—" }}</dd>
+
+        <dt class="col-sm-4 text-secondary">النتيجة</dt>
+        <dd class="col-sm-8"><span class="badge bg-info">{{ object.get_resultat_display }}</span></dd>
+      </dl>
+    </div>
+  </div>
+
+  {% if object.objet_avertissement %}
+  <div class="mb-3 p-3 bg-light rounded">
+    <strong class="text-secondary d-block mb-1">موضوع الإنذار</strong>
+    <p class="mb-0">{{ object.objet_avertissement }}</p>
+  </div>
+  {% endif %}
+
+  {% if object.destinataire_adresse %}
+  <div class="mb-3">
+    <strong class="text-secondary">العنوان:</strong> {{ object.destinataire_adresse }}
+  </div>
+  {% endif %}
+
+  {% if object.notes_reponse %}
+  <div class="mb-3 p-3 bg-light rounded">
+    <strong class="text-secondary d-block mb-1">ملاحظات على الرد</strong>
+    <p class="mb-0">{{ object.notes_reponse }}</p>
+  </div>
+  {% endif %}
+
+  {# المرفقات #}
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-5 text-secondary">نسخة الإنذار</dt>
+        <dd class="col-sm-7">
+          {% if object.document %}
+            <a href="#" class="btn btn-sm btn-outline-info me-1" data-bs-toggle="modal" data-bs-target="#mainModal"
+               hx-get="{% url 'cabinet:document_viewer' %}?model=avertissement&pk={{ object.pk }}&field=document" hx-target="#modalBody">
+              <i class="bi bi-eye ms-1"></i> معاينة
+            </a>
+            <a href="{{ object.document.url }}" class="btn btn-sm btn-outline-success" target="_blank">
+              <i class="bi bi-download ms-1"></i> تحميل
+            </a>
+          {% else %}
+            <span class="text-muted">--</span>
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+    <div class="col-12 col-md-6">
+      <dl class="row mb-0">
+        <dt class="col-sm-5 text-secondary">إثبات الإرسال</dt>
+        <dd class="col-sm-7">
+          {% if object.preuve_envoi %}
+            <a href="#" class="btn btn-sm btn-outline-info me-1" data-bs-toggle="modal" data-bs-target="#mainModal"
+               hx-get="{% url 'cabinet:document_viewer' %}?model=avertissement&pk={{ object.pk }}&field=preuve_envoi" hx-target="#modalBody">
+              <i class="bi bi-eye ms-1"></i> معاينة
+            </a>
+            <a href="{{ object.preuve_envoi.url }}" class="btn btn-sm btn-outline-success" target="_blank">
+              <i class="bi bi-download ms-1"></i> تحميل
+            </a>
+          {% else %}
+            <span class="text-muted">--</span>
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+  </div>
+{% endblock %}
+
+{% block detail_actions %}
+  <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#mainModal"
+          hx-get="{% url 'cabinet:avertissement_update' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-pencil ms-1"></i> تعديل
+  </button>
+  <button class="btn btn-outline-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#mainModal"
+          hx-get="{% url 'cabinet:avertissement_delete' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-trash ms-1"></i> حذف
+  </button>
+{% endblock %}

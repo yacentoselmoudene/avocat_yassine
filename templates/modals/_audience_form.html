@@ -1,0 +1,70 @@
+{# FILE: templates/modals/_audience_form.html #}
+{# نموذج الجلسة — تصميم منظم بأقسام #}
+{% load form_extras %}
+
+<form method="post"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# === Hidden: affaire === #}
+  {% if form.affaire %}
+    {{ form.affaire.as_hidden }}
+  {% endif %}
+
+  {# === Section 1: نوع الجلسة === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-tags ms-1"></i> نوع الجلسة</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.type_audience.label }} <span class="text-danger">*</span></label>
+        {{ form.type_audience }}
+        {% if form.type_audience.errors %}<div class="invalid-feedback d-block">{{ form.type_audience.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.resultat.label }} <span class="text-danger">*</span></label>
+        {{ form.resultat }}
+        {% if form.resultat.errors %}<div class="invalid-feedback d-block">{{ form.resultat.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Section 2: التاريخ === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-calendar3 ms-1"></i> التاريخ</h6>
+    <div>
+      <label class="form-label small fw-bold">{{ form.date_audience.label }} <span class="text-danger">*</span></label>
+      {{ form.date_audience|add_class:'form-control form-control-sm' }}
+      {% if form.date_audience.errors %}<div class="invalid-feedback d-block">{{ form.date_audience.errors|join:", " }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# === Section 3: المحضر === #}
+  {% if form.proces_verbal %}
+  <div class="mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-journal-text ms-1"></i> المحضر</h6>
+    <label class="form-label small fw-bold">{{ form.proces_verbal.label }}</label>
+    {{ form.proces_verbal|add_class:'form-control form-control-sm' }}
+    {% if form.proces_verbal.errors %}<div class="invalid-feedback d-block">{{ form.proces_verbal.errors|join:", " }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  {# === Actions === #}
+  <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,219 @@
+{# FILE: templates/modals/_mahakim_preview.html #}
+{# معاينة مزامنة محاكم — عرض المعلومات قبل المزامنة #}
+
+{% if mode == 'preview_single' %}
+  <div id="mahakimSyncPanel">
+    <h6 class="text-primary mb-3"><i class="bi bi-info-circle ms-1"></i> معاينة المزامنة</h6>
+    <div class="card border-0 bg-light mb-3">
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-4 text-secondary">المرجع الداخلي</dt>
+          <dd class="col-8 fw-bold">{{ affaire.reference_interne }}</dd>
+          <dt class="col-4 text-secondary">مرجع المحكمة</dt>
+          <dd class="col-8 font-monospace">{{ affaire.numero_dossier }}/{{ affaire.code_categorie.code }}/{{ affaire.annee_dossier }}</dd>
+          <dt class="col-4 text-secondary">المحكمة</dt>
+          <dd class="col-8">{{ affaire.juridiction }}</dd>
+          <dt class="col-4 text-secondary">النوع</dt>
+          <dd class="col-8"><span class="badge bg-primary-subtle text-primary-emphasis">{{ affaire.type_affaire }}</span></dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if last_sync %}
+    <div class="alert alert-info py-2 small">
+      <i class="bi bi-clock-history ms-1"></i>
+      آخر مزامنة: <strong>{{ last_sync.date_sync|date:"Y-m-d H:i" }}</strong>
+      {% if last_sync.success %}
+        <span class="badge bg-success">ناجحة</span>
+      {% else %}
+        <span class="badge bg-danger">فاشلة</span>
+      {% endif %}
+      {% if last_sync.statut_mahakim %}— الحالة: {{ last_sync.statut_mahakim }}{% endif %}
+    </div>
+    {% endif %}
+
+    <p class="text-secondary small">سيتم الاتصال ببوابة <strong>mahakim.ma</strong> للبحث عن مستجدات هذه القضية. قد تستغرق العملية بضع ثوان.</p>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إلغاء
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnConfirmSync"
+              onclick="startSingleSync('{{ affaire.pk }}')">
+        <i class="bi bi-cloud-download ms-1"></i> بدء المزامنة
+      </button>
+    </div>
+  </div>
+
+{% elif mode == 'preview_all' %}
+  <div id="mahakimSyncPanel">
+    <h6 class="text-primary mb-3"><i class="bi bi-arrow-repeat ms-1"></i> مزامنة جميع القضايا</h6>
+    <div class="alert alert-warning py-2 small">
+      <i class="bi bi-exclamation-triangle ms-1"></i>
+      سيتم مزامنة <strong>{{ total_syncable }}</strong> قضية مع بوابة محاكم. هذه العملية تتم في الخلفية وقد تستغرق عدة دقائق.
+    </div>
+
+    <div class="card border-0 bg-light mb-3">
+      <div class="card-body small">
+        <div class="row text-center">
+          <div class="col-4">
+            <div class="fs-4 fw-bold text-primary">{{ total_syncable }}</div>
+            <div class="text-secondary">قضية للمزامنة</div>
+          </div>
+          <div class="col-4">
+            <div class="fs-4 fw-bold text-success">{{ already_synced }}</div>
+            <div class="text-secondary">تمت مزامنتها سابقا</div>
+          </div>
+          <div class="col-4">
+            <div class="fs-4 fw-bold text-warning">{{ never_synced }}</div>
+            <div class="text-secondary">لم تزامن بعد</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-secondary small">بعد التأكيد، ستبدأ العملية في الخلفية. يمكنك إغلاق هذه النافذة ومتابعة العمل — أعد تحميل الصفحة بعد دقائق لرؤية النتائج.</p>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إلغاء
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnConfirmSyncAll"
+              onclick="startSyncAll()">
+        <i class="bi bi-cloud-download ms-1"></i> تأكيد المزامنة
+      </button>
+    </div>
+  </div>
+{% endif %}
+
+<script>
+function startSingleSync(pk) {
+  var panel = document.getElementById('mahakimSyncPanel');
+  panel.innerHTML = `
+    <div class="text-center py-4">
+      <div class="mb-3">
+        <div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">جاري المزامنة...</span>
+        </div>
+      </div>
+      <h6 class="text-primary mb-2">جاري المزامنة مع محاكم...</h6>
+      <p class="text-secondary small mb-3">يتم الاتصال ببوابة mahakim.ma — يرجى الانتظار</p>
+      <div class="progress mb-3" style="height:8px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:100%"></div>
+      </div>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إغلاق
+      </button>
+    </div>
+  `;
+
+  fetch('/affaires/' + pk + '/sync-mahakim/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    var icon, color, details = '';
+    if (data.ok) {
+      icon = 'bi-check-circle-fill';
+      color = 'success';
+      if (data.data) {
+        details = '<dl class="row mb-0 small text-start mt-3">';
+        if (data.data.statut) details += '<dt class="col-4 text-secondary">الحالة</dt><dd class="col-8">' + data.data.statut + '</dd>';
+        if (data.data.prochaine_audience) details += '<dt class="col-4 text-secondary">الجلسة القادمة</dt><dd class="col-8">' + data.data.prochaine_audience + '</dd>';
+        if (data.data.juge) details += '<dt class="col-4 text-secondary">القاضي</dt><dd class="col-8">' + data.data.juge + '</dd>';
+        details += '</dl>';
+      }
+    } else {
+      icon = 'bi-x-circle-fill';
+      color = 'danger';
+    }
+    panel.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi ${icon} text-${color}" style="font-size:3rem;"></i>
+        <h6 class="mt-2 text-${color}">${data.message || ''}</h6>
+        ${details}
+        <div class="mt-3 d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg ms-1"></i> إغلاق
+          </button>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise ms-1"></i> تحديث الصفحة
+          </button>
+        </div>
+      </div>
+    `;
+  })
+  .catch(err => {
+    panel.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>
+        <h6 class="mt-2 text-danger">خطأ في الاتصال</h6>
+        <p class="text-secondary small">${err.message || 'تعذر الاتصال بالخادم'}</p>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg ms-1"></i> إغلاق
+        </button>
+      </div>
+    `;
+  });
+}
+
+function startSyncAll() {
+  var panel = document.getElementById('mahakimSyncPanel');
+  panel.innerHTML = `
+    <div class="text-center py-4">
+      <div class="mb-3">
+        <div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">جاري المزامنة...</span>
+        </div>
+      </div>
+      <h6 class="text-primary mb-2">جاري إطلاق المزامنة الشاملة...</h6>
+      <p class="text-secondary small mb-3">تتم المزامنة في الخلفية — يمكنك إغلاق هذه النافذة والعودة لاحقا</p>
+      <div class="progress mb-3" style="height:8px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:100%"></div>
+      </div>
+    </div>
+  `;
+
+  fetch('{% url "cabinet:mahakim_sync_all" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    var icon = data.ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+    var color = data.ok ? 'success' : 'danger';
+    panel.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi ${icon} text-${color}" style="font-size:3rem;"></i>
+        <h6 class="mt-2 text-${color}">${data.message || ''}</h6>
+        <div class="mt-3 d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg ms-1"></i> إغلاق
+          </button>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise ms-1"></i> تحديث الصفحة
+          </button>
+        </div>
+      </div>
+    `;
+  })
+  .catch(err => {
+    panel.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>
+        <h6 class="mt-2 text-danger">خطأ في الاتصال</h6>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg ms-1"></i> إغلاق
+        </button>
+      </div>
+    `;
+  });
+}
+</script>

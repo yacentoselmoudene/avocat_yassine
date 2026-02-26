@@ -24,6 +24,22 @@ def set_attr(field, arg):
     attrs[k] = v
     return field.as_widget(attrs=attrs)
 
+@register.simple_tag(takes_context=True)
+def query_string(context, **kwargs):
+    """Build a query string preserving current GET params, overriding with kwargs.
+    Usage: {% query_string page=3 %} → "page=3&q=xxx&phase=yyy"
+    Pass None to remove a param: {% query_string page=None %}
+    """
+    request = context.get("request")
+    params = request.GET.copy() if request else {}
+    for key, value in kwargs.items():
+        if value is None:
+            params.pop(key, None)
+        else:
+            params[key] = value
+    return params.urlencode()
+
+
 @register.filter(name="add_attr")
 def add_attr(field, arg):
     """{{ field|add_attr:'data-hx:1' }}"""

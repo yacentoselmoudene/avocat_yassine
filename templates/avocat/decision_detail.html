@@ -1,10 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{# FILE: templates/avocat/decision_detail.html #}
+{% extends 'generic/detail.html' %}
 
-</body>
-</html>
+{% block title %}تفاصيل الحكم{% endblock %}
+{% block page_title %}تفاصيل الحكم{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cabinet:decision_list' %}">الأحكام</a></li>
+  <li class="breadcrumb-item active" aria-current="page">تفاصيل</li>
+{% endblock %}
+
+{% block header_actions %}
+  <a class="btn btn-primary" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:decision_update' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-pencil ms-1"></i> تعديل
+  </a>
+  <a class="btn btn-outline-secondary" href="{% url 'cabinet:decision_list' %}">
+    <i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع
+  </a>
+{% endblock %}
+
+{% block detail_body %}
+  <dl class="row mb-0">
+    <dt class="col-sm-4 text-secondary">القضية</dt>
+    <dd class="col-sm-8">
+      <a href="{% url 'cabinet:affaire_detail' object.affaire.pk %}">{{ object.affaire.reference_interne }}</a>
+    </dd>
+
+    <dt class="col-sm-4 text-secondary">رقم الحكم</dt>
+    <dd class="col-sm-8">{{ object.numero_decision }}</dd>
+
+    <dt class="col-sm-4 text-secondary">تاريخ النطق</dt>
+    <dd class="col-sm-8">{{ object.date_prononce|date:"Y-m-d H:i" }}</dd>
+
+    <dt class="col-sm-4 text-secondary">الهيئة/القاضي</dt>
+    <dd class="col-sm-8">{{ object.formation|default:"--" }}</dd>
+
+    <dt class="col-sm-4 text-secondary">ملخص</dt>
+    <dd class="col-sm-8">{{ object.resumé|default:"--" }}</dd>
+
+    <dt class="col-sm-4 text-secondary">قابل للطعن</dt>
+    <dd class="col-sm-8">
+      {% if object.susceptible_recours %}
+        <span class="badge bg-success">نعم</span>
+      {% else %}
+        <span class="badge bg-danger">لا</span>
+      {% endif %}
+    </dd>
+  </dl>
+{% endblock %}
+
+{% block detail_actions %}
+  <a class="btn btn-sm btn-outline-primary w-100 mb-2" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:decision_update' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-pencil ms-1"></i> تعديل
+  </a>
+  <a class="btn btn-sm btn-outline-danger w-100 mb-2" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:decision_delete' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-trash ms-1"></i> حذف
+  </a>
+  <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'cabinet:decision_list' %}">
+    <i class="bi bi-list-ul ms-1"></i> العودة للقائمة
+  </a>
+{% endblock %}

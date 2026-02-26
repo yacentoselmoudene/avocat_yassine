@@ -1,0 +1,454 @@
+{# FILE: templates/guide/user_guide.html #}
+{# دليل الاستعمال — صفحة دليل المستخدم مع طباعة PDF #}
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دليل الاستعمال — مكتب المحاماة</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; background: #f8f9fa; color: #1a1a1a; }
+    .guide-header { background: linear-gradient(135deg, #0d47a1, #1565c0, #1976d2); color: #fff; padding: 3rem 0; }
+    .guide-header h1 { font-family: 'Amiri', serif; font-size: 2.2rem; }
+    .guide-container { max-width: 900px; margin: 0 auto; }
+    .guide-section { background: #fff; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .guide-section h2 { color: #0d47a1; font-size: 1.4rem; border-bottom: 3px solid #e3f2fd; padding-bottom: .5rem; margin-bottom: 1rem; }
+    .guide-section h3 { color: #1565c0; font-size: 1.1rem; margin-top: 1rem; }
+    .flow-step { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; padding: .75rem; border-radius: 8px; background: #f8f9fa; }
+    .flow-step .step-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff; flex-shrink: 0; }
+    .flow-arrow { text-align: center; color: #90caf9; font-size: 1.5rem; margin: .25rem 0; }
+    .tip-box { background: #e8f5e9; border-right: 4px solid #4caf50; padding: .75rem 1rem; border-radius: 0 8px 8px 0; margin: .75rem 0; font-size: .9rem; }
+    .warn-box { background: #fff3e0; border-right: 4px solid #ff9800; padding: .75rem 1rem; border-radius: 0 8px 8px 0; margin: .75rem 0; font-size: .9rem; }
+    .toc-link { display: block; padding: .3rem 0; color: #1565c0; text-decoration: none; }
+    .toc-link:hover { text-decoration: underline; }
+    .print-bar { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid #dee2e6; padding: .5rem 0; }
+    @media print {
+      .print-bar, .guide-back-link { display: none !important; }
+      body { background: #fff; }
+      .guide-header { background: #0d47a1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .guide-section { box-shadow: none; border: 1px solid #dee2e6; break-inside: avoid; }
+      .flow-step { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  {# === Print bar === #}
+  <div class="print-bar">
+    <div class="container guide-container d-flex justify-content-between align-items-center">
+      <a href="/" class="guide-back-link btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i> الرئيسية</a>
+      <button onclick="window.print()" class="btn btn-sm btn-primary"><i class="bi bi-printer ms-1"></i> طباعة / حفظ PDF</button>
+    </div>
+  </div>
+
+  {# === Header === #}
+  <div class="guide-header text-center">
+    <div class="guide-container">
+      <h1><i class="bi bi-book ms-2"></i> دليل استعمال تطبيق تسيير مكتب المحاماة</h1>
+      <p class="mb-0 mt-2 opacity-75">دليل شامل لفهم تدفق المعلومات عبر جميع وظائف التطبيق</p>
+    </div>
+  </div>
+
+  <div class="container guide-container py-4">
+
+    {# === Table of Contents === #}
+    <div class="guide-section">
+      <h2><i class="bi bi-list-ol ms-2"></i> فهرس المحتويات</h2>
+      <div class="row">
+        <div class="col-md-6">
+          <a class="toc-link" href="#sec-overview">1. نظرة عامة على التطبيق</a>
+          <a class="toc-link" href="#sec-flow">2. تدفق المعلومات الرئيسي</a>
+          <a class="toc-link" href="#sec-dashboard">3. لوحة التحكم</a>
+          <a class="toc-link" href="#sec-affaires">4. إدارة القضايا</a>
+          <a class="toc-link" href="#sec-audiences">5. الجلسات والإجراءات</a>
+          <a class="toc-link" href="#sec-decisions">6. الأحكام</a>
+        </div>
+        <div class="col-md-6">
+          <a class="toc-link" href="#sec-notifications">7. التبليغات والإنذارات</a>
+          <a class="toc-link" href="#sec-recours">8. طرق الطعن والتنفيذ</a>
+          <a class="toc-link" href="#sec-finance">9. الإدارة المالية</a>
+          <a class="toc-link" href="#sec-docs">10. المرفقات والوثائق</a>
+          <a class="toc-link" href="#sec-search">11. البحث والتصفية</a>
+          <a class="toc-link" href="#sec-settings">12. الإعدادات والمراجع</a>
+        </div>
+      </div>
+    </div>
+
+    {# === 1. Overview === #}
+    <div class="guide-section" id="sec-overview">
+      <h2><i class="bi bi-info-circle ms-2"></i> 1. نظرة عامة على التطبيق</h2>
+      <p>تطبيق تسيير مكتب المحاماة هو نظام متكامل لإدارة القضايا والملفات القانونية وفق النظام القضائي المغربي. يتيح للمحامي ومساعديه:</p>
+      <ul>
+        <li><strong>متابعة القضايا</strong> من مرحلة الابتدائي إلى التنفيذ والإقفال</li>
+        <li><strong>تسجيل الجلسات</strong> ونتائجها والإجراءات المتخذة</li>
+        <li><strong>تتبع الأحكام</strong> والتبليغات وطرق الطعن مع حساب الآجال تلقائيًا</li>
+        <li><strong>إدارة الإنذارات</strong> ومتابعة نتائجها</li>
+        <li><strong>ضبط المصاريف والمداخيل</strong> مع ملخص مالي شهري</li>
+        <li><strong>أرشفة الوثائق</strong> ومعاينتها مباشرة من التطبيق</li>
+        <li><strong>المزامنة مع محاكم.ما</strong> للحصول على آخر مستجدات الملفات</li>
+      </ul>
+    </div>
+
+    {# === 2. Information Flow === #}
+    <div class="guide-section" id="sec-flow">
+      <h2><i class="bi bi-diagram-3 ms-2"></i> 2. تدفق المعلومات الرئيسي</h2>
+      <p>يتبع التطبيق المسار القانوني الطبيعي للقضية في النظام القضائي المغربي:</p>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#1565c0;"><i class="bi bi-folder-plus"></i></div>
+        <div>
+          <strong>إنشاء القضية</strong>
+          <div class="small text-secondary">تسجيل المعلومات الأساسية: المرجع الداخلي، رقم ملف المحكمة، نوع القضية، المحكمة المختصة</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#f57c00;"><i class="bi bi-people"></i></div>
+        <div>
+          <strong>إضافة الأطراف والمحامين</strong>
+          <div class="small text-secondary">ربط المدعي والمدعى عليه والأطراف المتدخلة، وتعيين المحامين المكلفين</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#fbc02d;"><i class="bi bi-calendar3"></i></div>
+        <div>
+          <strong>تسجيل الجلسات</strong>
+          <div class="small text-secondary">تحديد تواريخ الجلسات، تسجيل نتائجها (تأجيل، حكم، خبرة...) والإجراءات المأمور بها</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#7b1fa2;"><i class="bi bi-clipboard-check"></i></div>
+        <div>
+          <strong>تنفيذ الإجراءات</strong>
+          <div class="small text-secondary">متابعة الخبرات والإجراءات القضائية وتحديث حالاتها</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#455a64;"><i class="bi bi-hammer"></i></div>
+        <div>
+          <strong>صدور الحكم</strong>
+          <div class="small text-secondary">تسجيل الحكم، رقمه، تاريخه، وما إذا كان قابلاً للطعن</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#00897b;"><i class="bi bi-envelope-paper"></i></div>
+        <div>
+          <strong>التبليغ</strong>
+          <div class="small text-secondary">تسجيل تبليغ الحكم وإرسال الإنذارات مع حساب الآجال القانونية تلقائيًا</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#c62828;"><i class="bi bi-arrow-90deg-left"></i></div>
+        <div>
+          <strong>الطعن (اختياري)</strong>
+          <div class="small text-secondary">تقديم استئناف أو نقض مع متابعة الآجال — والانتقال التلقائي للمرحلة الموالية</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#2e7d32;"><i class="bi bi-gear"></i></div>
+        <div>
+          <strong>التنفيذ</strong>
+          <div class="small text-secondary">متابعة إجراءات التنفيذ: إيداع الصندوق، محضر الرفض، الإكراه البدني</div>
+        </div>
+      </div>
+      <div class="flow-arrow"><i class="bi bi-arrow-down"></i></div>
+
+      <div class="flow-step">
+        <div class="step-icon" style="background:#37474f;"><i class="bi bi-lock"></i></div>
+        <div>
+          <strong>إقفال القضية</strong>
+          <div class="small text-secondary">أرشفة القضية بعد انتهاء جميع الإجراءات</div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <i class="bi bi-lightbulb ms-1"></i>
+        <strong>ملاحظة:</strong> الخط الزمني (الكرونولوجيا) في صفحة تفاصيل القضية يعرض جميع هذه المراحل بشكل تسلسلي مع رمز <i class="bi bi-eye"></i> لمعاينة الوثائق المرفقة بكل مرحلة.
+      </div>
+    </div>
+
+    {# === 3. Dashboard === #}
+    <div class="guide-section" id="sec-dashboard">
+      <h2><i class="bi bi-speedometer2 ms-2"></i> 3. لوحة التحكم</h2>
+      <p>الصفحة الرئيسية تعرض نظرة شاملة على نشاط المكتب:</p>
+
+      <h3>الإحصائيات العامة</h3>
+      <ul>
+        <li>عدد القضايا الجارية والمقفلة</li>
+        <li>عدد الجلسات المبرمجة</li>
+        <li>الأحكام الصادرة والمنذرات المرسلة</li>
+      </ul>
+
+      <h3>توزيع القضايا حسب المرحلة</h3>
+      <p>رسم بياني يوضح عدد القضايا في كل مرحلة (ابتدائي، استئنافي، نقض...). <strong>يمكنك الضغط على أي مرحلة</strong> للانتقال مباشرة إلى لائحة القضايا المصفاة حسب تلك المرحلة.</p>
+
+      <h3>الملخص المالي الشهري</h3>
+      <p>جدول يعرض إجمالي المصاريف والمداخيل والصافي للشهر الحالي. <strong>استخدم أسهم التنقل</strong> للتنقل بين الأشهر والسنوات السابقة.</p>
+    </div>
+
+    {# === 4. Affaires === #}
+    <div class="guide-section" id="sec-affaires">
+      <h2><i class="bi bi-journal-text ms-2"></i> 4. إدارة القضايا</h2>
+
+      <h3>إنشاء قضية جديدة</h3>
+      <p>من القائمة العلوية: <strong>القضايا ← إضافة قضية</strong>. يظهر نموذج على مراحل (stepper):</p>
+      <ol>
+        <li><strong>المرجع:</strong> المرجع الداخلي + رقم ملف المحكمة (رقم/صنف/سنة)</li>
+        <li><strong>التصنيف:</strong> نوع القضية، حالتها، المرحلة، المحكمة، المحامي المسؤول</li>
+        <li><strong>المحكمة:</strong> تاريخ الافتتاح، الأولوية، قيمة النزاع</li>
+        <li><strong>التفاصيل:</strong> موضوع القضية والملاحظات</li>
+      </ol>
+
+      <h3>مراحل القضية</h3>
+      <p>تمر القضية بالمراحل التالية حسب النظام القضائي المغربي:</p>
+      <table class="table table-sm table-bordered">
+        <thead class="table-light"><tr><th>المرحلة</th><th>الوصف</th></tr></thead>
+        <tbody>
+          <tr><td>تمهيدي</td><td>مرحلة التحضير قبل رفع الدعوى</td></tr>
+          <tr><td>ابتدائي</td><td>الدعوى أمام المحكمة الابتدائية</td></tr>
+          <tr><td>استئنافي</td><td>الطعن أمام محكمة الاستئناف</td></tr>
+          <tr><td>نقض</td><td>الطعن أمام محكمة النقض</td></tr>
+          <tr><td>تنفيذ</td><td>مرحلة تنفيذ الحكم</td></tr>
+          <tr><td>مقفل</td><td>القضية منتهية ومؤرشفة</td></tr>
+        </tbody>
+      </table>
+
+      <h3>صفحة تفاصيل القضية</h3>
+      <p>تعرض جميع المعلومات المرتبطة بالقضية مع <strong>خط زمني</strong> (كرونولوجيا) يجمع كل الأحداث: جلسات، أحكام، إنذارات، خبرات، تبليغات، مرفقات... مرتبة تاريخيًا.</p>
+
+      <div class="tip-box">
+        <i class="bi bi-lightbulb ms-1"></i>
+        يمكنك إضافة جميع العناصر المرتبطة بالقضية (جلسة، حكم، إنذار...) مباشرة من صفحة تفاصيل القضية عبر الأزرار الموجودة.
+      </div>
+    </div>
+
+    {# === 5. Audiences === #}
+    <div class="guide-section" id="sec-audiences">
+      <h2><i class="bi bi-calendar3 ms-2"></i> 5. الجلسات والإجراءات</h2>
+
+      <h3>تسجيل جلسة</h3>
+      <p>من صفحة تفاصيل القضية، اضغط على <strong>"إضافة جلسة"</strong>. حدد:</p>
+      <ul>
+        <li>نوع الجلسة (ابتدائية، استئنافية، ختامية...)</li>
+        <li>تاريخ ووقت الجلسة</li>
+        <li>نتيجة الجلسة (تأجيل، حكم، خبرة، صلح...)</li>
+      </ul>
+
+      <h3>الإجراءات</h3>
+      <p>كل جلسة يمكن أن تتضمن إجراءات مأمور بها (خبرة، معاينة، بحث...). الإجراء مرتبط بالجلسة ويتتبع حالته (منجز / غير منجز).</p>
+    </div>
+
+    {# === 6. Decisions === #}
+    <div class="guide-section" id="sec-decisions">
+      <h2><i class="bi bi-hammer ms-2"></i> 6. الأحكام</h2>
+      <p>عند صدور حكم، سجله من صفحة تفاصيل القضية:</p>
+      <ul>
+        <li><strong>رقم الحكم</strong> وتاريخ النطق به</li>
+        <li><strong>منطوق الحكم</strong> (القبول، الرفض، عدم القبول...)</li>
+        <li><strong>قابلية الطعن:</strong> هل الحكم قابل للاستئناف أو النقض</li>
+      </ul>
+
+      <div class="warn-box">
+        <i class="bi bi-exclamation-triangle ms-1"></i>
+        <strong>تنبيه:</strong> عند تسجيل حكم يظهر كعلامة فاصلة في الخط الزمني، مما يساعد على تتبع تطور القضية بصريًا.
+      </div>
+    </div>
+
+    {# === 7. Notifications & Avertissements === #}
+    <div class="guide-section" id="sec-notifications">
+      <h2><i class="bi bi-envelope-paper ms-2"></i> 7. التبليغات والإنذارات</h2>
+
+      <h3>التبليغات</h3>
+      <p>بعد صدور الحكم، سجل تبليغه للأطراف:</p>
+      <ul>
+        <li>رقم الطلب واسم المفوض القضائي</li>
+        <li>تاريخ التبليغ</li>
+        <li>محضر أو إثبات التبليغ (ملف مرفق)</li>
+      </ul>
+
+      <h3>الإنذارات</h3>
+      <p>لإرسال إنذار رسمي، استخدم نموذج الإنذار المتعدد المراحل:</p>
+      <ol>
+        <li><strong>النوع والتاريخ:</strong> نوع الإنذار، تاريخ الإرسال، وسيلة الإرسال</li>
+        <li><strong>المرسل إليه:</strong> اسم المرسل إليه وعنوانه</li>
+        <li><strong>الموضوع:</strong> موضوع الإنذار</li>
+        <li><strong>النتيجة والمرفقات:</strong> نتيجة الإنذار + إرفاق نسخة الإنذار وإثبات الإرسال</li>
+      </ol>
+
+      <div class="tip-box">
+        <i class="bi bi-lightbulb ms-1"></i>
+        <strong>حساب الآجال التلقائي:</strong> يحسب التطبيق تلقائيًا تاريخ انتهاء أجل الإنذار بناءً على نوع الإنذار والأجل القانوني المحدد في الإعدادات. يظهر عداد الأيام المتبقية في لائحة الإنذارات وفي الخط الزمني.
+      </div>
+    </div>
+
+    {# === 8. Recours & Execution === #}
+    <div class="guide-section" id="sec-recours">
+      <h2><i class="bi bi-arrow-90deg-left ms-2"></i> 8. طرق الطعن والتنفيذ</h2>
+
+      <h3>طرق الطعن</h3>
+      <p>إذا كان الحكم قابلاً للطعن، يمكنك تسجيل:</p>
+      <ul>
+        <li><strong>نوع الطعن:</strong> استئناف، تعرض، نقض، إعادة النظر...</li>
+        <li><strong>تاريخ الإيداع</strong> ورقم الملف الجديد</li>
+        <li>يحسب التطبيق تلقائيًا <strong>تاريخ انتهاء أجل الطعن</strong></li>
+      </ul>
+
+      <h3>التنفيذ</h3>
+      <p>بعد صيرورة الحكم نهائيًا، سجل إجراءات التنفيذ:</p>
+      <ol>
+        <li><strong>الحكم والنوع:</strong> الحكم المراد تنفيذه، نوع التنفيذ، الحالة</li>
+        <li><strong>التفاصيل:</strong> إيداع صندوق هيئة المحامين، تاريخ طلب التصفية</li>
+        <li><strong>المتابعة:</strong> محضر الرفض، الإكراه البدني</li>
+      </ol>
+
+      <div class="warn-box">
+        <i class="bi bi-exclamation-triangle ms-1"></i>
+        <strong>الآجال القانونية:</strong> انتبه للآجال المعروضة باللون الأحمر — تعني اقتراب أو انتهاء الأجل القانوني للطعن.
+      </div>
+    </div>
+
+    {# === 9. Finance === #}
+    <div class="guide-section" id="sec-finance">
+      <h2><i class="bi bi-cash-coin ms-2"></i> 9. الإدارة المالية</h2>
+
+      <h3>المصاريف</h3>
+      <p>سجل كل مصروف مرتبط بقضية معينة:</p>
+      <ul>
+        <li>نوع المصروف (رسوم قضائية، أتعاب خبير، مصاريف تنقل...)</li>
+        <li>المبلغ والتاريخ</li>
+        <li>إرفاق المستند الإثباتي (وصل، فاتورة...)</li>
+      </ul>
+
+      <h3>المداخيل</h3>
+      <p>سجل المداخيل المتعلقة بكل قضية:</p>
+      <ul>
+        <li>نوع المدخول (أتعاب، تعويضات، مصاريف مستردة...)</li>
+        <li>المبلغ والتاريخ</li>
+        <li>إرفاق المستند الإثباتي</li>
+      </ul>
+
+      <h3>الملخص المالي</h3>
+      <p>في لوحة التحكم، يعرض الملخص المالي الشهري:</p>
+      <table class="table table-sm table-bordered">
+        <thead class="table-light"><tr><th>البيان</th><th>الوصف</th></tr></thead>
+        <tbody>
+          <tr><td>إجمالي المصاريف</td><td>مجموع المصاريف المسجلة في الشهر المحدد</td></tr>
+          <tr><td>إجمالي المداخيل</td><td>مجموع المداخيل المسجلة في الشهر المحدد</td></tr>
+          <tr><td>الصافي</td><td>الفرق بين المداخيل والمصاريف</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip-box">
+        <i class="bi bi-lightbulb ms-1"></i>
+        استخدم أسهم التنقل في الملخص المالي للتنقل بين الأشهر ومراجعة التقارير المالية السابقة.
+      </div>
+    </div>
+
+    {# === 10. Documents === #}
+    <div class="guide-section" id="sec-docs">
+      <h2><i class="bi bi-folder2-open ms-2"></i> 10. المرفقات والوثائق</h2>
+
+      <h3>إضافة مرفقات</h3>
+      <p>يمكنك إرفاق وثائق بكل قضية (PDF، صور، Word، Excel...). حدد:</p>
+      <ul>
+        <li>عنوان المرفق ونوعه</li>
+        <li>الملف (الحد الأقصى: 10 ميغابايت)</li>
+      </ul>
+
+      <h3>معاينة الوثائق</h3>
+      <p>اضغط على رمز العين <i class="bi bi-eye text-info"></i> لمعاينة أي وثيقة مباشرة في التطبيق:</p>
+      <ul>
+        <li><strong>ملفات PDF:</strong> عرض مع إمكانية التكبير/التصغير والتنقل بين الصفحات</li>
+        <li><strong>الصور:</strong> عرض مع إمكانية التكبير/التصغير</li>
+        <li><strong>ملفات أخرى:</strong> زر للتحميل المباشر</li>
+      </ul>
+
+      <h3>طباعة الوثائق</h3>
+      <p>من لوائح المصاريف والمداخيل والمرفقات، اضغط على زر <strong>"طباعة المستندات"</strong> لطباعة جميع الوثائق المصفاة في صفحة واحدة.</p>
+    </div>
+
+    {# === 11. Search & Filters === #}
+    <div class="guide-section" id="sec-search">
+      <h2><i class="bi bi-funnel ms-2"></i> 11. البحث والتصفية</h2>
+
+      <h3>البحث النصي</h3>
+      <p>في أعلى كل لائحة، يوجد حقل بحث نصي يبحث في جميع الحقول النصية للعنصر. الكتابة تعطي نتائج فورية.</p>
+
+      <h3>الفلاتر المتقدمة</h3>
+      <p>اضغط على <strong>"تصفية متقدمة"</strong> لفتح لوحة الفلاتر. الفلاتر المتاحة تختلف حسب نوع اللائحة:</p>
+      <table class="table table-sm table-bordered">
+        <thead class="table-light"><tr><th>اللائحة</th><th>الفلاتر المتاحة</th></tr></thead>
+        <tbody>
+          <tr><td>القضايا</td><td>المرحلة، النوع، الحالة، المحكمة، المحامي، الأولوية، التاريخ</td></tr>
+          <tr><td>المصاريف</td><td>النوع، القضية، التاريخ، المبلغ</td></tr>
+          <tr><td>المداخيل</td><td>النوع، القضية، التاريخ، المبلغ</td></tr>
+          <tr><td>المرفقات</td><td>النوع، القضية</td></tr>
+          <tr><td>الجلسات</td><td>القضية، التاريخ</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip-box">
+        <i class="bi bi-lightbulb ms-1"></i>
+        الفلاتر تُطبق تلقائيًا عند تغيير أي قيمة — لا حاجة لزر "تطبيق". لمسح جميع الفلاتر، اضغط على "مسح الكل".
+      </div>
+    </div>
+
+    {# === 12. Settings === #}
+    <div class="guide-section" id="sec-settings">
+      <h2><i class="bi bi-gear ms-2"></i> 12. الإعدادات والمراجع</h2>
+      <p>من القائمة العلوية <strong>"الإعدادات"</strong>، يمكنك إدارة جداول المراجع التي يعتمد عليها التطبيق:</p>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <ul class="list-unstyled">
+            <li><i class="bi bi-building text-primary ms-1"></i> أنواع المحاكم</li>
+            <li><i class="bi bi-journal-text text-primary ms-1"></i> أنواع القضايا</li>
+            <li><i class="bi bi-flag text-primary ms-1"></i> حالات القضايا</li>
+            <li><i class="bi bi-calendar3 text-primary ms-1"></i> أنواع الجلسات</li>
+            <li><i class="bi bi-check2-square text-primary ms-1"></i> نتائج الجلسات</li>
+            <li><i class="bi bi-arrow-90deg-left text-primary ms-1"></i> أنواع الطعون</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <ul class="list-unstyled">
+            <li><i class="bi bi-gear text-primary ms-1"></i> أنواع التنفيذ</li>
+            <li><i class="bi bi-clipboard2-check text-primary ms-1"></i> حالات التنفيذ</li>
+            <li><i class="bi bi-cash-coin text-primary ms-1"></i> أنواع المصاريف</li>
+            <li><i class="bi bi-wallet2 text-primary ms-1"></i> أنواع المداخيل</li>
+            <li><i class="bi bi-exclamation-triangle text-primary ms-1"></i> أنواع الإنذارات</li>
+            <li><i class="bi bi-bell text-primary ms-1"></i> أنواع التنبيهات</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>محاكم.ما</h3>
+      <p>من القائمة <strong>"محاكم"</strong>، يمكنك مزامنة بيانات القضايا مع موقع محاكم.ما للحصول على آخر المستجدات (تواريخ الجلسات، الأحكام...).</p>
+    </div>
+
+    {# === Footer === #}
+    <div class="text-center text-secondary small py-4">
+      <p class="mb-1">تم إنشاء هذا الدليل تلقائيًا من تطبيق تسيير مكتب المحاماة</p>
+      <p class="mb-0">{{ today|date:"Y/m/d" }}</p>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

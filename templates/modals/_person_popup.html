@@ -1,0 +1,38 @@
+{# FILE: templates/modals/_person_popup.html #}
+{# Popup read-only pour Partie / Expert / Avocat / Utilisateur #}
+
+<div class="person-popup-card text-center p-4">
+  {# Avatar #}
+  <div class="person-avatar mx-auto mb-3">
+    <i class="bi {{ icon|default:'bi-person-circle' }}"></i>
+  </div>
+
+  {# Nom + Badge #}
+  <h5 class="fw-bold mb-1">{{ person_name }}</h5>
+  {% if person_badge %}
+    <span class="badge bg-primary-subtle text-primary-emphasis mb-3">{{ person_badge }}</span>
+  {% endif %}
+
+  <hr class="my-3">
+
+  {# Infos #}
+  <dl class="row text-start mb-0 small">
+    {% for item in person_fields %}
+      <dt class="col-5 text-secondary mb-2">{{ item.label }}</dt>
+      <dd class="col-7 mb-2">{{ item.value|default:"—" }}</dd>
+    {% endfor %}
+  </dl>
+
+  {# Lien vers detail #}
+  {% if detail_url %}
+  <hr class="my-3">
+  <a href="{{ detail_url }}" class="btn btn-outline-primary btn-sm w-100">
+    <i class="bi bi-box-arrow-in-left ms-1"></i> عرض التفاصيل الكاملة
+  </a>
+  {% endif %}
+
+  {# Close #}
+  <button type="button" class="btn btn-secondary btn-sm w-100 mt-2" data-bs-dismiss="modal">
+    <i class="bi bi-x-lg ms-1"></i> إغلاق
+  </button>
+</div>

@@ -1,16 +1,36 @@
-from uuid import uuid4
-from django.db import models
-from .models_base import TimeStampedSoftDeleteModel
-from django.core.validators import RegexValidator, MinValueValidator, EmailValidator
-from django.db.models import DO_NOTHING
-from django.utils.translation import gettext_lazy as _
-from uuid import uuid4
 import secrets
-from datetime import timedelta, datetime
+from datetime import timedelta
+from uuid import uuid4
+
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator, MinValueValidator, EmailValidator, FileExtensionValidator
 from django.db import models
-from django.utils import timezone
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
+from .models_base import TimeStampedSoftDeleteModel
+
+
+# =============================================
+# File upload validators
+# =============================================
+ALLOWED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'mp3', 'wav', 'ogg']
+MAX_UPLOAD_SIZE_MB = 10
+
+file_extension_validator = FileExtensionValidator(
+    allowed_extensions=ALLOWED_FILE_EXTENSIONS,
+    message=_("نوع الملف غير مسموح. الأنواع المسموحة: %(allowed_extensions)s"),
+)
+
+
+def validate_file_size(value):
+    limit = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if value.size > limit:
+        raise ValidationError(
+            _(f"حجم الملف يتجاوز الحد الأقصى المسموح ({MAX_UPLOAD_SIZE_MB} ميغابايت)."),
+        )
 # =============================================
 # Validateurs — فرض إدخال عربي للمحتوى الظاهر للمستخدم
 # =============================================
@@ -25,6 +45,24 @@ arabic_name_validator = RegexValidator(
     regex=rf"^[{ARABIC_CHAR_CLASSES}\s\-']+$",
     message=_("الاسم يجب أن يكون بالعربية."),
 )
+
+# =============================================
+# Enums réutilisables — تعدادات مشتركة
+# =============================================
+class DomaineJuridique(models.TextChoices):
+    CIVIL = "civil", "مدني"
+    PENAL = "penal", "جنائي"
+    COMMERCIAL = "commercial", "تجاري"
+    ADMINISTRATIF = "administratif", "إداري"
+    SOCIAL = "social", "اجتماعي"
+
+class PhaseAffaire(models.TextChoices):
+    PRELIMINAIRE = "PRELIMINAIRE", "المرحلة التمهيدية"
+    PREMIERE_INSTANCE = "PREMIERE_INSTANCE", "المحكمة الابتدائية"
+    APPEL = "APPEL", "محكمة الاستئناف"
+    CASSATION = "CASSATION", "محكمة النقض"
+    EXECUTION = "EXECUTION", "التنفيذ"
+    CLOTURE = "CLOTURE", "مقفلة"
 
 class AuditAction(models.TextChoices):
     CREATE = "CREATE", "إنشاء"
@@ -142,6 +180,8 @@ class TypeRecours(TimeStampedSoftDeleteModel):
 
     libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
     libelle_fr = models.CharField(max_length=180, verbose_name='nom en français')
+    delai_legal_jours = models.PositiveIntegerField(default=30, verbose_name='الأجل القانوني (أيام)')
+    domaine = models.CharField(max_length=20, choices=DomaineJuridique.choices, default=DomaineJuridique.CIVIL, verbose_name='المجال')
 
     class Meta:
         constraints = [
@@ -376,6 +416,26 @@ class TypeAlerte(TimeStampedSoftDeleteModel):
         ]
 
 
+class TypeAvertissement(TimeStampedSoftDeleteModel):
+    libelle = models.CharField(max_length=180, verbose_name='الاسم', validators=[arabic_text_validator])
+    libelle_fr = models.CharField(max_length=180, blank=True, default='', verbose_name='nom en français')
+    delai_legal_jours = models.PositiveIntegerField(default=15, verbose_name='الأجل القانوني (أيام)')
+    domaine = models.CharField(max_length=20, choices=DomaineJuridique.choices, default=DomaineJuridique.CIVIL, verbose_name='المجال')
+    base_legale = models.CharField(max_length=255, blank=True, default='', verbose_name='السند القانوني')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libelle"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_typeavertissement_libelle_alive",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.libelle} (محذوف)" if self.is_deleted else self.libelle
+
+
 # =============================================
 # النماذج — أسماء الحقول الفرنسية؛ التسميات الظاهرة بالعربية
 # =============================================
@@ -389,7 +449,7 @@ class Juridiction(TimeStampedSoftDeleteModel):
     villetribunal_fr = models.CharField(max_length=180,null=True,blank=True, verbose_name='المدينة بالفرنسية')
     villetribunal_ar = models.CharField(max_length=180,null=True,blank=True, verbose_name='المدينة بالعربية', validators=[arabic_text_validator])
     telephonetribunal = models.CharField(max_length=180,null=True,blank=True, verbose_name='رقم الهاتف')
-    type = models.ForeignKey(TypeJuridiction, on_delete= DO_NOTHING, verbose_name='نوع المحكمة')
+    type = models.ForeignKey(TypeJuridiction, on_delete=models.PROTECT, verbose_name='نوع المحكمة')
     TribunalParent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
                                related_name="juridictions_filles", verbose_name="تنتمي إلى")
 
@@ -425,7 +485,7 @@ class Avocat(TimeStampedSoftDeleteModel):
     telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
     email = models.EmailField(max_length=120, null=True, blank=True, verbose_name='بريد إلكتروني')
     taux_horaire = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='تعريفة بالساعة', validators=[MinValueValidator(0)])
-    barreau = models.ForeignKey(Barreau, on_delete= DO_NOTHING, verbose_name="الهيئة")
+    barreau = models.ForeignKey(Barreau, on_delete=models.PROTECT, verbose_name="الهيئة")
 
     class Meta:
         db_table = 'avocat'
@@ -439,21 +499,56 @@ class Avocat(TimeStampedSoftDeleteModel):
         return reverse("cabinet:avocat_detail", kwargs={"pk": self.pk})
 
 
+class CodeCategorieAffaire(TimeStampedSoftDeleteModel):
+    DOMAINE_CHOICES = [
+        ('civil', 'مدني'), ('penal', 'جنائي'), ('famille', 'أسرة'),
+        ('commercial', 'تجاري'), ('administratif', 'إداري'),
+        ('social', 'اجتماعي'), ('immobilier', 'عقاري'),
+        ('execution', 'تنفيذ'), ('notification', 'تبليغ'),
+        ('proximite', 'قضاء القرب'), ('plainte', 'شكاية'),
+    ]
+    NIVEAU_CHOICES = [
+        ('premiere_instance', 'ابتدائي'), ('appel', 'استئناف'),
+        ('cassation', 'نقض'), ('execution', 'تنفيذ'),
+        ('notification', 'تبليغ'),
+    ]
+
+    code = models.CharField(max_length=10, unique=True, verbose_name='الرمز')
+    libelle = models.CharField(max_length=200, verbose_name='التسمية')
+    domaine = models.CharField(max_length=30, choices=DOMAINE_CHOICES, verbose_name='المجال')
+    niveau = models.CharField(max_length=20, choices=NIVEAU_CHOICES, default='premiere_instance', verbose_name='الدرجة')
+
+    class Meta:
+        db_table = 'code_categorie_affaire'
+        verbose_name = 'رمز صنف القضية'
+        verbose_name_plural = 'رموز أصناف القضايا'
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.libelle}"
+
+
 class Affaire(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     reference_interne = models.CharField(max_length=50, verbose_name='مرجع داخلي', unique=True)
     reference_tribunal = models.CharField(max_length=100, null=True, blank=True, verbose_name='مرجع المحكمة')
 
-    type_affaire = models.ForeignKey(TypeAffaire, on_delete= DO_NOTHING, verbose_name="نوع القضية")
-    statut_affaire = models.ForeignKey(StatutAffaire, on_delete= DO_NOTHING, verbose_name="حالة القضية")
+    # Structured reference for mahakim.ma
+    numero_dossier = models.CharField(max_length=20, null=True, blank=True, verbose_name='رقم الملف')
+    code_categorie = models.ForeignKey(CodeCategorieAffaire, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='صنف القضية')
+    annee_dossier = models.CharField(max_length=4, null=True, blank=True, verbose_name='السنة')
 
-    juridiction = models.ForeignKey(Juridiction, on_delete= DO_NOTHING, verbose_name='المحكمة')
+    type_affaire = models.ForeignKey(TypeAffaire, on_delete=models.PROTECT, verbose_name="نوع القضية")
+    statut_affaire = models.ForeignKey(StatutAffaire, on_delete=models.PROTECT, verbose_name="حالة القضية")
+
+    juridiction = models.ForeignKey(Juridiction, on_delete=models.PROTECT, verbose_name='المحكمة')
     date_ouverture = models.DateField(verbose_name='تاريخ الفتح')
     objet = models.TextField(null=True, blank=True, verbose_name='موضوع الدعوى', validators=[arabic_text_validator])
     valeur_litige = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, verbose_name='قيمة النزاع', validators=[MinValueValidator(0)])
     priorite = models.CharField(max_length=10, choices=[('Haute','مرتفعة'),('Normale','عادية'),('Basse','منخفضة')], default='Normale', verbose_name='الأولوية')
-    avocat_responsable = models.ForeignKey('Avocat', on_delete= DO_NOTHING, related_name='affaires_responsable', verbose_name='المحامي المسؤول')
+    avocat_responsable = models.ForeignKey('Avocat', on_delete=models.PROTECT, related_name='affaires_responsable', verbose_name='المحامي المسؤول')
     notes = models.TextField(null=True, blank=True, verbose_name='ملاحظات', validators=[arabic_text_validator])
+    phase = models.CharField(max_length=20, choices=PhaseAffaire.choices, default=PhaseAffaire.PRELIMINAIRE, verbose_name='المرحلة')
 
     avocats = models.ManyToManyField(Avocat, through='AffaireAvocat', related_name='affaires', verbose_name='محامون')
     class Meta:
@@ -467,13 +562,73 @@ class Affaire(TimeStampedSoftDeleteModel):
         ]
 
     def __str__(self):
-        return f"{self.reference_interne} ({self.get_type_affaire_display()})"
+        return f"{self.reference_interne} ({self.type_affaire})"
 
     def get_absolute_url(self):
         return reverse("cabinet:affaire_detail", kwargs={"pk": self.pk})
 
     def has_decision(self) -> bool:
-        return self.decision_set.exists()  # adapte si related_name différent
+        return self.decision_set.exists()
+
+    @property
+    def reference_tribunal_compose(self):
+        parts = [self.numero_dossier, str(self.code_categorie.code) if self.code_categorie else None, self.annee_dossier]
+        parts = [p for p in parts if p]
+        return "/".join(parts) if parts else self.reference_tribunal or ""
+
+class Avertissement(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
+    type_avertissement = models.ForeignKey(TypeAvertissement, on_delete=models.PROTECT, verbose_name='نوع الإنذار')
+    date_envoi = models.DateField(verbose_name='تاريخ الإرسال')
+    date_echeance = models.DateField(null=True, blank=True, verbose_name='تاريخ انتهاء الأجل')
+    destinataire_nom = models.CharField(max_length=180, verbose_name='اسم المرسل إليه', validators=[arabic_name_validator])
+    destinataire_adresse = models.TextField(null=True, blank=True, verbose_name='عنوان المرسل إليه', validators=[arabic_text_validator])
+    moyen_envoi = models.CharField(max_length=20, choices=[
+        ('huissier', 'مفوض قضائي'), ('poste', 'البريد المضمون'),
+        ('main', 'تسليم باليد'), ('email', 'بريد إلكتروني'),
+    ], default='huissier', verbose_name='وسيلة الإرسال')
+    numero_suivi = models.CharField(max_length=80, null=True, blank=True, verbose_name='رقم التتبع')
+    resultat = models.CharField(max_length=20, choices=[
+        ('en_attente', 'في الانتظار'), ('reponse', 'تم الرد'),
+        ('sans_reponse', 'بدون رد'), ('partielle', 'استجابة جزئية'),
+    ], default='en_attente', verbose_name='النتيجة')
+    date_reponse = models.DateField(null=True, blank=True, verbose_name='تاريخ الرد')
+    objet_avertissement = models.TextField(verbose_name='موضوع الإنذار', validators=[arabic_text_validator])
+    document = models.FileField(upload_to='avertissements/', null=True, blank=True, verbose_name='نسخة الإنذار', validators=[file_extension_validator, validate_file_size])
+    preuve_envoi = models.FileField(upload_to='avertissements/preuves/', null=True, blank=True, verbose_name='إثبات الإرسال', validators=[file_extension_validator, validate_file_size])
+    notes_reponse = models.TextField(null=True, blank=True, verbose_name='ملاحظات على الرد', validators=[arabic_text_validator])
+
+    class Meta:
+        db_table = 'avertissement'
+        verbose_name = 'إنذار'
+        verbose_name_plural = 'إنذارات'
+        ordering = ['-date_envoi']
+        indexes = [models.Index(fields=['date_envoi']), models.Index(fields=['date_echeance'])]
+
+    def save(self, *args, **kwargs):
+        if not self.date_echeance and self.date_envoi and self.type_avertissement_id:
+            self.date_echeance = self.date_envoi + timedelta(days=self.type_avertissement.delai_legal_jours)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        if not self.date_echeance:
+            return False
+        return timezone.localdate() > self.date_echeance
+
+    @property
+    def jours_restants(self):
+        if not self.date_echeance:
+            return None
+        return (self.date_echeance - timezone.localdate()).days
+
+    def __str__(self):
+        return f"إنذار — {self.affaire.reference_interne} — {self.type_avertissement}"
+
+    def get_absolute_url(self):
+        return reverse("cabinet:avertissement_detail", kwargs={"pk": self.pk})
+
 
 class Partie(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -545,9 +700,9 @@ class AffaireAvocat(TimeStampedSoftDeleteModel):
 class Audience(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_audience = models.ForeignKey(TypeAudience, on_delete= DO_NOTHING, verbose_name="نوع الجلسة")
+    type_audience = models.ForeignKey(TypeAudience, on_delete=models.PROTECT, verbose_name="نوع الجلسة")
     date_audience = models.DateTimeField(verbose_name='تاريخ الجلسة')
-    resultat = models.ForeignKey(ResultatAudience, on_delete= DO_NOTHING, verbose_name="النتيجة")
+    resultat = models.ForeignKey(ResultatAudience, on_delete=models.PROTECT, verbose_name="النتيجة")
     proces_verbal = models.TextField(null=True, blank=True, verbose_name='محضر الجلسة', validators=[arabic_text_validator])
 
     class Meta:
@@ -566,8 +721,8 @@ class Audience(TimeStampedSoftDeleteModel):
 class Mesure(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     audience = models.ForeignKey(Audience, on_delete=models.CASCADE, verbose_name='الجلسة')
-    type_mesure = models.ForeignKey(TypeMesure, on_delete= DO_NOTHING, verbose_name="نوع الإجراء")
-    statut = models.ForeignKey(StatutMesure, on_delete= DO_NOTHING, verbose_name="حالة الإجراء")
+    type_mesure = models.ForeignKey(TypeMesure, on_delete=models.PROTECT, verbose_name="نوع الإجراء")
+    statut = models.ForeignKey(StatutMesure, on_delete=models.PROTECT, verbose_name="حالة الإجراء")
     notes = models.TextField(null=True, blank=True, verbose_name='ملاحظات', validators=[arabic_text_validator])
     date_ordonnee = models.DateTimeField(verbose_name='تاريخ الأمر')
 
@@ -587,7 +742,7 @@ class Expertise(TimeStampedSoftDeleteModel):
     date_ordonnee = models.DateField(verbose_name='تاريخ الأمر')
     date_depot = models.DateField(null=True, blank=True, verbose_name='تاريخ الإيداع')
     contre_expertise = models.BooleanField(default=False, verbose_name='خبرة مضادّة')
-    rapport = models.FileField(upload_to='expertises/', null=True, blank=True, verbose_name='تقرير (ملف)')
+    rapport = models.FileField(upload_to='expertises/', null=True, blank=True, verbose_name='تقرير (ملف)', validators=[file_extension_validator, validate_file_size])
 
     class Meta:
         db_table = 'expertise'
@@ -632,7 +787,7 @@ class Notification(TimeStampedSoftDeleteModel):
     huissier_nom = models.CharField(max_length=180, null=True, blank=True, verbose_name='اسم المفوض القضائي', validators=[arabic_name_validator])
     date_remise_huissier = models.DateField(null=True, blank=True, verbose_name='تاريخ التسليم للمفوض')
     date_signification = models.DateField(null=True, blank=True, verbose_name='تاريخ التبليغ')
-    preuve = models.FileField(upload_to='notifications/', null=True, blank=True, verbose_name='محضر/إثبات (ملف)')
+    preuve = models.FileField(upload_to='notifications/', null=True, blank=True, verbose_name='محضر/إثبات (ملف)', validators=[file_extension_validator, validate_file_size])
 
     class Meta:
         db_table = 'notification'
@@ -650,29 +805,60 @@ class Notification(TimeStampedSoftDeleteModel):
 class VoieDeRecours(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     decision = models.ForeignKey(Decision, on_delete=models.CASCADE, verbose_name='الحكم/القرار')
-    type_recours = models.ForeignKey(TypeRecours, on_delete= DO_NOTHING, verbose_name="نوع الطعن")
-    statut = models.ForeignKey(StatutRecours, on_delete= DO_NOTHING, verbose_name="الحالة")
+    type_recours = models.ForeignKey(TypeRecours, on_delete=models.PROTECT, verbose_name="نوع الطعن")
+    statut = models.ForeignKey(StatutRecours, on_delete=models.PROTECT, verbose_name="الحالة")
     date_depot = models.DateField(verbose_name='تاريخ الإيداع')
     numero_recours = models.CharField(max_length=80, null=True, blank=True, verbose_name='رقم ملف الطعن')
-    juridiction = models.ForeignKey(Juridiction, on_delete= DO_NOTHING, verbose_name='المحكمة')
+    juridiction = models.ForeignKey(Juridiction, on_delete=models.PROTECT, verbose_name='المحكمة')
+    date_echeance_recours = models.DateField(null=True, blank=True, verbose_name='تاريخ انتهاء أجل الطعن')
 
     class Meta:
         db_table = 'voie_de_recours'
         verbose_name = 'طريق طعن'
         verbose_name_plural = 'طرق الطعن'
 
+    def save(self, *args, **kwargs):
+        if not self.date_echeance_recours and self.date_depot and self.type_recours_id:
+            self.date_echeance_recours = self.date_depot + timedelta(days=self.type_recours.delai_legal_jours)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_deadline_expired(self):
+        if not self.date_echeance_recours:
+            return False
+        return timezone.localdate() > self.date_echeance_recours
+
+    @property
+    def jours_restants_recours(self):
+        if not self.date_echeance_recours:
+            return None
+        return (self.date_echeance_recours - timezone.localdate()).days
+
+    @property
+    def urgence_level(self):
+        j = self.jours_restants_recours
+        if j is None:
+            return "green"
+        if j <= 0:
+            return "red"
+        if j <= 5:
+            return "red"
+        if j <= 10:
+            return "yellow"
+        return "green"
+
     def get_absolute_url(self):
         return reverse("cabinet:voie_de_recours_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        return f"طعن لـ {self.decision.numero_decision} — {self.get_type_recours_display()}"
+        return f"طعن لـ {self.decision.numero_decision} — {self.type_recours}"
 
 
 class Execution(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     decision = models.ForeignKey(Decision, on_delete=models.CASCADE, verbose_name='الحكم/القرار')
-    type_execution = models.ForeignKey(TypeExecution, on_delete= DO_NOTHING, verbose_name="نوع التنفيذ")
-    statut = models.ForeignKey(StatutExecution, on_delete=DO_NOTHING, verbose_name="حالة التنفيذ")
+    type_execution = models.ForeignKey(TypeExecution, on_delete=models.PROTECT, verbose_name="نوع التنفيذ")
+    statut = models.ForeignKey(StatutExecution, on_delete=models.PROTECT, verbose_name="حالة التنفيذ")
     date_demande = models.DateField(verbose_name='تاريخ الطلب')
     depot_caisse_barreau = models.BooleanField(default=False, verbose_name='إيداع بصندوق الهيئة')
     date_demande_liquidation = models.DateField(null=True, blank=True, verbose_name='تاريخ طلب التصفية')
@@ -696,11 +882,11 @@ class Execution(TimeStampedSoftDeleteModel):
 class Depense(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_depense = models.ForeignKey(TypeDepense, on_delete= DO_NOTHING, verbose_name="نوع المصروف")
+    type_depense = models.ForeignKey(TypeDepense, on_delete=models.PROTECT, verbose_name="نوع المصروف")
     montant = models.DecimalField(max_digits=18, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='المبلغ')
     date_depense = models.DateField(verbose_name='تاريخ الصرف')
     beneficiaire = models.CharField(max_length=180, null=True, blank=True, verbose_name='المستفيد', validators=[arabic_name_validator])
-    piece = models.FileField(upload_to='depenses/', null=True, blank=True, verbose_name='مرفق (ملف)')
+    piece = models.FileField(upload_to='depenses/', null=True, blank=True, verbose_name='مرفق (ملف)', validators=[file_extension_validator, validate_file_size])
 
     class Meta:
         db_table = 'depense'
@@ -717,11 +903,11 @@ class Depense(TimeStampedSoftDeleteModel):
 class Recette(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
-    type_recette = models.ForeignKey(TypeRecette, on_delete= DO_NOTHING, verbose_name="نوع الدخل")
+    type_recette = models.ForeignKey(TypeRecette, on_delete=models.PROTECT, verbose_name="نوع الدخل")
     montant = models.DecimalField(max_digits=18, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='المبلغ')
     date_recette = models.DateField(verbose_name='تاريخ التحصيل')
     source = models.CharField(max_length=180, null=True, blank=True, verbose_name='المصدر', validators=[arabic_text_validator])
-    piece = models.FileField(upload_to='recettes/', null=True, blank=True, verbose_name='مرفق (ملف)')
+    piece = models.FileField(upload_to='recettes/', null=True, blank=True, verbose_name='مرفق (ملف)', validators=[file_extension_validator, validate_file_size])
 
     class Meta:
         db_table = 'recette'
@@ -740,7 +926,7 @@ class PieceJointe(TimeStampedSoftDeleteModel):
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, related_name='pieces', verbose_name='القضية')
     titre = models.CharField(max_length=180, verbose_name='عنوان المرفق', validators=[arabic_text_validator])
     type_piece = models.CharField(max_length=10, choices=[('PDF','PDF'),('Image','صورة'),('Doc','مستند'),('Audio','صوت'),('Autre','أخرى')], verbose_name='نوع الملف')
-    fichier = models.FileField(upload_to='pieces/', verbose_name='ملف')
+    fichier = models.FileField(upload_to='pieces/', verbose_name='ملف', validators=[file_extension_validator, validate_file_size])
     date_ajout = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
 
     class Meta:
@@ -760,7 +946,7 @@ class Expert(TimeStampedSoftDeleteModel):
     telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
     email = models.EmailField(max_length=120, verbose_name='بريد إلكتروني', validators=[EmailValidator()])
     adresse = models.CharField(max_length=120, verbose_name='العنوان', validators=[arabic_name_validator])
-    specialite = models.CharField(max_length=120, verbose_name='العنوان', validators=[arabic_name_validator])
+    specialite = models.CharField(max_length=120, verbose_name='التخصص', validators=[arabic_name_validator])
 
     class Meta:
         db_table = 'expert'
@@ -768,7 +954,7 @@ class Expert(TimeStampedSoftDeleteModel):
         verbose_name_plural = 'خبراء'
 
     def __str__(self):
-        return f"{self.nom_complet} ({self.get_role_display()})"
+        return f"{self.nom_complet} ({self.specialite})"
 
     def get_absolute_url(self):
         return reverse("cabinet:expert_detail", kwargs={"pk": self.pk})
@@ -776,7 +962,7 @@ class Expert(TimeStampedSoftDeleteModel):
 class Utilisateur(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     nom_complet = models.CharField(max_length=120, verbose_name='الاسم الكامل', validators=[arabic_name_validator])
-    role = models.ForeignKey(RoleUtilisateur, on_delete= DO_NOTHING, verbose_name="الدور")
+    role = models.ForeignKey(RoleUtilisateur, on_delete=models.PROTECT, verbose_name="الدور")
     telephone = models.CharField(max_length=30, null=True, blank=True, verbose_name='هاتف')
     email = models.EmailField(max_length=120, verbose_name='بريد إلكتروني', validators=[EmailValidator()])
     actif = models.BooleanField(default=True, verbose_name='نشط')
@@ -788,7 +974,7 @@ class Utilisateur(TimeStampedSoftDeleteModel):
         verbose_name_plural = 'مستخدمون'
 
     def __str__(self):
-        return f"{self.nom_complet} ({self.get_role_display()})"
+        return f"{self.nom_complet} ({self.role})"
 
     def get_absolute_url(self):
         return reverse("cabinet:utilisateur_detail", kwargs={"pk": self.pk})
@@ -800,7 +986,7 @@ class Tache(TimeStampedSoftDeleteModel):
     description = models.TextField(null=True, blank=True, verbose_name='وصف', validators=[arabic_text_validator])
     echeance = models.DateTimeField(null=True, blank=True, verbose_name='موعد الاستحقاق')
     assigne_a = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='مكلّف')
-    statut = models.ForeignKey(StatutTache, on_delete= DO_NOTHING, verbose_name="الحالة")
+    statut = models.ForeignKey(StatutTache, on_delete=models.PROTECT, verbose_name="الحالة")
 
     class Meta:
         db_table = 'tache'
@@ -809,14 +995,14 @@ class Tache(TimeStampedSoftDeleteModel):
         indexes = [models.Index(fields=['echeance'])]
 
     def __str__(self):
-        return f"{self.titre} — {self.get_statut_display()}"
+        return f"{self.titre} — {self.statut}"
 
     def get_absolute_url(self):
         return reverse("cabinet:tache_detail", kwargs={"pk": self.pk})
 
 class Alerte(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    type_alerte = models.ForeignKey(TypeAlerte, on_delete= DO_NOTHING, verbose_name="نوع التنبيه")
+    type_alerte = models.ForeignKey(TypeAlerte, on_delete=models.PROTECT, verbose_name="نوع التنبيه")
     reference_id = models.UUIDField(verbose_name='المعرّف المرتبط')
     date_alerte = models.DateTimeField(verbose_name='تاريخ التنبيه')
     moyen = models.CharField(max_length=10, choices=[('Email','Email'),('SMS','SMS'),('InApp','داخل النظام')], verbose_name='قناة الإشعار')
@@ -830,7 +1016,7 @@ class Alerte(TimeStampedSoftDeleteModel):
         indexes = [models.Index(fields=['date_alerte'])]
 
     def __str__(self):
-        return f"{self.get_type_alerte_display()} — {self.date_alerte:%Y-%m-%d %H:%M}"
+        return f"{self.type_alerte} — {self.date_alerte:%Y-%m-%d %H:%M}"
 
     def get_absolute_url(self):
         return reverse("cabinet:alerte_detail", kwargs={"pk": self.pk})
@@ -858,6 +1044,25 @@ class JournalActivite(TimeStampedSoftDeleteModel):
 
 # إذا كان لديك موديل Utilisateur هو الـUser الفعلي:
 # settings.AUTH_USER_MODEL يجب أن يشير إليه (مثلاً "avocat_app.Utilisateur")
+
+class DocumentRequirement(TimeStampedSoftDeleteModel):
+    phase = models.CharField(max_length=20, choices=PhaseAffaire.choices, verbose_name='المرحلة')
+    type_affaire = models.ForeignKey(TypeAffaire, null=True, blank=True, on_delete=models.SET_NULL, verbose_name='نوع القضية')
+    nom_document = models.CharField(max_length=180, verbose_name='اسم الوثيقة', validators=[arabic_text_validator])
+    nom_document_fr = models.CharField(max_length=180, blank=True, default='', verbose_name='nom du document')
+    obligatoire = models.BooleanField(default=True, verbose_name='إلزامي')
+    description = models.TextField(null=True, blank=True, verbose_name='وصف', validators=[arabic_text_validator])
+    ordre = models.PositiveIntegerField(default=0, verbose_name='الترتيب')
+
+    class Meta:
+        db_table = 'document_requirement'
+        verbose_name = 'متطلب وثائقي'
+        verbose_name_plural = 'متطلبات وثائقية'
+        ordering = ['phase', 'ordre']
+
+    def __str__(self):
+        return f"{self.nom_document} ({self.get_phase_display()})"
+
 
 class AuthToken(TimeStampedSoftDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -915,6 +1120,29 @@ class AuthToken(TimeStampedSoftDeleteModel):
         if self.is_active:
             self.is_active = False
             self.save(update_fields=["is_active"])
+
+
+class MahakimSyncResult(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, related_name='mahakim_syncs', verbose_name='القضية')
+    date_sync = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المزامنة')
+    statut_mahakim = models.CharField(max_length=200, null=True, blank=True, verbose_name='حالة القضية بمحاكم')
+    prochaine_audience = models.DateField(null=True, blank=True, verbose_name='الجلسة القادمة')
+    juge = models.CharField(max_length=200, null=True, blank=True, verbose_name='القاضي')
+    observations = models.TextField(null=True, blank=True, verbose_name='ملاحظات')
+    raw_html = models.TextField(null=True, blank=True, verbose_name='HTML خام')
+    success = models.BooleanField(default=False, verbose_name='نجاح المزامنة')
+    error_message = models.TextField(null=True, blank=True, verbose_name='رسالة الخطأ')
+
+    class Meta:
+        db_table = 'mahakim_sync_result'
+        verbose_name = 'نتيجة مزامنة محاكم'
+        verbose_name_plural = 'نتائج مزامنة محاكم'
+        ordering = ['-date_sync']
+
+    def __str__(self):
+        status = "✓" if self.success else "✗"
+        return f"{status} مزامنة {self.affaire.reference_interne} — {self.date_sync:%Y-%m-%d %H:%M}"
 
 
 

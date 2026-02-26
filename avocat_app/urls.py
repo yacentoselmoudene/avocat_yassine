@@ -39,6 +39,7 @@ urlpatterns = [
     path("affaires/<uuid:affaire_id>/notifications/new/", views.NotificationCreateForAffaire.as_view(), name="notification_create"),
     path("affaires/<uuid:affaire_id>/recours/new/", views.RecoursCreateForAffaire.as_view(), name="voiederecours_create"),
     path("affaires/<uuid:affaire_id>/executions/new/", views.ExecutionCreateForAffaire.as_view(), name="execution_create"),
+    path("affaires/<uuid:affaire_id>/avertissements/new/", views.AvertissementCreateForAffaire.as_view(), name="avertissement_create_for_affaire"),
 
 
 
@@ -61,7 +62,7 @@ urlpatterns = [
     path("notifications/create/", views.NotificationCreate.as_view(), name="notification_create"),
     path("notifications/<uuid:pk>/", views.NotificationDetail.as_view(), name="notification_detail"),
     path("notifications/<uuid:pk>/update/", views.NotificationUpdate.as_view(), name="notification_update"),
-    path("notifications/<uuid:pk>/delete/", views.NotificationDelete.as_view(), name="decision_delete"),
+    path("notifications/<uuid:pk>/delete/", views.NotificationDelete.as_view(), name="notification_delete"),
 
     # ====== Partie ======
     path("parties/", views.PartieList.as_view(), name="partie_list"),
@@ -162,6 +163,33 @@ urlpatterns = [
     path("barreaux/<slug:pk>/", views.BarreauDetail.as_view(), name="barreau_detail"),
     path("barreaux/<slug:pk>/update/", views.BarreauUpdate.as_view(), name="barreau_update"),
     path("barreaux/<slug:pk>/delete/", views.BarreauDelete.as_view(), name="barreau_delete"),
+
+    # ====== Avertissement (إنذار) ======
+    path("avertissements/", views.AvertissementList.as_view(), name="avertissement_list"),
+    path("avertissements/create/", views.AvertissementCreate.as_view(), name="avertissement_create"),
+    path("avertissements/<uuid:pk>/", views.AvertissementDetail.as_view(), name="avertissement_detail"),
+    path("avertissements/<uuid:pk>/update/", views.AvertissementUpdate.as_view(), name="avertissement_update"),
+    path("avertissements/<uuid:pk>/delete/", views.AvertissementDelete.as_view(), name="avertissement_delete"),
+
+    # ====== Popups Personne ======
+    path("parties/<uuid:pk>/popup/", views.PartiePopup.as_view(), name="partie_popup"),
+    path("experts/<uuid:pk>/popup/", views.ExpertPopup.as_view(), name="expert_popup"),
+    path("avocats/<uuid:pk>/popup/", views.AvocatPopup.as_view(), name="avocat_popup"),
+    path("users/<uuid:pk>/popup/", views.UtilisateurPopup.as_view(), name="utilisateur_popup"),
+
+    # ====== Mahakim.ma Sync (مزامنة محاكم) ======
+    path("mahakim/", views.MahakimSyncListView.as_view(), name="mahakim_sync"),
+    path("mahakim/sync-all/", views.sync_all_mahakim, name="mahakim_sync_all"),
+    path("mahakim/preview-all/", views.mahakim_preview_all, name="mahakim_preview_all"),
+    path("affaires/<uuid:pk>/sync-mahakim/", views.sync_affaire_mahakim, name="affaire_sync_mahakim"),
+    path("affaires/<uuid:pk>/sync-preview/", views.mahakim_preview_single, name="mahakim_preview_single"),
+
+    # ====== Document viewer & print ======
+    path("viewer/", views.document_viewer, name="document_viewer"),
+    path("print-docs/", views.print_documents, name="print_documents"),
+
+    # ====== دليل الاستعمال ======
+    path("guide/", views.user_guide, name="user_guide"),
 
     path("audit/", views_audit.AuditLogList.as_view(), name="audit_list"),
     path("audit/<uuid:pk>/", views_audit.AuditLogDetail.as_view(), name="audit_detail"),

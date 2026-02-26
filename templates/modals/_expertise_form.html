@@ -1,0 +1,70 @@
+{# FILE: templates/modals/_expertise_form.html #}
+{# نموذج الخبرة — تصميم منظم بأقسام #}
+{% load form_extras %}
+
+<form method="post"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# === Hidden: affaire === #}
+  {% if form.affaire %}
+    {{ form.affaire.as_hidden }}
+  {% endif %}
+
+  {# === Section 1: الخبير === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-mortarboard ms-1"></i> الخبير</h6>
+    <div>
+      <label class="form-label small fw-bold">{{ form.expert_nom.label }} <span class="text-danger">*</span></label>
+      {{ form.expert_nom|add_class:'form-control form-control-sm' }}
+      {% if form.expert_nom.errors %}<div class="invalid-feedback d-block">{{ form.expert_nom.errors|join:", " }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# === Section 2: التواريخ === #}
+  <div class="border-bottom pb-3 mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-calendar3 ms-1"></i> التواريخ</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_ordonnee.label }} <span class="text-danger">*</span></label>
+        {{ form.date_ordonnee|add_class:'form-control form-control-sm' }}
+        {% if form.date_ordonnee.errors %}<div class="invalid-feedback d-block">{{ form.date_ordonnee.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_depot.label }}</label>
+        {{ form.date_depot|add_class:'form-control form-control-sm' }}
+        {% if form.date_depot.errors %}<div class="invalid-feedback d-block">{{ form.date_depot.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Section 3: تفاصيل === #}
+  <div class="mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-info-circle ms-1"></i> تفاصيل</h6>
+    <div class="form-check form-switch">
+      {{ form.contre_expertise }}
+      <label class="form-check-label" for="{{ form.contre_expertise.id_for_label }}">{{ form.contre_expertise.label }}</label>
+    </div>
+    {% if form.contre_expertise.errors %}<div class="invalid-feedback d-block">{{ form.contre_expertise.errors|join:", " }}</div>{% endif %}
+  </div>
+
+  {# === Actions === #}
+  <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+    </button>
+  </div>
+</form>

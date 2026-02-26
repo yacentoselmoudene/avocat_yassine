@@ -1,18 +1,38 @@
+{# FILE: templates/modals/_form.html — generic modal form (mahakim style) #}
 <form method="post"
       action="{{ action_url|default:request.path }}"
       hx-post="{{ action_url|default:request.path }}"
-      hx-target="#modalBody" hx-swap="outerHTML">
+      hx-target="#modalBody" hx-swap="outerHTML"
+      novalidate>
   {% csrf_token %}
-  {{ form.non_field_errors }}
-  {% for field in form.visible_fields %}
-    <div class="mb-3">
-      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3" style="border-right: 4px solid #ef4444;">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
     </div>
-  {% endfor %}
-  <div class="d-flex justify-content-end gap-2">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-    <button type="submit" class="btn btn-primary">حفظ</button>
+  {% endif %}
+
+  <div class="row g-3">
+    {% for field in form.visible_fields %}
+      <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% elif forloop.counter|divisibleby:2 %}col-12 col-md-6{% else %}col-12 col-md-6{% endif %}">
+        <label class="form-label small fw-bold" for="{{ field.id_for_label }}">
+          {{ field.label }}
+          {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}<div class="form-text small">{{ field.help_text|safe }}</div>{% endif %}
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top" style="border-color: var(--m-surface, #eff3f8) !important;">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="submit" class="btn btn-primary btn-sm">
+      <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+    </button>
   </div>
 </form>

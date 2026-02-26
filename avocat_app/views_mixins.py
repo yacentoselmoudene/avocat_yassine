@@ -80,17 +80,18 @@ class HTMXViewMixin:
 class HTMXModalFormMixin(HTMXViewMixin):
     """Rend le _form en GET HTMX; renvoie JSON au succès POST HTMX."""
     page_template: str | None = None        # rendu page complète si non-HTMX
+    modal_template: str = "modals/_form.html"  # template custom pour le modal
     success_message: str = "تم الحفظ."
 
     def get_template_names(self):
         if self.htmx():
-            return ["modals/_form.html"]
-        return [self.page_template or "modals/_form.html"]
+            return [self.modal_template]
+        return [self.page_template or self.modal_template]
 
     def form_invalid(self, form):
         # En HTMX: renvoyer le formulaire (avec erreurs) dans le modal
         if self.htmx():
-            return self.render_modal("modals/_form.html", {
+            return self.render_modal(self.modal_template, {
                 "form": form, "title": getattr(self, "modal_title", "نموذج"), "action": self.request.path
             })
         return super().form_invalid(form)

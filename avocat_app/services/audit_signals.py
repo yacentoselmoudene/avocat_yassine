@@ -1,7 +1,8 @@
 # avocat_app/services/audit_signals.py
+import threading
+
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
-from django.apps import apps
 from django.db.models import Model
 from django.conf import settings
 
@@ -10,8 +11,13 @@ from .audit_utils import diff_instances
 from ..middleware.request_local import get_current_request
 from ..utils.audit import is_migration_command
 
-# ذاكرة مؤقتة قبل الحفظ لمقارنة old/new
-_BEFORE = {}
+# Thread-safe storage for pre-save snapshots
+_thread_local = threading.local()
+
+def _get_before_dict():
+    if not hasattr(_thread_local, 'before'):
+        _thread_local.before = {}
+    return _thread_local.before
 
 def _key(inst: Model):
     return f"{inst._meta.label_lower}:{inst.pk or 'new'}"
@@ -26,21 +32,21 @@ def _capture_before_save(sender, instance, **kwargs):
         return
     if not _should_audit(instance): return
     if instance.pk:
+        before = _get_before_dict()
         try:
             old = sender.objects.get(pk=instance.pk)
-            _BEFORE[_key(instance)] = old
+            before[_key(instance)] = old
         except sender.DoesNotExist:
-            _BEFORE[_key(instance)] = None
+            before[_key(instance)] = None
 
 @receiver(post_save)
 def _audit_after_save(sender, instance, created, **kwargs):
     if is_migration_command() or not settings.AUDIT_ENABLED:
         return
     if not _should_audit(instance): return
-    if not getattr(settings, "AUDIT_ENABLED", True): return
     request = get_current_request()
 
-    old = _BEFORE.pop(_key(instance), None)
+    old = _get_before_dict().pop(_key(instance), None)
     action = AuditAction.CREATE if created else AuditAction.UPDATE
     changes = diff_instances(old, instance)
 
@@ -70,7 +76,6 @@ def _audit_after_delete(sender, instance, **kwargs):
     if is_migration_command() or not settings.AUDIT_ENABLED:
         return
     if not _should_audit(instance): return
-    if not getattr(settings, "AUDIT_ENABLED", True): return
     request = get_current_request()
     AuditLog.objects.create(
         actor=getattr(request, "user", None) if request and getattr(request, "user", None) and request.user.is_authenticated else None,

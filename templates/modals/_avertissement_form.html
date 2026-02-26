@@ -1,0 +1,160 @@
+{# FILE: templates/modals/_avertissement_form.html #}
+{# نموذج الإنذار — stepper multi-étapes #}
+{% load form_extras %}
+{% include '_partials/_stepper.html' %}
+
+<form method="post" id="avertissementStepperForm"
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-target="#modalBody" hx-swap="outerHTML"
+      enctype="multipart/form-data"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {# === Hidden: affaire === #}
+  {% if form.affaire %}
+    {{ form.affaire.as_hidden }}
+  {% endif %}
+
+  {# Stepper nav #}
+  <div class="stepper-nav">
+    <div class="step-indicator active"><span class="step-num">1</span> النوع</div>
+    <div class="step-indicator"><span class="step-num">2</span> المرسل إليه</div>
+    <div class="step-indicator"><span class="step-num">3</span> الموضوع</div>
+    <div class="step-indicator"><span class="step-num">4</span> النتيجة والمرفقات</div>
+  </div>
+
+  {# === Step 1: النوع والتاريخ والإرسال === #}
+  <div class="step-panel active" data-step="0">
+    <h6 class="text-primary mb-3"><i class="bi bi-exclamation-triangle ms-1"></i> النوع والتاريخ</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.type_avertissement.label }} <span class="text-danger">*</span></label>
+        {{ form.type_avertissement }}
+        {% if form.type_avertissement.errors %}<div class="invalid-feedback d-block">{{ form.type_avertissement.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.date_envoi.label }} <span class="text-danger">*</span></label>
+        {{ form.date_envoi|add_class:'form-control form-control-sm' }}
+        {% if form.date_envoi.errors %}<div class="invalid-feedback d-block">{{ form.date_envoi.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    <h6 class="text-primary mb-3"><i class="bi bi-send ms-1"></i> الإرسال</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.moyen_envoi.label }} <span class="text-danger">*</span></label>
+        {{ form.moyen_envoi|add_class:'form-select form-select-sm' }}
+        {% if form.moyen_envoi.errors %}<div class="invalid-feedback d-block">{{ form.moyen_envoi.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.numero_suivi.label }}</label>
+        {{ form.numero_suivi|add_class:'form-control form-control-sm' }}
+        {% if form.numero_suivi.errors %}<div class="invalid-feedback d-block">{{ form.numero_suivi.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Step 2: المرسل إليه === #}
+  <div class="step-panel" data-step="1">
+    <h6 class="text-primary mb-3"><i class="bi bi-person ms-1"></i> المرسل إليه</h6>
+    <div class="mb-2">
+      <label class="form-label small fw-bold">{{ form.destinataire_nom.label }} <span class="text-danger">*</span></label>
+      {{ form.destinataire_nom|add_class:'form-control form-control-sm' }}
+      {% if form.destinataire_nom.errors %}<div class="invalid-feedback d-block">{{ form.destinataire_nom.errors|join:", " }}</div>{% endif %}
+    </div>
+    <div>
+      <label class="form-label small fw-bold">{{ form.destinataire_adresse.label }}</label>
+      {{ form.destinataire_adresse|add_class:'form-control form-control-sm' }}
+      {% if form.destinataire_adresse.errors %}<div class="invalid-feedback d-block">{{ form.destinataire_adresse.errors|join:", " }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# === Step 3: الموضوع === #}
+  <div class="step-panel" data-step="2">
+    <h6 class="text-primary mb-3"><i class="bi bi-journal-text ms-1"></i> الموضوع</h6>
+    <label class="form-label small fw-bold">{{ form.objet_avertissement.label }} <span class="text-danger">*</span></label>
+    {{ form.objet_avertissement|add_class:'form-control form-control-sm' }}
+    {% if form.objet_avertissement.errors %}<div class="invalid-feedback d-block">{{ form.objet_avertissement.errors|join:", " }}</div>{% endif %}
+  </div>
+
+  {# === Step 4: النتيجة والمرفقات === #}
+  <div class="step-panel" data-step="3">
+    <h6 class="text-primary mb-3"><i class="bi bi-check2-square ms-1"></i> النتيجة</h6>
+    <div class="row g-2 mb-3">
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.resultat.label }}</label>
+        {{ form.resultat|add_class:'form-select form-select-sm' }}
+        {% if form.resultat.errors %}<div class="invalid-feedback d-block">{{ form.resultat.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.date_reponse.label }}</label>
+        {{ form.date_reponse|add_class:'form-control form-control-sm' }}
+        {% if form.date_reponse.errors %}<div class="invalid-feedback d-block">{{ form.date_reponse.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="col-4">
+        <label class="form-label small fw-bold">{{ form.notes_reponse.label }}</label>
+        {{ form.notes_reponse|add_class:'form-control form-control-sm' }}
+        {% if form.notes_reponse.errors %}<div class="invalid-feedback d-block">{{ form.notes_reponse.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    <h6 class="text-primary mb-3"><i class="bi bi-paperclip ms-1"></i> المرفقات</h6>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.document.label }}</label>
+        {{ form.document|add_class:'form-control form-control-sm' }}
+        {% if form.document.errors %}<div class="invalid-feedback d-block">{{ form.document.errors|join:", " }}</div>{% endif %}
+        {% if form.instance.document %}
+          <div class="mt-1 small text-secondary">
+            <i class="bi bi-file-earmark ms-1"></i> {{ form.instance.document.name|truncatechars:30 }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold">{{ form.preuve_envoi.label }}</label>
+        {{ form.preuve_envoi|add_class:'form-control form-control-sm' }}
+        {% if form.preuve_envoi.errors %}<div class="invalid-feedback d-block">{{ form.preuve_envoi.errors|join:", " }}</div>{% endif %}
+        {% if form.instance.preuve_envoi %}
+          <div class="mt-1 small text-secondary">
+            <i class="bi bi-file-earmark ms-1"></i> {{ form.instance.preuve_envoi.name|truncatechars:30 }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# === Navigation === #}
+  <div class="stepper-buttons mt-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm stepper-prev" style="display:none;">
+      <i class="bi bi-arrow-right ms-1"></i> السابق
+    </button>
+    <div class="d-flex gap-2 me-auto">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إلغاء
+      </button>
+      <button type="button" class="btn btn-primary btn-sm stepper-next">
+        التالي <i class="bi bi-arrow-left me-1"></i>
+      </button>
+      <button type="submit" class="btn btn-primary btn-sm stepper-submit" style="display:none;">
+        <i class="bi bi-check2-circle ms-1"></i> {% if form.instance.pk %}تحديث{% else %}حفظ{% endif %}
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var f = document.getElementById('avertissementStepperForm');
+  if (f) initStepper(f);
+});
+document.body.addEventListener('htmx:afterSwap', function() {
+  var f = document.getElementById('avertissementStepperForm');
+  if (f) initStepper(f);
+});
+</script>

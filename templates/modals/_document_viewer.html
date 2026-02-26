@@ -1,0 +1,102 @@
+{# modals/_document_viewer.html — Visionneuse de documents (PDF / Image / Autre) #}
+<div class="modal-header zellige-modal-header">
+  <h5 class="modal-title"><i class="bi bi-file-earmark ms-1"></i> {{ title }}</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+</div>
+<div class="modal-body p-0">
+  {# Toolbar #}
+  <div class="d-flex justify-content-center align-items-center gap-2 py-2 px-3 bg-light border-bottom">
+    {% if doc_type == 'pdf' %}
+    <button class="btn btn-sm btn-outline-secondary" id="pdfPrev" title="الصفحة السابقة"><i class="bi bi-chevron-right"></i></button>
+    <span class="small" id="pdfPageInfo">— / —</span>
+    <button class="btn btn-sm btn-outline-secondary" id="pdfNext" title="الصفحة التالية"><i class="bi bi-chevron-left"></i></button>
+    <span class="border-start mx-2" style="height:20px;"></span>
+    {% endif %}
+    {% if doc_type != 'other' %}
+    <button class="btn btn-sm btn-outline-secondary" id="zoomOut" title="تصغير"><i class="bi bi-zoom-out"></i></button>
+    <span class="small" id="zoomLevel">100%</span>
+    <button class="btn btn-sm btn-outline-secondary" id="zoomIn" title="تكبير"><i class="bi bi-zoom-in"></i></button>
+    <button class="btn btn-sm btn-outline-secondary" id="zoomReset" title="إعادة ضبط"><i class="bi bi-arrows-angle-expand"></i></button>
+    <span class="border-start mx-2" style="height:20px;"></span>
+    {% endif %}
+    <a href="{{ file_url }}" download class="btn btn-sm btn-outline-primary" title="تحميل"><i class="bi bi-download"></i></a>
+  </div>
+
+  {# Viewer area #}
+  <div id="viewerArea" style="overflow:auto; max-height:70vh; text-align:center; background:#f8f9fa; padding:1rem;">
+    {% if doc_type == 'pdf' %}
+      <canvas id="pdfCanvas" style="max-width:100%;"></canvas>
+    {% elif doc_type == 'image' %}
+      <img id="docImage" src="{{ file_url }}" alt="{{ title }}"
+           style="max-width:100%; transition: transform 0.2s ease; transform-origin: center center;">
+    {% else %}
+      <div class="py-5 text-center text-secondary">
+        <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
+        <p>لا يمكن معاينة هذا الملف</p>
+        <a href="{{ file_url }}" download class="btn btn-primary"><i class="bi bi-download ms-1"></i> تحميل الملف</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if doc_type == 'pdf' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function(){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  var url = '{{ file_url|escapejs }}';
+  var pdfDoc = null, pageNum = 1, scale = 1.5;
+  var canvas = document.getElementById('pdfCanvas');
+  var ctx = canvas.getContext('2d');
+
+  function renderPage(num) {
+    pdfDoc.getPage(num).then(function(page) {
+      var viewport = page.getViewport({scale: scale});
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      page.render({canvasContext: ctx, viewport: viewport});
+      document.getElementById('pdfPageInfo').textContent = num + ' / ' + pdfDoc.numPages;
+      document.getElementById('zoomLevel').textContent = Math.round(scale * 100 / 1.5) + '%';
+    });
+  }
+
+  pdfjsLib.getDocument(url).promise.then(function(pdf) {
+    pdfDoc = pdf;
+    renderPage(pageNum);
+  });
+
+  document.getElementById('pdfPrev').addEventListener('click', function() {
+    if (pageNum > 1) { pageNum--; renderPage(pageNum); }
+  });
+  document.getElementById('pdfNext').addEventListener('click', function() {
+    if (pdfDoc && pageNum < pdfDoc.numPages) { pageNum++; renderPage(pageNum); }
+  });
+  document.getElementById('zoomIn').addEventListener('click', function() {
+    scale += 0.25; renderPage(pageNum);
+  });
+  document.getElementById('zoomOut').addEventListener('click', function() {
+    if (scale > 0.5) { scale -= 0.25; renderPage(pageNum); }
+  });
+  document.getElementById('zoomReset').addEventListener('click', function() {
+    scale = 1.5; renderPage(pageNum);
+  });
+})();
+</script>
+{% endif %}
+
+{% if doc_type == 'image' %}
+<script>
+(function(){
+  var img = document.getElementById('docImage');
+  var currentScale = 1;
+  function setZoom(s) {
+    currentScale = s;
+    img.style.transform = 'scale(' + currentScale + ')';
+    document.getElementById('zoomLevel').textContent = Math.round(currentScale * 100) + '%';
+  }
+  document.getElementById('zoomIn').addEventListener('click', function() { setZoom(currentScale + 0.25); });
+  document.getElementById('zoomOut').addEventListener('click', function() { if(currentScale > 0.25) setZoom(currentScale - 0.25); });
+  document.getElementById('zoomReset').addEventListener('click', function() { setZoom(1); });
+})();
+</script>
+{% endif %}
