@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}سجل رسائل واتساب{% endblock %}
+{% block page_title %}سجل رسائل واتساب{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="text-secondary small">
+    <i class="bi bi-info-circle ms-1"></i>
+    المزامنة الآلية ترسل التذكيرات قبل يوم واحد من الجلسة عبر الأمر
+    <code>send_audience_reminders</code>.
+  </div>
+  <a href="{% url 'cabinet:whatsapp_template_list' %}" class="btn btn-outline-primary">
+    <i class="bi bi-file-text ms-1"></i> القوالب
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover m-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>التاريخ</th>
+          <th>المستلم</th>
+          <th>القضية</th>
+          <th>الجلسة</th>
+          <th>الحالة</th>
+          <th>نص الرسالة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in messages_qs %}
+        <tr>
+          <td class="small">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            <div><strong>{{ m.to_name|default:'—' }}</strong></div>
+            <div class="small text-secondary" dir="ltr">{{ m.to_number }}</div>
+          </td>
+          <td>
+            {% if m.affaire %}
+              <a href="{% url 'cabinet:affaire_detail' m.affaire.pk %}">{{ m.affaire.reference_interne }}</a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if m.audience %}
+              <a href="{% url 'cabinet:audience_detail' m.audience.pk %}">{{ m.audience.date_audience|date:"d/m H:i" }}</a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if m.status == 'sent' %}<span class="badge bg-success">{{ m.get_status_display }}</span>
+            {% elif m.status == 'delivered' %}<span class="badge bg-success">{{ m.get_status_display }}</span>
+            {% elif m.status == 'read' %}<span class="badge bg-primary">{{ m.get_status_display }}</span>
+            {% elif m.status == 'failed' %}<span class="badge bg-danger">{{ m.get_status_display }}</span>
+            {% elif m.status == 'dry_run' %}<span class="badge bg-secondary">{{ m.get_status_display }}</span>
+            {% else %}<span class="badge bg-warning text-dark">{{ m.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td class="small text-secondary" style="max-width:380px">
+            {{ m.body|truncatechars:140 }}
+            {% if m.error_message %}<div class="text-danger small mt-1">{{ m.error_message|truncatechars:120 }}</div>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد رسائل بعد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a></li>{% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a></li>{% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

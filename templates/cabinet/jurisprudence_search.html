@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}بحث جوهري في الاجتهادات{% endblock %}
+{% block page_title %}بحث جوهري في الاجتهادات (Semantic)
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .score-bar {
+    height: 4px; border-radius: 2px; background: #e5e7eb; overflow: hidden;
+  }
+  .score-bar > div {
+    height: 100%; background: linear-gradient(90deg, #16a34a 0%, #facc15 60%, #dc2626 100%);
+  }
+  .jurispru-result { transition: background .15s; }
+  .jurispru-result:hover { background: rgba(var(--bs-primary-rgb), .04); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="d-flex gap-2 align-items-end">
+      <div class="flex-grow-1">
+        <label class="form-label fw-bold small">عبارة البحث (يمكن جملة كاملة)</label>
+        <textarea name="q" class="form-control" rows="2"
+                  placeholder="مثال: حكم بأداء مبلغ مع الفوائد القانونية في قضية تجارية…">{{ q }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg">
+        <i class="bi bi-search ms-1"></i> بحث
+      </button>
+    </form>
+    <div class="d-flex justify-content-between mt-2">
+      <small class="text-secondary">
+        <i class="bi bi-info-circle ms-1"></i>
+        البحث الجوهري يقارن المعنى وليس الكلمات. كلما زاد عدد الأحكام المُحلَّلة، تحسّنت النتائج.
+      </small>
+      <small class="text-secondary">
+        <i class="bi bi-database ms-1"></i>
+        مفهرس: {{ total_indexed }} / {{ total_decisions }} تحليل
+      </small>
+    </div>
+  </div>
+</div>
+
+{% if q and not results %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle ms-1"></i>
+    لا توجد نتائج. تأكد من أن تحاليل الأحكام مفهرسة عبر:
+    <code>python manage.py index_decisions</code>
+  </div>
+{% endif %}
+
+{% if results %}
+  <div class="card shadow-sm">
+    <div class="card-header zellige-section-header fw-bold d-flex justify-content-between">
+      <span><i class="bi bi-stars ms-1"></i> أفضل {{ results|length }} نتيجة</span>
+      <small class="text-secondary">مرتبة بدرجة التشابه الدلالي</small>
+    </div>
+    <ul class="list-group list-group-flush">
+      {% for r in results %}
+        <li class="list-group-item jurispru-result">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <h6 class="m-0">
+                <a href="{% url 'cabinet:decision_detail' r.decision.pk %}">
+                  {{ r.decision.numero_decision }}
+                </a>
+                <small class="text-secondary ms-2">{{ r.decision.date_prononce|date:"d/m/Y" }}</small>
+              </h6>
+              <div class="small text-secondary mb-1">
+                <i class="bi bi-folder2 ms-1"></i>
+                <a href="{% url 'cabinet:affaire_detail' r.affaire.pk %}">{{ r.affaire.reference_interne }}</a>
+                — {{ r.affaire.juridiction.nomtribunal_ar|default:'' }}
+              </div>
+              {% if r.analysis.resume_ar %}
+                <div class="small mt-1">{{ r.analysis.resume_ar|truncatechars:280 }}</div>
+              {% elif r.analysis.decision_essentielle %}
+                <div class="small mt-1">{{ r.analysis.decision_essentielle|truncatechars:280 }}</div>
+              {% endif %}
+            </div>
+            <div class="text-end ms-3" style="min-width:96px">
+              <div class="fw-bold text-primary">{{ r.score_pct }}%</div>
+              <div class="score-bar mt-1">
+                <div style="width: {{ r.score_pct }}%"></div>
+              </div>
+              <div class="small text-secondary mt-1">{{ r.score }}</div>
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if not q %}
+  <div class="card shadow-sm border-info">
+    <div class="card-body">
+      <h6 class="text-info"><i class="bi bi-lightbulb ms-1"></i> كيف يعمل البحث الجوهري؟</h6>
+      <ul class="small mb-0">
+        <li>كل تحليل ذكاء اصطناعي لحكم يُحوَّل إلى متجه (embedding) يلخّص معناه.</li>
+        <li>عبارتك يتم تحويلها إلى نفس النوع من المتجه.</li>
+        <li>نُحسب تشابه جيب التمام (cosine) لإيجاد الأحكام الأقرب معنىً.</li>
+        <li>مع مفتاح Voyage AI: تشابه دلالي حقيقي. بدونه: تشابه على الكلمات المعالجة (Bag-of-Words محذوف الهمزات).</li>
+      </ul>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

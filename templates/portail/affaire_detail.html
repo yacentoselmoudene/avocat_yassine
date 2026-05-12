@@ -1,0 +1,87 @@
+{% extends "portail/base.html" %}
+{% block title %}{{ affaire.reference_interne }}{% endblock %}
+{% block body %}
+<nav class="navbar navbar-expand portail-navbar">
+  <div class="container">
+    <a class="navbar-brand"><i class="bi bi-shield-lock-fill ms-1"></i> بوابة الموكلين</a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <span class="text-white-50 small">{{ partie.nom_complet }}</span>
+      <a href="{% url 'cabinet:portail_logout' %}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-box-arrow-left ms-1"></i> خروج
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <a href="{% url 'cabinet:portail_dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+    <i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع
+  </a>
+
+  <div class="portail-card p-4 mb-3">
+    <h4 class="mb-3">{{ affaire.reference_interne }}</h4>
+    <dl class="row mb-0">
+      <dt class="col-sm-4 text-secondary">نوع القضية</dt>
+      <dd class="col-sm-8">{{ affaire.type_affaire }}</dd>
+
+      <dt class="col-sm-4 text-secondary">الحالة</dt>
+      <dd class="col-sm-8"><span class="badge bg-info text-dark">{{ affaire.statut_affaire }}</span></dd>
+
+      <dt class="col-sm-4 text-secondary">المحكمة</dt>
+      <dd class="col-sm-8">{{ affaire.juridiction.nomtribunal_ar }}</dd>
+
+      <dt class="col-sm-4 text-secondary">تاريخ الفتح</dt>
+      <dd class="col-sm-8">{{ affaire.date_ouverture|date:"d/m/Y" }}</dd>
+
+      <dt class="col-sm-4 text-secondary">المرحلة</dt>
+      <dd class="col-sm-8">{{ affaire.get_phase_display }}</dd>
+
+      <dt class="col-sm-4 text-secondary">المحامي المسؤول</dt>
+      <dd class="col-sm-8">{{ affaire.avocat_responsable.nom }}</dd>
+
+      {% if affaire.objet %}
+      <dt class="col-sm-4 text-secondary">الموضوع</dt>
+      <dd class="col-sm-8">{{ affaire.objet }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="portail-card p-4 mb-3">
+    <h6 class="fw-bold mb-3"><i class="bi bi-calendar3 ms-1"></i> الجلسات</h6>
+    {% if audiences %}
+      <ul class="list-group list-group-flush">
+        {% for a in audiences %}
+          <li class="list-group-item d-flex justify-content-between">
+            <div>
+              <strong>{{ a.type_audience }}</strong>
+              <span class="small text-secondary d-block">{{ a.resultat }}</span>
+            </div>
+            <span class="badge bg-secondary">{{ a.date_audience|date:"d/m/Y H:i" }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted text-center">لا توجد جلسات.</p>
+    {% endif %}
+  </div>
+
+  <div class="portail-card p-4 mb-3">
+    <h6 class="fw-bold mb-3"><i class="bi bi-hammer ms-1"></i> الأحكام</h6>
+    {% if decisions %}
+      <ul class="list-group list-group-flush">
+        {% for d in decisions %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <strong>{{ d.numero_decision }}</strong>
+              <span class="small text-secondary">{{ d.date_prononce|date:"d/m/Y" }}</span>
+            </div>
+            {% if d.resumé %}<div class="small mt-1">{{ d.resumé }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted text-center">لا توجد أحكام.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

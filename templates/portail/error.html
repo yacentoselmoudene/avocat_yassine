@@ -1,0 +1,18 @@
+{% extends "portail/base.html" %}
+{% block title %}{{ title|default:"خطأ" }}{% endblock %}
+{% block body %}
+<div class="portail-login-wrap">
+  <div class="portail-login-card">
+    <div class="card portail-card">
+      <div class="card-body p-5 text-center">
+        <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem"></i>
+        <h4 class="mt-3">{{ title|default:"خطأ" }}</h4>
+        <p class="text-secondary mt-2">{{ detail|default:"تعذّر تنفيذ العملية." }}</p>
+        <a href="{% url 'cabinet:portail_login' %}" class="btn btn-primary mt-2">
+          <i class="bi bi-arrow-counterclockwise ms-1"></i> طلب رابط جديد
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

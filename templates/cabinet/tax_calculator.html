@@ -1,0 +1,553 @@
+{# FILE: templates/cabinet/tax_calculator.html #}
+{% extends 'base.html' %}
+{% block title %}حاسبة الرسوم القضائية{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# --- Header --- #}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-1"><i class="bi bi-calculator text-info ms-2"></i> حاسبة الرسوم القضائية</h4>
+      <p class="text-secondary mb-0 small">
+        حساب الرسوم القضائية طبقا لملحق المرسوم رقم 2.58.1151
+        (قانون المصاريف القضائية في الميدانين المدني والجنائي)
+      </p>
+    </div>
+    <div>
+      <a href="{% url 'cabinet:mahakim_sync' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right ms-1"></i> رجوع لصفحة المزامنة
+      </a>
+    </div>
+  </div>
+
+  {# --- Calculator Form --- #}
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card zellige-card shadow-sm">
+        <div class="card-header bg-info-subtle">
+          <h6 class="mb-0"><i class="bi bi-ui-checks-grid ms-1"></i> معطيات الحساب</h6>
+        </div>
+        <div class="card-body">
+
+          {# 1. طبيعة الاستخلاص (محدد / غير محدد) #}
+          <div class="mb-3">
+            <label class="form-label fw-bold">طبيعة الاستخلاص <span class="text-danger">*</span></label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="nature" id="nat_mohadad" value="mohadad" onchange="onNatureChange()" checked>
+                <label class="form-check-label" for="nat_mohadad">محدد</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="nature" id="nat_ghayr" value="ghayr_mohadad" onchange="onNatureChange()">
+                <label class="form-check-label" for="nat_ghayr">غير محدد</label>
+              </div>
+            </div>
+          </div>
+
+          {# 2. نوع الدعوى #}
+          <div class="mb-3">
+            <label class="form-label fw-bold">نوع الدعوى <span class="text-danger">*</span></label>
+            <select id="selDomain" class="form-select" onchange="onDomainChange()">
+              <option value="madani">مدني</option>
+              <option value="tijari">تجاري</option>
+              <option value="idari">إداري</option>
+              <option value="jinai">جنائي</option>
+            </select>
+          </div>
+
+          {# 3. نوع الطلب / الإجراء #}
+          <div class="mb-3">
+            <label class="form-label fw-bold">نوع الطلب / الإجراء <span class="text-danger">*</span></label>
+            <select id="selTypeTalab" class="form-select" onchange="onTalabChange()">
+            </select>
+          </div>
+
+          {# 4. المبلغ المطلوب (visible only for محدد) #}
+          <div class="mb-3" id="montantGroup">
+            <label class="form-label fw-bold">المبلغ المطلوب (درهم)</label>
+            <input type="number" id="inputMontant" class="form-control" min="0" step="1" value="">
+            <div class="form-text text-muted">أدخل مبلغ الطلب بالدرهم</div>
+          </div>
+
+          {# Calculate button #}
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="resetForm()">
+              <i class="bi bi-arrow-counterclockwise ms-1"></i> إعادة تعيين
+            </button>
+            <button type="button" class="btn btn-info text-white" id="btnCalculate" onclick="calculateTax()">
+              <i class="bi bi-calculator ms-1"></i> حساب الرسوم
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      {# --- Legal Reference --- #}
+      <div class="card zellige-card shadow-sm mt-3">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="bi bi-book ms-1"></i> المرجع القانوني</h6>
+        </div>
+        <div class="card-body small text-secondary">
+          <p class="mb-1">
+            <strong>الفصل 24:</strong> المطالبة بمبلغ معين (محدد):
+          </p>
+          <ul class="mb-2">
+            <li>من 1.000 إلى 5.000 درهم: <strong>4%</strong> (أدنى ما يستوفى 50 درهم)</li>
+            <li>من 5.001 إلى 20.000 درهم: <strong>2,5%</strong> (أدنى ما يستوفى 200 درهم)</li>
+            <li>ما فوق 20.000 درهم: <strong>1%</strong> + 300 درهم</li>
+          </ul>
+          <p class="mb-1"><strong>الفصل 25:</strong> غير محدد القيمة: <strong>150 درهم</strong> ثابت</p>
+          <p class="mb-1"><strong>الفصل 32:</strong> الاستئناف = الرسم العادي + <strong>10%</strong></p>
+          <p class="mb-1"><strong>الفصل 33:</strong> النقض = <strong>750 درهم</strong> ثابت</p>
+          <p class="mb-0"><strong>الفصل 29:</strong> أمر بالأداء: ≤5.000 → 50 درهم، &gt;5.000 → 100 درهم</p>
+        </div>
+      </div>
+    </div>
+
+    {# --- Result Panel --- #}
+    <div class="col-lg-6">
+      <div class="card zellige-card shadow-sm">
+        <div class="card-header bg-success-subtle">
+          <h6 class="mb-0"><i class="bi bi-receipt ms-1"></i> نتيجة الحساب</h6>
+        </div>
+        <div class="card-body" id="resultPanel">
+          <div class="text-center text-secondary py-5">
+            <i class="bi bi-calculator" style="font-size:3rem;"></i>
+            <p class="mt-2">قم بملء المعطيات واضغط على "حساب الرسوم" لعرض النتيجة</p>
+          </div>
+        </div>
+      </div>
+
+      {# --- Quick Calculator for common cases --- #}
+      <div class="card zellige-card shadow-sm mt-3">
+        <div class="card-header bg-warning-subtle">
+          <h6 class="mb-0"><i class="bi bi-lightning ms-1"></i> حساب سريع</h6>
+        </div>
+        <div class="card-body">
+          <div class="input-group mb-2">
+            <input type="number" id="quickMontant" class="form-control" placeholder="المبلغ بالدرهم" min="0">
+            <button class="btn btn-warning" onclick="quickCalc()">
+              <i class="bi bi-calculator"></i>
+            </button>
+          </div>
+          <div id="quickResult" class="small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==================================================================
+   حاسبة الرسوم القضائية — حساب محلي طبقا للقانون
+   المرسوم رقم 2.58.1151 (المصاريف القضائية)
+   ================================================================== */
+
+/* ===== Fee Table (from the law) ===== */
+var FEE_CONFIG = {
+  /* الفصل 24 — المطالبة بمبلغ معين */
+  proportional: [
+    { min: 0,     max: 999,   rate: 0,      fixedFee: 50,   surcharge: 0 },
+    { min: 1000,  max: 5000,  rate: 0.04,   minFee: 50,     surcharge: 0 },
+    { min: 5001,  max: 20000, rate: 0.025,  minFee: 200,    surcharge: 0 },
+    { min: 20001, max: null,  rate: 0.01,   minFee: 0,      surcharge: 300 }
+  ],
+  /* الفصل 25 — غير محدد القيمة */
+  fixedUndetermined: 150,
+  /* الفصل 32 — الاستئناف: +10% */
+  appealSurchargeRate: 0.10,
+  /* الفصل 33 — النقض */
+  cassationFixed: 750,
+  /* الفصل 29 — أمر بالأداء */
+  orderToPayThreshold: 5000,
+  orderToPayLow: 50,
+  orderToPayHigh: 100,
+  /* الفصل 26 — طلبات متنوعة (أمام رئيس المحكمة) */
+  diverseRequestTPI: 50,
+  diverseRequestCA: 100,
+  /* الفصل 27 — القضايا المستعجلة */
+  urgentCase: 100,
+  /* الفصل 30 — التحفيظ العقاري */
+  landRegistration: 150,
+  /* الفصل 31 — المعارضة */
+  oppositionTPI: 50,
+  oppositionCA: 100,
+  /* الفصل 36 — إدخال الضامن / التدخل */
+  interventionTPI: 100,
+  interventionCA: 150,
+  /* الفصل 38 — تفسير أو تصحيح حكم */
+  interpretationRequest: 100
+};
+
+/* ===== Request types per domain ===== */
+var REQUEST_TYPES = {
+  madani: [
+    { value: 'maqal_iftitahi',    label: 'مقال افتتاحي',            category: 'main' },
+    { value: 'maqal_idafi',       label: 'مقال إضافي',              category: 'main' },
+    { value: 'maqal_modad',       label: 'مقال مضاد (دعوى مقابلة)', category: 'main' },
+    { value: 'amr_bilaadaa',      label: 'أمر بالأداء (الفصل 155)', category: 'order' },
+    { value: 'qadiya_mustaajila', label: 'قضية مستعجلة / حيازة',    category: 'urgent' },
+    { value: 'talab_amam_rais',   label: 'طلب أمام رئيس المحكمة',   category: 'diverse' },
+    { value: 'istinaf',           label: 'استئناف حكم نهائي',       category: 'appeal' },
+    { value: 'istinaf_tahdiiri',  label: 'استئناف حكم تحضيري / أمر مستعجل', category: 'appeal_fixed' },
+    { value: 'naqd',              label: 'طعن بالنقض',              category: 'cassation' },
+    { value: 'muaarada',          label: 'معارضة (حكم غيابي)',      category: 'opposition' },
+    { value: 'muaaradat_ghair',   label: 'معارضة الغير الخارج عن الخصومة', category: 'third_party' },
+    { value: 'iltimas_iaada',     label: 'التماس إعادة النظر',      category: 'third_party' },
+    { value: 'tahfid',            label: 'اعتراض على تحفيظ عقاري',  category: 'land' },
+    { value: 'idkhal_damen',      label: 'إدخال الضامن / اختصام الغير / التدخل', category: 'intervention' },
+    { value: 'tafsir_tashih',     label: 'تفسير أو تصحيح حكم',     category: 'interpretation' },
+    { value: 'hisabat_qisma',     label: 'تقديم حسابات / قسمة / تصفية شركة', category: 'fixed_150' }
+  ],
+  tijari: [
+    { value: 'maqal_iftitahi',    label: 'مقال افتتاحي',            category: 'main' },
+    { value: 'maqal_idafi',       label: 'مقال إضافي',              category: 'main' },
+    { value: 'maqal_modad',       label: 'مقال مضاد (دعوى مقابلة)', category: 'main' },
+    { value: 'amr_bilaadaa',      label: 'أمر بالأداء',             category: 'order' },
+    { value: 'qadiya_mustaajila', label: 'قضية مستعجلة',            category: 'urgent' },
+    { value: 'talab_amam_rais',   label: 'طلب أمام رئيس المحكمة',   category: 'diverse' },
+    { value: 'istinaf',           label: 'استئناف حكم نهائي',       category: 'appeal' },
+    { value: 'istinaf_tahdiiri',  label: 'استئناف حكم تحضيري / أمر', category: 'appeal_fixed' },
+    { value: 'naqd',              label: 'طعن بالنقض',              category: 'cassation' },
+    { value: 'muaarada',          label: 'معارضة (حكم غيابي)',      category: 'opposition' },
+    { value: 'idkhal_damen',      label: 'إدخال الضامن / التدخل',   category: 'intervention' },
+    { value: 'tafsir_tashih',     label: 'تفسير أو تصحيح حكم',     category: 'interpretation' },
+    { value: 'iflas',             label: 'إفلاس / تصفية قضائية',    category: 'fixed_150' }
+  ],
+  idari: [
+    { value: 'maqal_iftitahi',    label: 'مقال افتتاحي (تعويض)',    category: 'main' },
+    { value: 'talab_ilghaa',      label: 'طلب إلغاء (الشطط في استعمال السلطة)', category: 'fixed_150' },
+    { value: 'qadiya_mustaajila', label: 'قضية مستعجلة',            category: 'urgent' },
+    { value: 'istinaf',           label: 'استئناف',                 category: 'appeal' },
+    { value: 'naqd',              label: 'طعن بالنقض',              category: 'cassation' },
+    { value: 'muaarada',          label: 'معارضة',                  category: 'opposition' },
+    { value: 'tafsir_tashih',     label: 'تفسير أو تصحيح حكم',     category: 'interpretation' }
+  ],
+  jinai: [
+    { value: 'taassis_taraf',     label: 'تأسيس طرف مدني (الحق المدني)', category: 'main' },
+    { value: 'istinaf_jinai',     label: 'استئناف في الشق المدني',  category: 'appeal' },
+    { value: 'naqd',              label: 'طعن بالنقض',              category: 'cassation' }
+  ]
+};
+
+/* ===== Initialize form ===== */
+function populateTalabSelect() {
+  var domain = document.getElementById('selDomain').value;
+  var sel = document.getElementById('selTypeTalab');
+  sel.innerHTML = '';
+
+  var types = REQUEST_TYPES[domain] || [];
+  types.forEach(function(t) {
+    sel.add(new Option(t.label, t.value));
+  });
+  onTalabChange();
+}
+
+function onNatureChange() {
+  var nature = document.querySelector('input[name="nature"]:checked').value;
+  var montantGroup = document.getElementById('montantGroup');
+  if (nature === 'ghayr_mohadad') {
+    montantGroup.style.display = 'none';
+  } else {
+    montantGroup.style.display = 'block';
+  }
+}
+
+function onDomainChange() {
+  populateTalabSelect();
+}
+
+function onTalabChange() {
+  // Some request types don't need montant
+  var domain = document.getElementById('selDomain').value;
+  var talabVal = document.getElementById('selTypeTalab').value;
+  var types = REQUEST_TYPES[domain] || [];
+  var talab = types.find(function(t) { return t.value === talabVal; });
+
+  var montantGroup = document.getElementById('montantGroup');
+  var nature = document.querySelector('input[name="nature"]:checked').value;
+
+  if (talab && ['cassation', 'urgent', 'diverse', 'land', 'intervention', 'interpretation',
+                 'opposition', 'appeal_fixed', 'fixed_150', 'order'].includes(talab.category)) {
+    // Fixed fee types — hide montant if not already hidden
+    if (talab.category === 'order') {
+      montantGroup.style.display = 'block'; // order needs amount
+    } else {
+      montantGroup.style.display = 'none';
+    }
+  } else if (nature === 'ghayr_mohadad') {
+    montantGroup.style.display = 'none';
+  } else {
+    montantGroup.style.display = 'block';
+  }
+}
+
+function resetForm() {
+  document.getElementById('nat_mohadad').checked = true;
+  document.getElementById('selDomain').value = 'madani';
+  document.getElementById('inputMontant').value = '';
+  document.getElementById('montantGroup').style.display = 'block';
+  populateTalabSelect();
+  document.getElementById('resultPanel').innerHTML =
+    '<div class="text-center text-secondary py-5">'
+    + '<i class="bi bi-calculator" style="font-size:3rem;"></i>'
+    + '<p class="mt-2">قم بملء المعطيات واضغط على "حساب الرسوم" لعرض النتيجة</p>'
+    + '</div>';
+}
+
+// Init on load
+populateTalabSelect();
+onNatureChange();
+
+/* ===== Core calculation ===== */
+function calcProportionalFee(amount) {
+  /* الفصل 24 — المطالبة بمبلغ معين */
+  if (amount <= 0) return { fee: 50, bracket: 'أقل من 1.000 درهم', rate: '—', detail: 'الحد الأدنى: 50 درهم' };
+
+  if (amount < 1000) {
+    return { fee: 50, bracket: 'أقل من 1.000 درهم', rate: '—', detail: 'رسم ثابت أدنى: 50 درهم' };
+  }
+  if (amount <= 5000) {
+    var fee = Math.max(Math.ceil(amount * 0.04), 50);
+    return { fee: fee, bracket: '1.000 — 5.000 درهم', rate: '4%', detail: amount + ' × 4% = ' + Math.ceil(amount * 0.04) + ' درهم (أدنى 50)' };
+  }
+  if (amount <= 20000) {
+    var fee = Math.max(Math.ceil(amount * 0.025), 200);
+    return { fee: fee, bracket: '5.001 — 20.000 درهم', rate: '2,5%', detail: amount + ' × 2.5% = ' + Math.ceil(amount * 0.025) + ' درهم (أدنى 200)' };
+  }
+  // > 20,000
+  var fee = Math.ceil(amount * 0.01) + 300;
+  return { fee: fee, bracket: 'أكثر من 20.000 درهم', rate: '1% + 300', detail: amount + ' × 1% = ' + Math.ceil(amount * 0.01) + ' + 300 = ' + fee + ' درهم' };
+}
+
+function calculateTax() {
+  var nature = document.querySelector('input[name="nature"]:checked').value;
+  var domain = document.getElementById('selDomain').value;
+  var talabVal = document.getElementById('selTypeTalab').value;
+  var montant = parseFloat(document.getElementById('inputMontant').value) || 0;
+
+  var types = REQUEST_TYPES[domain] || [];
+  var talab = types.find(function(t) { return t.value === talabVal; });
+  if (!talab) { alert('يرجى اختيار نوع الطلب'); return; }
+
+  var result = { fee: 0, details: [], article: '', warnings: [] };
+  var domainLabels = { madani: 'مدني', tijari: 'تجاري', idari: 'إداري', jinai: 'جنائي' };
+
+  // ---- Determine fee based on category ----
+  switch (talab.category) {
+
+    case 'main': // مقال افتتاحي / إضافي / مضاد
+      if (nature === 'ghayr_mohadad') {
+        result.fee = FEE_CONFIG.fixedUndetermined;
+        result.article = 'الفصل 25';
+        result.details.push('طلب غير محدد القيمة: رسم ثابت ' + result.fee + ' درهم');
+        result.details.push('ملاحظة: يصفى الرسم لاحقا إذا أصبح المبلغ محددا (الفصل 25 فقرة 2)');
+      } else {
+        if (montant <= 0) { alert('يرجى إدخال المبلغ المطلوب'); return; }
+        var calc = calcProportionalFee(montant);
+        result.fee = calc.fee;
+        result.article = 'الفصل 24';
+        result.details.push('الشريحة: ' + calc.bracket + ' — النسبة: ' + calc.rate);
+        result.details.push(calc.detail);
+      }
+      break;
+
+    case 'order': // أمر بالأداء
+      if (montant <= 0) { alert('يرجى إدخال مبلغ الدين'); return; }
+      if (montant <= FEE_CONFIG.orderToPayThreshold) {
+        result.fee = FEE_CONFIG.orderToPayLow;
+        result.details.push('الدين ≤ 5.000 درهم: رسم ثابت 50 درهم');
+      } else {
+        result.fee = FEE_CONFIG.orderToPayHigh;
+        result.details.push('الدين > 5.000 درهم: رسم ثابت 100 درهم');
+      }
+      result.article = 'الفصل 29';
+      break;
+
+    case 'urgent': // مستعجلة
+      result.fee = FEE_CONFIG.urgentCase;
+      result.article = 'الفصل 27';
+      result.details.push('قضية مستعجلة / حيازة / تعيين حدود: 100 درهم');
+      break;
+
+    case 'diverse': // طلب أمام رئيس المحكمة
+      result.fee = FEE_CONFIG.diverseRequestTPI;
+      result.article = 'الفصل 26';
+      result.details.push('طلب أمام رئيس المحكمة الابتدائية: 50 درهم');
+      result.details.push('(أمام غرفة المشورة بمحكمة الاستئناف: 100 درهم)');
+      break;
+
+    case 'appeal': // استئناف حكم نهائي
+      if (nature === 'ghayr_mohadad') {
+        var baseFee = FEE_CONFIG.fixedUndetermined;
+        var surcharge = Math.ceil(baseFee * FEE_CONFIG.appealSurchargeRate);
+        result.fee = baseFee + surcharge;
+        result.article = 'الفصل 32(ب) + الفصل 25';
+        result.details.push('رسم ثابت: ' + baseFee + ' درهم');
+        result.details.push('زيادة الاستئناف (10%): + ' + surcharge + ' درهم');
+        result.details.push('المجموع: ' + result.fee + ' درهم');
+      } else {
+        if (montant <= 0) { alert('يرجى إدخال المبلغ'); return; }
+        var calc = calcProportionalFee(montant);
+        var surcharge = Math.ceil(calc.fee * FEE_CONFIG.appealSurchargeRate);
+        result.fee = calc.fee + surcharge;
+        result.article = 'الفصل 32(ب)';
+        result.details.push('الرسم الأساسي (الفصل 24): ' + calc.fee + ' درهم');
+        result.details.push(calc.detail);
+        result.details.push('زيادة الاستئناف (10%): + ' + surcharge + ' درهم');
+        result.details.push('المجموع: ' + result.fee + ' درهم');
+      }
+      break;
+
+    case 'appeal_fixed': // استئناف حكم تحضيري / أمر مستعجل
+      result.fee = 150;
+      result.article = 'الفصل 32(أ)';
+      result.details.push('استئناف حكم تحضيري / أمر مستعجل / أمر على عريضة / اختصاص: 150 درهم');
+      break;
+
+    case 'cassation': // النقض
+      result.fee = FEE_CONFIG.cassationFixed;
+      result.article = 'الفصل 33';
+      result.details.push('طعن بالنقض أمام محكمة النقض: 750 درهم ثابت');
+      break;
+
+    case 'opposition': // معارضة في حكم غيابي
+      result.fee = FEE_CONFIG.oppositionTPI;
+      result.article = 'الفصل 31';
+      result.details.push('معارضة أمام المحكمة الابتدائية: 50 درهم');
+      result.details.push('(أمام محكمة الاستئناف: 100 درهم)');
+      break;
+
+    case 'third_party': // معارضة الغير / التماس إعادة النظر
+      if (nature === 'ghayr_mohadad') {
+        result.fee = FEE_CONFIG.fixedUndetermined;
+      } else if (montant > 0) {
+        result.fee = calcProportionalFee(montant).fee;
+      } else {
+        result.fee = FEE_CONFIG.fixedUndetermined;
+      }
+      result.article = 'الفصل 37';
+      result.details.push('يدفع نفس الرسم المستوفى عن الحكم المطعون فيه');
+      result.details.push('الرسم المحسوب: ' + result.fee + ' درهم');
+      break;
+
+    case 'land': // تحفيظ عقاري
+      result.fee = FEE_CONFIG.landRegistration;
+      result.article = 'الفصل 30';
+      result.details.push('اعتراض على تحفيظ عقاري: 150 درهم ثابت');
+      result.details.push('(علاوة على رسم المرافعات — الفصل 65)');
+      break;
+
+    case 'intervention': // إدخال الضامن / التدخل
+      result.fee = FEE_CONFIG.interventionTPI;
+      result.article = 'الفصل 36';
+      result.details.push('إدخال الضامن / اختصام الغير / التدخل:');
+      result.details.push('أمام المحكمة الابتدائية: 100 درهم');
+      result.details.push('(أمام محكمة الاستئناف: 150 درهم)');
+      break;
+
+    case 'interpretation': // تفسير أو تصحيح
+      result.fee = FEE_CONFIG.interpretationRequest;
+      result.article = 'الفصل 38';
+      result.details.push('طلب تفسير أو تصحيح حكم: 100 درهم');
+      break;
+
+    case 'fixed_150': // حسابات / قسمة / إلغاء إداري...
+      result.fee = 150;
+      result.article = 'الفصل 25';
+      result.details.push('رسم ثابت: 150 درهم');
+      if (talab.value === 'talab_ilghaa') {
+        result.details.push('طلب إلغاء قرار إداري (الشطط في استعمال السلطة)');
+      } else {
+        result.details.push('تقديم حسابات / قسمة / تصفية شركة');
+        result.details.push('ملاحظة: يزاد عليه الرسم النسبي إذا أحيلت القضية للتصديق (الفصل 25 فقرة 3)');
+      }
+      break;
+
+    default:
+      result.fee = 0;
+      result.details.push('نوع الطلب غير معروف');
+  }
+
+  // ---- Exemptions check ----
+  if (domain === 'jinai' && talab.value !== 'taassis_taraf' && talab.category !== 'appeal' && talab.category !== 'cassation') {
+    result.warnings.push('في القضايا الجنائية، الرسوم لا تؤدى مقدما بل يتحملها المحكوم عليه');
+  }
+
+  // ---- Render result ----
+  var html = '<div class="mb-3">'
+    + '<div class="d-flex justify-content-between align-items-center mb-2">'
+    + '<span class="text-secondary">المرجع القانوني:</span>'
+    + '<span class="badge bg-info-subtle text-info-emphasis">' + result.article + '</span>'
+    + '</div>';
+
+  html += '<div class="d-flex justify-content-between align-items-center mb-2">'
+    + '<span class="text-secondary">نوع الدعوى:</span>'
+    + '<span class="fw-bold">' + domainLabels[domain] + '</span>'
+    + '</div>';
+
+  html += '<div class="d-flex justify-content-between align-items-center mb-2">'
+    + '<span class="text-secondary">طبيعة الاستخلاص:</span>'
+    + '<span class="fw-bold">' + (nature === 'mohadad' ? 'محدد' : 'غير محدد') + '</span>'
+    + '</div>';
+
+  html += '<div class="d-flex justify-content-between align-items-center mb-2">'
+    + '<span class="text-secondary">نوع الطلب:</span>'
+    + '<span class="fw-bold">' + talab.label + '</span>'
+    + '</div>';
+
+  if (nature === 'mohadad' && montant > 0) {
+    html += '<div class="d-flex justify-content-between align-items-center mb-2">'
+      + '<span class="text-secondary">المبلغ المطلوب:</span>'
+      + '<span class="fw-bold font-monospace">' + montant.toLocaleString('fr-MA') + ' درهم</span>'
+      + '</div>';
+  }
+
+  html += '<hr>';
+
+  // Details
+  html += '<div class="mb-3">';
+  result.details.forEach(function(d) {
+    html += '<div class="small text-secondary mb-1"><i class="bi bi-dot ms-1"></i> ' + d + '</div>';
+  });
+  html += '</div>';
+
+  // Warnings
+  if (result.warnings.length > 0) {
+    result.warnings.forEach(function(w) {
+      html += '<div class="alert alert-warning py-1 small mb-2"><i class="bi bi-exclamation-triangle ms-1"></i> ' + w + '</div>';
+    });
+  }
+
+  // Total
+  html += '<div class="bg-success-subtle rounded p-3 text-center">'
+    + '<div class="text-secondary small mb-1">الرسم القضائي المستحق</div>'
+    + '<div class="display-5 fw-bold text-success">' + result.fee.toLocaleString('fr-MA') + '</div>'
+    + '<div class="text-success small">درهم</div>'
+    + '</div>';
+
+  html += '</div>';
+
+  document.getElementById('resultPanel').innerHTML = html;
+}
+
+/* ===== Quick Calculator ===== */
+function quickCalc() {
+  var m = parseFloat(document.getElementById('quickMontant').value) || 0;
+  if (m <= 0) { document.getElementById('quickResult').innerHTML = '<span class="text-danger">أدخل مبلغا صحيحا</span>'; return; }
+
+  var calc = calcProportionalFee(m);
+  var appealFee = calc.fee + Math.ceil(calc.fee * 0.10);
+
+  var html = '<table class="table table-sm table-striped small mb-0">'
+    + '<tbody>'
+    + '<tr><td>مقال افتتاحي</td><td class="fw-bold text-success">' + calc.fee + ' درهم</td><td class="text-secondary">(' + calc.rate + ')</td></tr>'
+    + '<tr><td>استئناف (+10%)</td><td class="fw-bold text-warning">' + appealFee + ' درهم</td><td class="text-secondary">' + calc.fee + ' + ' + Math.ceil(calc.fee * 0.10) + '</td></tr>'
+    + '<tr><td>طعن بالنقض</td><td class="fw-bold text-info">750 درهم</td><td class="text-secondary">ثابت</td></tr>'
+    + '</tbody></table>';
+  document.getElementById('quickResult').innerHTML = html;
+}
+</script>
+{% endblock %}

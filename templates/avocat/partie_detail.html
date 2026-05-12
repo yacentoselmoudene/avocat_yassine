@@ -64,6 +64,24 @@
      hx-get="{% url 'cabinet:partie_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
+
+  {# ── Envoyer rappel portail ── #}
+  {% if object.email or object.telephone %}
+  <form method="post" action="{% url 'cabinet:portail_issue_link' object.pk %}" class="mb-2"
+        onsubmit="return confirm('إنشاء وإرسال رابط البوابة لهذا الطرف؟');">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'cabinet:partie_detail' object.pk %}">
+    <button type="submit" class="btn btn-sm btn-info w-100">
+      <i class="bi bi-shield-lock ms-1"></i> إرسال رابط البوابة
+    </button>
+  </form>
+  {% else %}
+    <div class="alert alert-warning small p-2 mb-2">
+      <i class="bi bi-exclamation-triangle ms-1"></i>
+      أضف بريدًا أو هاتفًا لتمكين بوابة الموكل.
+    </div>
+  {% endif %}
+
   <a class="btn btn-sm btn-outline-danger w-100 mb-2" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:partie_delete' object.pk %}" hx-target="#modalBody">

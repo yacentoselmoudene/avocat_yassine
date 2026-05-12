@@ -3,6 +3,7 @@
 {% block title %}مزامنة محاكم — mahakim.ma{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid py-4">
 
   {# --- Header --- #}
@@ -14,11 +15,72 @@
         — إجمالي القضايا القابلة للمزامنة: <strong>{{ total_syncable }}</strong>
       </p>
     </div>
-    <div>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mainModal"
-              hx-get="{% url 'cabinet:mahakim_preview_all' %}" hx-target="#modalBody">
-        <i class="bi bi-cloud-download ms-1"></i> مزامنة الكل
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-warning" id="btnFetchIds" onclick="startFetchIds()">
+        <i class="bi bi-database-down ms-1"></i> جلب معرفات المحاكم
       </button>
+    </div>
+  </div>
+
+  {# --- Sync Types Cards --- #}
+  <div class="row g-3 mb-4">
+    {# Type 1: Dossier (active) #}
+    <div class="col-md-4 col-lg">
+      <div class="card h-100 zellige-card border-primary cursor-pointer shadow-sm"
+           style="cursor:pointer;" onclick="showSyncModal('dossier')"
+           role="button" tabindex="0">
+        <div class="card-body text-center p-3">
+          <i class="bi bi-folder2-open text-primary" style="font-size:2rem;"></i>
+          <h6 class="mt-2 mb-1">مزامنة الملفات</h6>
+          <p class="text-secondary small mb-0">حالة الملف، الإجراءات، الأطراف</p>
+        </div>
+      </div>
+    </div>
+    {# Type 2: Sessions (active) #}
+    <div class="col-md-4 col-lg">
+      <div class="card h-100 zellige-card border-success cursor-pointer shadow-sm"
+           style="cursor:pointer;" onclick="showSyncModal('sessions')"
+           role="button" tabindex="0">
+        <div class="card-body text-center p-3">
+          <i class="bi bi-calendar-week text-success" style="font-size:2rem;"></i>
+          <h6 class="mt-2 mb-1">مزامنة الجلسات</h6>
+          <p class="text-secondary small mb-0">جدول الجلسات، القاعات، الشُعب</p>
+        </div>
+      </div>
+    </div>
+    {# Type 3: Contumace (المسطرة الغيابية) #}
+    <div class="col-md-4 col-lg">
+      <div class="card h-100 zellige-card border-danger cursor-pointer shadow-sm"
+           style="cursor:pointer;" onclick="showSyncModal('contumace')"
+           role="button" tabindex="0">
+        <div class="card-body text-center p-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2rem;"></i>
+          <h6 class="mt-2 mb-1">المسطرة الغيابية</h6>
+          <p class="text-secondary small mb-0">سجلات الحكم الغيابي، المتهمون</p>
+        </div>
+      </div>
+    </div>
+    {# Type 4: Tax Calculator (active) #}
+    <div class="col-md-4 col-lg">
+      <div class="card h-100 zellige-card border-info cursor-pointer shadow-sm"
+           style="cursor:pointer;" onclick="window.location.href='{% url 'cabinet:tax_calculator' %}'"
+           role="button" tabindex="0">
+        <div class="card-body text-center p-3">
+          <i class="bi bi-calculator text-info" style="font-size:2rem;"></i>
+          <h6 class="mt-2 mb-1">حاسبة الرسوم القضائية</h6>
+          <p class="text-secondary small mb-0">حساب الرسوم عبر caisseenligne</p>
+        </div>
+      </div>
+    </div>
+    {# Type 5: Traffic Violations (coming soon) #}
+    <div class="col-md-4 col-lg">
+      <div class="card h-100 zellige-card border-secondary opacity-50" title="قريبا">
+        <div class="card-body text-center p-3">
+          <i class="bi bi-car-front text-secondary" style="font-size:2rem;"></i>
+          <h6 class="mt-2 mb-1">مخالفات وجنح السير</h6>
+          <span class="badge bg-secondary">قريبا</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -26,7 +88,7 @@
   <div class="card zellige-card">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover table-striped mb-0">
+        <table class="table table-hover table-striped mb-0" id="syncTable">
           <thead class="table-light">
             <tr>
               <th>المرجع الداخلي</th>
@@ -39,8 +101,20 @@
               <th>القاضي</th>
               <th class="text-center">إجراء</th>
             </tr>
+            {# --- Search row --- #}
+            <tr class="bg-light">
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="0" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="1" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="2" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="3" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="4" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="5" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="6" oninput="filterTable()"></th>
+              <th><input type="search" class="form-control form-control-sm" placeholder="بحث..." data-col="7" oninput="filterTable()"></th>
+              <th></th>
+            </tr>
           </thead>
-          <tbody>
+          <tbody id="syncTableBody">
             {% for item in sync_data %}
             <tr>
               <td>
@@ -51,7 +125,14 @@
               <td class="font-monospace small">
                 {{ item.affaire.numero_dossier }}/{{ item.affaire.code_categorie.code }}/{{ item.affaire.annee_dossier }}
               </td>
-              <td class="small">{{ item.affaire.juridiction }}</td>
+              <td class="small">
+                {{ item.affaire.juridiction }}
+                {% if item.affaire.juridiction.TribunalParent %}
+                  <br><span class="text-secondary" style="font-size:0.8em;">
+                    ({{ item.affaire.juridiction.TribunalParent.nomtribunal_ar }})
+                  </span>
+                {% endif %}
+              </td>
               <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ item.affaire.type_affaire }}</span></td>
 
               {% if item.sync %}
@@ -111,4 +192,584 @@
   {% endif %}
 
 </div>
+
+{# ================================================================ #}
+{# --- Modal: Main Modal (single sync, sync all, sessions) --- #}
+{# ================================================================ #}
+<div class="modal fade" id="mainModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0 pb-1">
+        <h5 class="modal-title" id="mainModalTitle"><i class="bi bi-arrow-repeat ms-2"></i> مزامنة محاكم</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ================================================================ #}
+{# --- Modal: Sync Type Explanation (#syncTypeModal) --- #}
+{# ================================================================ #}
+<div class="modal fade" id="syncTypeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0 pb-1">
+        <h5 class="modal-title" id="syncTypeModalTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="syncTypeModalBody">
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ================================================================ #}
+{# --- Modal: Progression du fetch des IDs --- #}
+{# ================================================================ #}
+<div class="modal fade" id="fetchIdsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning-subtle border-bottom-0 pb-1">
+        <h5 class="modal-title"><i class="bi bi-database-down ms-2"></i> جلب معرفات المحاكم</h5>
+      </div>
+      <div class="modal-body pt-2">
+        {# Phase label #}
+        <div id="fetchPhaseLabel" class="fw-bold mb-3 text-center" style="font-size:1.15rem;">
+          جاري بدء المهمة...
+        </div>
+
+        {# Progress bar #}
+        <div class="progress mb-2" style="height: 36px; border-radius: 10px;">
+          <div id="fetchProgressBar"
+               class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+               role="progressbar"
+               style="width: 0%; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;"
+               aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            0%
+          </div>
+        </div>
+
+        {# Court name #}
+        <div id="fetchCourtName" class="text-center text-muted mb-2" style="font-size: 0.95rem;"></div>
+
+        {# Counter badge #}
+        <div class="text-center mb-2">
+          <span id="fetchCounter" class="badge bg-light text-dark border d-none" style="font-size: 0.9rem;"></span>
+        </div>
+
+        {# Error list (hidden initially) #}
+        <div id="fetchErrorsBox" class="alert alert-danger small d-none mt-2" style="max-height:120px;overflow-y:auto;"></div>
+
+        {# Result summary (hidden initially) #}
+        <div id="fetchResultBox" class="d-none mt-3">
+          <div class="alert alert-success mb-2">
+            <i class="bi bi-check-circle-fill ms-1"></i>
+            <span id="fetchResultMsg"></span>
+          </div>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a id="fetchExportBtn" href="#" class="btn btn-outline-success">
+              <i class="bi bi-file-earmark-excel ms-1"></i> تصدير Excel
+            </a>
+            <button class="btn btn-outline-primary" onclick="location.reload()">
+              <i class="bi bi-arrow-clockwise ms-1"></i> تحديث الصفحة
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top-0 d-none" id="fetchModalFooter">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Sync Type Modal ===== */
+function showSyncModal(syncType) {
+  var modal = new bootstrap.Modal(document.getElementById('syncTypeModal'));
+  var title = document.getElementById('syncTypeModalTitle');
+  var body = document.getElementById('syncTypeModalBody');
+
+  if (syncType === 'dossier') {
+    title.innerHTML = '<i class="bi bi-folder2-open text-primary ms-2"></i> مزامنة الملفات (بطاقة الملف)';
+    body.innerHTML = `
+      <div class="alert alert-info py-2 small">
+        <i class="bi bi-info-circle ms-1"></i>
+        <strong>ما هي هذه المزامنة؟</strong><br>
+        جلب حالة الملفات من بوابة mahakim.ma — لكل قضية مسجلة بالمرجع الكامل (رقم + صنف + سنة).
+      </div>
+      <div class="card border-0 bg-light mb-3">
+        <div class="card-body small">
+          <h6 class="fw-bold mb-2"><i class="bi bi-list-check ms-1"></i> البيانات التي يتم جلبها:</h6>
+          <ul class="mb-0">
+            <li><strong>بطاقة الملف:</strong> المحكمة، نوع الشكاية، الرقم، الموضوع، تاريخ التسجيل</li>
+            <li><strong>لائحة الإجراءات:</strong> تاريخ الإجراء، نوع الإجراء، المرجع</li>
+            <li><strong>لائحة الأطراف:</strong> الصفة، اسم الطرف، المحامون</li>
+          </ul>
+        </div>
+      </div>
+      <p class="text-secondary small">يتم المزامنة لكل قضية على حدة أو مزامنة شاملة لجميع القضايا.</p>
+      <div class="d-flex gap-2 justify-content-end flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg ms-1"></i> إغلاق
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="launchDossierSyncAll()">
+          <i class="bi bi-cloud-download ms-1"></i> بدء مزامنة جميع الملفات
+        </button>
+      </div>
+    `;
+    modal.show();
+
+  } else if (syncType === 'sessions') {
+    title.innerHTML = '<i class="bi bi-calendar-week text-success ms-2"></i> مزامنة جدول الجلسات';
+    body.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-success" role="status"></div></div>';
+    modal.show();
+
+    // Load the sessions form via fetch, then init Select2
+    fetch("{% url 'cabinet:mahakim_preview_sessions' %}")
+      .then(r => r.text())
+      .then(html => {
+        body.innerHTML = html;
+        // innerHTML doesn't execute <script>, so init Select2 manually here
+        _initSessionsSelect2();
+      })
+      .catch(() => { body.innerHTML = '<div class="text-center text-danger py-3">خطأ في تحميل النموذج</div>'; });
+
+  } else if (syncType === 'contumace') {
+    // Redirect to the dedicated contumace page
+    window.location.href = "{% url 'cabinet:contumace_list' %}";
+    return;
+
+  } else {
+    title.innerHTML = '<i class="bi bi-hourglass text-secondary ms-2"></i> قيد التطوير';
+    body.innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-tools text-secondary" style="font-size:3rem;"></i>
+        <h6 class="mt-3 text-secondary">هذه الميزة قيد التطوير وستتوفر قريبا</h6>
+        <p class="text-muted small">نعمل على إضافة هذا النوع من المزامنة في التحديثات القادمة.</p>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg ms-1"></i> إغلاق
+        </button>
+      </div>
+    `;
+    modal.show();
+  }
+}
+
+/* ===== Launch dossier sync all from explanation modal ===== */
+function launchDossierSyncAll() {
+  // Close explanation modal
+  var explModal = bootstrap.Modal.getInstance(document.getElementById('syncTypeModal'));
+  if (explModal) explModal.hide();
+
+  // Open main modal with preview_all content
+  setTimeout(function() {
+    var mainModal = new bootstrap.Modal(document.getElementById('mainModal'));
+    document.getElementById('modalBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+    mainModal.show();
+
+    fetch("{% url 'cabinet:mahakim_preview_all' %}")
+      .then(r => r.text())
+      .then(html => { document.getElementById('modalBody').innerHTML = html; })
+      .catch(() => { document.getElementById('modalBody').innerHTML = '<div class="text-center text-danger py-3">خطأ في تحميل المعاينة</div>'; });
+  }, 400);
+}
+
+/* ===== Client-side table filter ===== */
+function filterTable() {
+  var inputs = document.querySelectorAll('#syncTable thead input[data-col]');
+  var filters = {};
+  inputs.forEach(function(inp) {
+    var col = parseInt(inp.getAttribute('data-col'));
+    var val = inp.value.trim().toLowerCase();
+    if (val) filters[col] = val;
+  });
+
+  var rows = document.querySelectorAll('#syncTableBody tr');
+  rows.forEach(function(row) {
+    var cells = row.querySelectorAll('td');
+    if (cells.length === 0) return; // empty row
+    var show = true;
+    for (var col in filters) {
+      var cell = cells[parseInt(col)];
+      if (!cell) { show = false; break; }
+      var text = cell.textContent.toLowerCase();
+      if (text.indexOf(filters[col]) === -1) { show = false; break; }
+    }
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+/* ===== Fetch IDs — background task with progress modal ===== */
+var _fetchTaskId = null;
+var _fetchPollTimer = null;
+
+function startFetchIds() {
+  var btn = document.getElementById('btnFetchIds');
+  btn.disabled = true;
+
+  // Reset modal
+  document.getElementById('fetchPhaseLabel').textContent = 'جاري بدء المهمة...';
+  var bar = document.getElementById('fetchProgressBar');
+  bar.style.width = '0%';
+  bar.textContent = '0%';
+  bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+  document.getElementById('fetchCourtName').textContent = '';
+  document.getElementById('fetchCounter').classList.add('d-none');
+  document.getElementById('fetchErrorsBox').classList.add('d-none');
+  document.getElementById('fetchErrorsBox').innerHTML = '';
+  document.getElementById('fetchResultBox').classList.add('d-none');
+  document.getElementById('fetchModalFooter').classList.add('d-none');
+
+  var modal = new bootstrap.Modal(document.getElementById('fetchIdsModal'));
+  modal.show();
+
+  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                  || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+  fetch("{% url 'cabinet:mahakim_fetch_ids' %}", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken, "Content-Type": "application/json" },
+  })
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (data.ok && data.task_id) {
+      _fetchTaskId = data.task_id;
+      _fetchPollTimer = setInterval(pollFetchStatus, 2000);
+    } else {
+      showFetchError(data.message || 'خطأ غير معروف');
+    }
+  })
+  .catch(function(err) {
+    showFetchError('خطأ في الاتصال: ' + err);
+  });
+}
+
+function pollFetchStatus() {
+  if (!_fetchTaskId) return;
+
+  fetch("{% url 'cabinet:mahakim_fetch_ids_status' %}?task_id=" + _fetchTaskId)
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      clearInterval(_fetchPollTimer);
+      showFetchError(data.message);
+      return;
+    }
+
+    var bar = document.getElementById('fetchProgressBar');
+    var label = document.getElementById('fetchPhaseLabel');
+    var courtName = document.getElementById('fetchCourtName');
+    var counter = document.getElementById('fetchCounter');
+
+    if (data.total > 0 && data.phase === 'appel') {
+      var pct = Math.round((data.current / data.total) * 100);
+      bar.style.width = pct + '%';
+      bar.textContent = pct + '%';
+      label.textContent = 'مزامنة محكمة الاستئناف ' + data.current + ' / ' + data.total;
+      courtName.textContent = data.name || '';
+      counter.classList.remove('d-none');
+      counter.textContent = data.current + ' / ' + data.total;
+    } else if (data.phase === 'saving') {
+      bar.style.width = '95%';
+      bar.textContent = '95%';
+      label.textContent = 'جاري تحديث قاعدة البيانات...';
+      courtName.textContent = '';
+      counter.classList.add('d-none');
+    } else if (data.phase === 'init') {
+      label.textContent = data.message || 'جاري التحضير...';
+    }
+
+    if (data.errors && data.errors.length > 0) {
+      var errBox = document.getElementById('fetchErrorsBox');
+      errBox.classList.remove('d-none');
+      errBox.innerHTML = '<strong>أخطاء:</strong><br>' + data.errors.map(function(e) {
+        return '- ' + e;
+      }).join('<br>');
+    }
+
+    if (data.status === 'done') {
+      clearInterval(_fetchPollTimer);
+      bar.style.width = '100%';
+      bar.textContent = '100%';
+      bar.classList.remove('progress-bar-animated');
+      label.textContent = 'تمت العملية بنجاح';
+      courtName.textContent = '';
+      counter.classList.add('d-none');
+
+      document.getElementById('fetchResultBox').classList.remove('d-none');
+      document.getElementById('fetchResultMsg').textContent = data.message;
+      document.getElementById('fetchExportBtn').href =
+        "{% url 'cabinet:mahakim_fetch_ids_export' %}?task_id=" + _fetchTaskId;
+      document.getElementById('fetchModalFooter').classList.remove('d-none');
+      document.getElementById('btnFetchIds').disabled = false;
+    }
+
+    if (data.status === 'error') {
+      clearInterval(_fetchPollTimer);
+      showFetchError(data.message);
+    }
+  })
+  .catch(function(err) {
+    console.warn('Poll error:', err);
+  });
+}
+
+function showFetchError(msg) {
+  var bar = document.getElementById('fetchProgressBar');
+  bar.classList.remove('bg-success', 'progress-bar-animated');
+  bar.classList.add('bg-danger');
+  bar.style.width = '100%';
+  bar.textContent = 'خطأ';
+  document.getElementById('fetchPhaseLabel').textContent = msg;
+  document.getElementById('fetchCounter').classList.add('d-none');
+  document.getElementById('fetchModalFooter').classList.remove('d-none');
+  document.getElementById('btnFetchIds').disabled = false;
+}
+
+/* ===== Sessions Sync — Select2 init + sync logic ===== */
+function _initSessionsSelect2() {
+  var $modal = $('#syncTypeModal');
+  if (!$modal.length) $modal = $(document.body);
+
+  setTimeout(function() {
+    var $type = $('#sessionsTypeSeance');
+    var $jurid = $('#sessionsJuridiction');
+    var $piSelect = $('#sessionsTribunalPI');
+
+    if ($type.length && !$type.data('select2')) {
+      $type.select2({
+        theme: 'bootstrap-5',
+        dir: 'rtl',
+        width: '100%',
+        allowClear: true,
+        placeholder: '— اختر نوع الجلسة (اختياري) —',
+        dropdownParent: $modal
+      });
+    }
+
+    if ($jurid.length && !$jurid.data('select2')) {
+      $jurid.select2({
+        theme: 'bootstrap-5',
+        dir: 'rtl',
+        width: '100%',
+        allowClear: true,
+        placeholder: '— اختر محكمة الاستئناف —',
+        dropdownParent: $modal,
+        matcher: function(params, data) {
+          if (!params.term || params.term.trim() === '') return data;
+          if (!data.text) return null;
+          if (data.text.indexOf(params.term) > -1) return data;
+          return null;
+        }
+      });
+
+      // When appeal court changes → show/hide PI toggle + load PI tribunals
+      $jurid.on('change', function() {
+        var courtId = $(this).val();
+        var toggleWrapper = document.getElementById('sessionsTogglePIWrapper');
+        var piWrapper = document.getElementById('sessionsPIWrapper');
+        var toggleCheck = document.getElementById('sessionsTogglePI');
+
+        // Reset PI section
+        if (toggleWrapper) toggleWrapper.style.display = 'none';
+        if (piWrapper) piWrapper.style.display = 'none';
+        if (toggleCheck) toggleCheck.checked = false;
+        if ($piSelect.length) {
+          $piSelect.html('<option value="">— اختر المحكمة الابتدائية —</option>');
+          if ($piSelect.data('select2')) $piSelect.trigger('change');
+        }
+
+        if (!courtId) return;
+
+        // Fetch PI tribunals for this appeal court
+        fetch("{% url 'cabinet:mahakim_tribunaux_pi' %}?parent_id=" + courtId)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.tribunaux && data.tribunaux.length > 0) {
+              // Show toggle
+              if (toggleWrapper) toggleWrapper.style.display = 'block';
+
+              // Populate PI dropdown
+              var html = '<option value="">— اختر المحكمة الابتدائية —</option>';
+              data.tribunaux.forEach(function(t) {
+                html += '<option value="' + t.pk + '">' + t.nom + '</option>';
+              });
+              $piSelect.html(html);
+
+              // Init Select2 on PI dropdown if not already
+              if ($piSelect.length && !$piSelect.data('select2')) {
+                $piSelect.select2({
+                  theme: 'bootstrap-5',
+                  dir: 'rtl',
+                  width: '100%',
+                  allowClear: true,
+                  placeholder: '— اختر المحكمة الابتدائية —',
+                  dropdownParent: $modal
+                });
+              } else if ($piSelect.data('select2')) {
+                $piSelect.trigger('change.select2');
+              }
+            }
+          });
+      });
+    }
+
+    // Toggle PI tribunals visibility
+    $(document).off('change', '#sessionsTogglePI').on('change', '#sessionsTogglePI', function() {
+      var piWrapper = document.getElementById('sessionsPIWrapper');
+      if (this.checked) {
+        if (piWrapper) piWrapper.style.display = 'block';
+      } else {
+        if (piWrapper) piWrapper.style.display = 'none';
+        // Clear PI selection
+        if ($piSelect.length) {
+          $piSelect.val('').trigger('change');
+        }
+      }
+    });
+  }, 150);
+}
+
+function startSessionSync() {
+  var juridictionId = $('#sessionsJuridiction').val();
+  var piId = $('#sessionsTribunalPI').val();
+  var piToggle = document.getElementById('sessionsTogglePI');
+  var dateVal = document.getElementById('sessionsDate') ? document.getElementById('sessionsDate').value : '';
+  var typeSeance = $('#sessionsTypeSeance').val();
+
+  // If PI toggle is on and a PI tribunal selected, use PI tribunal ID
+  var selectedId = (piToggle && piToggle.checked && piId) ? piId : juridictionId;
+
+  if (!juridictionId) {
+    alert('يجب اختيار محكمة الاستئناف');
+    return;
+  }
+  if (!dateVal) {
+    alert('يجب اختيار تاريخ الجلسة');
+    return;
+  }
+
+  // Convert date from yyyy-mm-dd to dd/mm/yyyy
+  var parts = dateVal.split('-');
+  var dateFmt = parts[2] + '/' + parts[1] + '/' + parts[0];
+
+  var panel = document.getElementById('sessionsSyncPanel');
+  if (!panel) return;
+
+  panel.innerHTML = '<div class="text-center py-4">'
+    + '<div class="mb-3"><div class="spinner-border text-success" role="status" style="width:3rem;height:3rem;"></div></div>'
+    + '<h6 class="text-success mb-2">جاري جلب جدول الجلسات...</h6>'
+    + '<p class="text-secondary small mb-3">يتم الاتصال ببوابة mahakim.ma — يرجى الانتظار</p>'
+    + '<div class="progress mb-3" style="height:8px;"><div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width:100%"></div></div>'
+    + '<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg ms-1"></i> إغلاق</button>'
+    + '</div>';
+
+  var payload = { juridiction_id: selectedId, date: dateFmt };
+  if (typeSeance) payload.type_seance = typeSeance;
+
+  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                  || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+  fetch("{% url 'cabinet:mahakim_sync_sessions' %}", {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok && data.sessions) {
+      var html = '';
+      if (data.sessions.length === 0) {
+        html = '<div class="text-center text-secondary py-3"><i class="bi bi-info-circle ms-1"></i> لا توجد جلسات في هذا التاريخ</div>';
+      } else {
+        html = '<div style="max-height:500px;overflow-y:auto;">';
+        data.sessions.forEach(function(s, si) {
+          // Session header card
+          html += '<div class="card mb-2 border-success-subtle">'
+            + '<div class="card-header bg-success-subtle py-2 d-flex justify-content-between align-items-center" '
+            + 'style="cursor:pointer;" onclick="var b=document.getElementById(\'sessFiles_'+si+'\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';">'
+            + '<span><i class="bi bi-clock ms-1"></i> <strong>' + (s.time||'—') + '</strong>'
+            + ' — ' + (s.room||'—') + ' — ' + (s.division||'—') + '</span>'
+            + '<span class="badge bg-primary">' + (s.files_count||0) + ' ملف</span>'
+            + '</div>';
+
+          // Files sub-table (collapsible)
+          if (s.files && s.files.length > 0) {
+            html += '<div id="sessFiles_'+si+'" class="card-body p-0" style="display:none;">';
+            html += '<table class="table table-sm table-striped mb-0 small">';
+            html += '<thead class="table-light"><tr>'
+              + '<th>رقم الملف</th><th>تاريخ التسجيل</th><th>نوع الإجراء</th>'
+              + '<th>القرار</th><th>الجلسة المقبلة</th><th>الأطراف</th></tr></thead><tbody>';
+
+            s.files.forEach(function(f, fi) {
+              html += '<tr><td class="font-monospace">' + (f.numero||'—') + '</td>'
+                + '<td>' + (f.date_enregistrement||'—') + '</td>'
+                + '<td>' + (f.type_procedure||'—') + '</td>'
+                + '<td>' + (f.decision||'—') + '</td>'
+                + '<td>' + (f.prochaine_audience||'—') + '</td>';
+
+              if (f.parties && f.parties.length > 0) {
+                var partiesId = 'parties_'+si+'_'+fi;
+                html += '<td><button class="btn btn-sm btn-outline-secondary py-0 px-1" '
+                  + 'onclick="event.stopPropagation();var p=document.getElementById(\''+partiesId+'\');'
+                  + 'p.style.display=p.style.display===\'none\'?\'table-row\':\'none\';">'
+                  + '<i class="bi bi-people-fill"></i> ' + f.parties.length + '</button></td>';
+                html += '</tr>';
+                // Parties expansion row
+                html += '<tr id="'+partiesId+'" style="display:none;"><td colspan="6" class="bg-light p-2">'
+                  + '<table class="table table-sm table-bordered mb-0" style="font-size:0.85em;">'
+                  + '<thead><tr class="table-secondary"><th>الصفة</th><th>اسم الطرف</th></tr></thead><tbody>';
+                f.parties.forEach(function(p) {
+                  html += '<tr><td>' + (p.sifa||'—') + '</td><td>' + (p.nom||'—') + '</td></tr>';
+                });
+                html += '</tbody></table></td></tr>';
+              } else {
+                html += '<td class="text-secondary">—</td></tr>';
+              }
+            });
+            html += '</tbody></table></div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      // Count total files
+      var totalFiles = 0;
+      data.sessions.forEach(function(s) { totalFiles += (s.files ? s.files.length : 0); });
+      var msg = data.message + (totalFiles > 0 ? ' — ' + totalFiles + ' ملف مفصل' : '');
+
+      panel.innerHTML = '<div class="py-2">'
+        + '<div class="text-center mb-3"><i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem;"></i>'
+        + '<h6 class="mt-2 text-success">' + msg + '</h6>'
+        + '<p class="text-secondary small mb-0">اضغط على الجلسة لعرض الملفات، وعلى أيقونة الأطراف لعرض تفاصيلهم</p></div>'
+        + html
+        + '<div class="mt-3 d-flex gap-2 justify-content-center">'
+        + '<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg ms-1"></i> إغلاق</button>'
+        + '<button type="button" class="btn btn-outline-primary btn-sm" onclick="location.reload()"><i class="bi bi-arrow-clockwise ms-1"></i> تحديث الصفحة</button>'
+        + '</div></div>';
+    } else {
+      panel.innerHTML = '<div class="text-center py-3">'
+        + '<i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>'
+        + '<h6 class="mt-2 text-danger">' + (data.message || 'فشلت المزامنة') + '</h6>'
+        + '<div class="mt-3"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg ms-1"></i> إغلاق</button></div>'
+        + '</div>';
+    }
+  })
+  .catch(function(err) {
+    panel.innerHTML = '<div class="text-center py-3">'
+      + '<i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>'
+      + '<h6 class="mt-2 text-danger">خطأ في الاتصال</h6>'
+      + '<p class="text-secondary small">' + (err.message || 'تعذر الاتصال بالخادم') + '</p>'
+      + '<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg ms-1"></i> إغلاق</button>'
+      + '</div>';
+  });
+}
+</script>
 {% endblock %}

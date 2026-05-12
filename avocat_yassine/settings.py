@@ -216,3 +216,32 @@ else:
     EMAIL_USE_TLS = True
     EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
     EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+
+# =============================
+# Twilio WhatsApp
+# =============================
+# En l'absence de credentials ou en mode DEBUG, les envois passent en dry-run
+# (les messages sont journalisés en base avec status='dry_run' sans appel API).
+TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN', default='')
+TWILIO_WHATSAPP_FROM = env('TWILIO_WHATSAPP_FROM', default='')  # ex: +14155238886 (sandbox)
+TWILIO_DRY_RUN = env.bool('TWILIO_DRY_RUN', default=DEBUG)
+
+# =============================
+# Anthropic Claude — Analyse IA des décisions
+# =============================
+# Sans clé, l'analyse renvoie un résultat dry-run.
+ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default='')
+ANTHROPIC_MODEL = env('ANTHROPIC_MODEL', default='claude-sonnet-4-6')
+ANTHROPIC_DRY_RUN = env.bool('ANTHROPIC_DRY_RUN', default=False)
+
+# =============================
+# Voyage AI — Embeddings pour la recherche sémantique
+# =============================
+# Sans clé, fallback sur un embedding hash-based déterministe (fonctionne en dev).
+VOYAGE_API_KEY = env('VOYAGE_API_KEY', default='')
+
+# =============================
+# Portail client (magic link)
+# =============================
+PORTAIL_COOKIE_SECRET = env('PORTAIL_COOKIE_SECRET', default=SECRET_KEY)

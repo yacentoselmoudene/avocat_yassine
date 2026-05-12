@@ -1,0 +1,84 @@
+{# FILE: templates/modals/_mahakim_preview_sessions.html #}
+{# معاينة مزامنة جدول الجلسات — نوع الجلسة + محكمة الاستئناف + المحكمة الابتدائية + التاريخ #}
+{# NOTE: No <script> here — scripts are in mahakim_sync.html because innerHTML doesn't execute scripts #}
+
+<div id="sessionsSyncPanel">
+  <h6 class="text-success mb-3"><i class="bi bi-calendar-week ms-1"></i> مزامنة جدول الجلسات</h6>
+
+  <div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle ms-1"></i>
+    <strong>البيانات التي سيتم جلبها:</strong>
+    <ul class="mb-0 mt-1">
+      <li>الساعة والقاعة والشعبة</li>
+      <li>ملفات الجلسة (رقم الملف، تاريخ التسجيل، نوع الإجراء)</li>
+      <li>القرار وتاريخ الجلسة المقبلة</li>
+      <li>الأطراف</li>
+    </ul>
+  </div>
+
+  <div class="card border-0 bg-light mb-3">
+    <div class="card-body">
+      {# --- نوع الجلسة --- #}
+      <div class="mb-3">
+        <label class="form-label fw-bold">نوع الجلسة</label>
+        <select id="sessionsTypeSeance" class="form-select" style="width:100%;">
+          <option value="">— اختر نوع الجلسة (اختياري) —</option>
+          <option value="جلسة مدنية">جلسة مدنية</option>
+          <option value="جلسة إدارية">جلسة إدارية</option>
+          <option value="جلسة تجارية">جلسة تجارية</option>
+          <option value="جلسة جنحية">جلسة جنحية</option>
+        </select>
+      </div>
+
+      {# --- محكمة الاستئناف --- #}
+      <div class="mb-3">
+        <label class="form-label fw-bold">محكمة الاستئناف <span class="text-danger">*</span></label>
+        <select id="sessionsJuridiction" class="form-select" style="width:100%;" required>
+          <option value="">— اختر محكمة الاستئناف —</option>
+          {% for j in juridictions_appel %}
+            <option value="{{ j.pk }}" data-mahakim="{{ j.id_mahakim|default:'' }}">
+              {{ j.nomtribunal_ar }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# --- Toggle: utiliser les tribunaux PI --- #}
+      <div class="mb-3" id="sessionsTogglePIWrapper" style="display:none;">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="sessionsTogglePI">
+          <label class="form-check-label fw-bold" for="sessionsTogglePI">
+            <i class="bi bi-building ms-1"></i> استخدام المحاكم الابتدائية
+          </label>
+        </div>
+      </div>
+
+      {# --- المحكمة الابتدائية (hidden by default) --- #}
+      <div class="mb-3" id="sessionsPIWrapper" style="display:none;">
+        <label class="form-label fw-bold">المحكمة الابتدائية</label>
+        <select id="sessionsTribunalPI" class="form-select" style="width:100%;">
+          <option value="">— اختر المحكمة الابتدائية —</option>
+        </select>
+        <div class="form-text small text-success mt-1">
+          <i class="bi bi-info-circle ms-1"></i>
+          سيتم البحث عن جلسات المحكمة الابتدائية داخل محكمة الاستئناف التابعة لها.
+        </div>
+      </div>
+
+      {# --- تاريخ الجلسة --- #}
+      <div class="mb-3">
+        <label class="form-label fw-bold">تاريخ الجلسة <span class="text-danger">*</span></label>
+        <input type="date" id="sessionsDate" class="form-control" required>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="button" class="btn btn-success btn-sm" id="btnStartSessionSync" onclick="startSessionSync()">
+      <i class="bi bi-cloud-download ms-1"></i> بدء مزامنة الجلسات
+    </button>
+  </div>
+</div>

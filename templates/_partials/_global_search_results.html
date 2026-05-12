@@ -1,0 +1,33 @@
+{# Dropdown de résultats pour la recherche globale (HTMX) #}
+{% if too_short %}
+  <div class="global-search-empty p-3 text-muted small">
+    <i class="bi bi-search ms-1"></i> اكتب حرفين على الأقل للبحث…
+  </div>
+{% elif not groups %}
+  <div class="global-search-empty p-3 text-muted small">
+    <i class="bi bi-emoji-frown ms-1"></i> لا توجد نتائج لـ "<strong>{{ q }}</strong>"
+  </div>
+{% else %}
+  <div class="global-search-results">
+    {% for g in groups %}
+      <div class="gs-group">
+        <div class="gs-group-header">
+          <i class="bi {{ g.icon }} ms-1"></i> {{ g.label }}
+          <span class="badge bg-secondary ms-1">{{ g.items|length }}</span>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for item in g.items %}
+            <li class="list-group-item gs-item">
+              <a href="{{ item.url }}" class="d-block text-decoration-none">
+                <div class="fw-bold text-dark">{{ item.title }}</div>
+                {% if item.subtitle %}
+                  <div class="small text-secondary">{{ item.subtitle }}</div>
+                {% endif %}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

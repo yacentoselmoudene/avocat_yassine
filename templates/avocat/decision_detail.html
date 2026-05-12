@@ -49,6 +49,110 @@
       {% endif %}
     </dd>
   </dl>
+
+  {# ── Résultat de l'analyse IA ── #}
+  {% if analysis %}
+    <hr>
+    <div class="ai-analysis-block">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">
+          <i class="bi bi-stars text-primary ms-1"></i>
+          تحليل الذكاء الاصطناعي
+          {% if analysis.is_dry_run %}
+            <span class="badge bg-secondary ms-1">محاكاة</span>
+          {% else %}
+            <span class="badge bg-success ms-1">{{ analysis.model_used }}</span>
+          {% endif %}
+        </h5>
+        <small class="text-muted">{{ analysis.generated_at|date:"d/m/Y H:i"|default:"--" }}</small>
+      </div>
+
+      {% if analysis.error_message %}
+        <div class="alert alert-warning small">{{ analysis.error_message }}</div>
+      {% endif %}
+
+      {% if analysis.resume_ar %}
+        <div class="card bg-light mb-3">
+          <div class="card-body">
+            <div class="small text-secondary mb-1"><i class="bi bi-translate ms-1"></i> ملخص بالعربية</div>
+            <div>{{ analysis.resume_ar|linebreaksbr }}</div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if analysis.resume_fr %}
+        <div class="card bg-light mb-3" dir="ltr">
+          <div class="card-body">
+            <div class="small text-secondary mb-1"><i class="bi bi-translate me-1"></i> Résumé en français</div>
+            <div>{{ analysis.resume_fr|linebreaksbr }}</div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if analysis.decision_essentielle %}
+        <div class="mb-3">
+          <div class="small text-secondary mb-1"><i class="bi bi-hammer ms-1"></i> المنطوق الأساسي</div>
+          <div class="bg-warning-subtle p-3 rounded">{{ analysis.decision_essentielle|linebreaksbr }}</div>
+        </div>
+      {% endif %}
+
+      {% if analysis.delai_appel_jours %}
+        <div class="mb-3">
+          <span class="badge bg-danger fs-6">
+            <i class="bi bi-clock ms-1"></i> أجل الاستئناف: {{ analysis.delai_appel_jours }} يومًا
+          </span>
+        </div>
+      {% endif %}
+
+      {% if analysis.parties_extraites %}
+        <div class="mb-3">
+          <div class="small text-secondary mb-1"><i class="bi bi-people ms-1"></i> الأطراف المستخرجة</div>
+          <ul class="list-group list-group-flush small">
+            {% for p in analysis.parties_extraites %}
+              <li class="list-group-item d-flex justify-content-between">
+                <span>{{ p.nom|default:"—" }}</span>
+                <span class="badge bg-info">{{ p.role|default:"—" }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if analysis.dates_importantes %}
+        <div class="mb-3">
+          <div class="small text-secondary mb-1"><i class="bi bi-calendar-event ms-1"></i> تواريخ مهمة</div>
+          <ul class="list-group list-group-flush small">
+            {% for d in analysis.dates_importantes %}
+              <li class="list-group-item d-flex justify-content-between">
+                <span>{{ d.label|default:"—" }}</span>
+                <code>{{ d.date_iso|default:"—" }}</code>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if analysis.motifs %}
+        <div class="mb-2">
+          <div class="small text-secondary mb-1"><i class="bi bi-file-text ms-1"></i> الحيثيات</div>
+          <div class="accordion" id="motifsAccordion">
+            {% for m in analysis.motifs %}
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#motif-{{ forloop.counter }}">
+                    {{ m.titre|default:"حيثية" }}
+                  </button>
+                </h2>
+                <div id="motif-{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#motifsAccordion">
+                  <div class="accordion-body small">{{ m.contenu|default:"—"|linebreaksbr }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block detail_actions %}
@@ -57,6 +161,39 @@
      hx-get="{% url 'cabinet:decision_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
+
+  {# ── Analyse IA ── #}
+  <button type="button" class="btn btn-sm btn-info w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#aiPanel">
+    <i class="bi bi-stars ms-1"></i> {% if analysis %}إعادة التحليل بالذكاء الاصطناعي{% else %}تحليل الحكم بالذكاء الاصطناعي{% endif %}
+  </button>
+  <div class="collapse {% if not analysis %}show{% endif %} mb-3" id="aiPanel">
+    <form method="post" action="{% url 'cabinet:decision_ai_analyze' object.pk %}">
+      {% csrf_token %}
+
+      {% if pdf_pieces %}
+        <label class="form-label small fw-bold">PDF مرفق (اختياري)</label>
+        <select name="piece_jointe_id" class="form-select form-select-sm mb-2">
+          <option value="">— بدون مرفق —</option>
+          {% for p in pdf_pieces %}
+            <option value="{{ p.pk }}">{{ p.titre|truncatechars:60 }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+
+      <label class="form-label small fw-bold">أو ألصق النص هنا</label>
+      <textarea name="source_text" rows="6" class="form-control form-control-sm mb-2"
+                placeholder="نص الحكم..."></textarea>
+
+      <button type="submit" class="btn btn-sm btn-success w-100">
+        <i class="bi bi-cpu ms-1"></i> تشغيل التحليل
+      </button>
+      <div class="form-text small mt-1">
+        <i class="bi bi-info-circle ms-1"></i>
+        بدون مفتاح Anthropic، يعمل في وضع المحاكاة.
+      </div>
+    </form>
+  </div>
+
   <a class="btn btn-sm btn-outline-danger w-100 mb-2" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:decision_delete' object.pk %}" hx-target="#modalBody">

@@ -1,0 +1,120 @@
+{% extends "portail/base.html" %}
+{% block title %}بوابتي{% endblock %}
+{% block body %}
+<nav class="navbar navbar-expand portail-navbar">
+  <div class="container">
+    <a class="navbar-brand"><i class="bi bi-shield-lock-fill ms-1"></i> بوابة الموكلين</a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <span class="text-white-50 small">{{ partie.nom_complet }}</span>
+      <a href="{% url 'cabinet:portail_logout' %}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-box-arrow-left ms-1"></i> خروج
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container my-4">
+
+  {# KPIs #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="portail-card p-3 text-center">
+        <div class="text-secondary small">ملفاتي</div>
+        <div class="fs-3 fw-bold text-primary">{{ affaires|length }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="portail-card p-3 text-center">
+        <div class="text-secondary small">جلسات قادمة</div>
+        <div class="fs-3 fw-bold text-warning">{{ next_audiences|length }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="portail-card p-3 text-center">
+        <div class="text-secondary small">المصاريف</div>
+        <div class="fs-3 fw-bold text-danger">{{ finance.depenses }} <small>درهم</small></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="portail-card p-3 text-center">
+        <div class="text-secondary small">الصافي</div>
+        <div class="fs-3 fw-bold {% if finance.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ finance.net }} <small>درهم</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {# Mes affaires #}
+    <div class="col-12 col-lg-6">
+      <div class="portail-card p-3 mb-3">
+        <h6 class="fw-bold mb-3"><i class="bi bi-folder2 ms-1"></i> ملفاتي</h6>
+        {% if affaires %}
+          <ul class="list-group list-group-flush">
+            {% for a in affaires %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <a href="{% url 'cabinet:portail_affaire_detail' a.pk %}" class="fw-bold">{{ a.reference_interne }}</a>
+                  <div class="small text-secondary">{{ a.type_affaire }} — {{ a.juridiction.nomtribunal_ar }}</div>
+                </div>
+                <span class="badge bg-info text-dark">{{ a.statut_affaire }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted text-center py-4">لا توجد ملفات.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Prochaines audiences #}
+    <div class="col-12 col-lg-6">
+      <div class="portail-card p-3 mb-3">
+        <h6 class="fw-bold mb-3"><i class="bi bi-calendar3 ms-1"></i> الجلسات القادمة</h6>
+        {% if next_audiences %}
+          <ul class="list-group list-group-flush">
+            {% for a in next_audiences %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <strong>{{ a.type_audience }}</strong>
+                  <span class="badge bg-warning text-dark">{{ a.date_audience|date:"d/m/Y H:i" }}</span>
+                </div>
+                <div class="small text-secondary">
+                  {{ a.affaire.reference_interne }} — {{ a.affaire.juridiction.nomtribunal_ar }}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted text-center py-4">لا توجد جلسات قادمة.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Décisions récentes #}
+    <div class="col-12">
+      <div class="portail-card p-3 mb-3">
+        <h6 class="fw-bold mb-3"><i class="bi bi-hammer ms-1"></i> آخر الأحكام</h6>
+        {% if recent_decisions %}
+          <ul class="list-group list-group-flush">
+            {% for d in recent_decisions %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <strong>{{ d.numero_decision }}</strong>
+                  <span class="small text-secondary">{{ d.date_prononce|date:"d/m/Y" }}</span>
+                </div>
+                <div class="small text-secondary">{{ d.affaire.reference_interne }}</div>
+                {% if d.resumé %}<div class="small mt-1">{{ d.resumé|truncatechars:200 }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted text-center py-4">لا توجد أحكام.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

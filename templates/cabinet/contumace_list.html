@@ -1,0 +1,319 @@
+{# FILE: templates/cabinet/contumace_list.html #}
+{% extends 'base.html' %}
+{% block title %}المسطرة الغيابية{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid py-4">
+
+  {# --- Header --- #}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-1"><i class="bi bi-exclamation-triangle-fill text-danger ms-2"></i> المسطرة الغيابية</h4>
+      <p class="text-secondary mb-0 small">
+        سجلات المسطرة الغيابية من بوابة
+        <a href="https://www.mahakim.ma/#/procedure-contumace" target="_blank" rel="noopener">mahakim.ma</a>
+        — إجمالي السجلات: <strong>{{ total_records }}</strong>
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'cabinet:mahakim_sync' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right ms-1"></i> رجوع لصفحة المزامنة
+      </a>
+      <button class="btn btn-danger" id="btnSyncContumace" onclick="showContumaceModal()">
+        <i class="bi bi-cloud-download ms-1"></i> مزامنة المسطرة الغيابية
+      </button>
+    </div>
+  </div>
+
+  {# --- Search bar --- #}
+  <div class="card zellige-card mb-3">
+    <div class="card-body py-2">
+      <form method="get" class="d-flex gap-2 align-items-center">
+        <div class="flex-grow-1">
+          <input type="search" name="q" value="{{ query }}" class="form-control"
+                 placeholder="بحث بالاسم، رقم الملف، المحكمة، رقم البطاقة..." autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search ms-1"></i> بحث
+        </button>
+        {% if query %}
+        <a href="{% url 'cabinet:contumace_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg ms-1"></i> مسح
+        </a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  {# --- Results Table --- #}
+  <div class="card zellige-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0" id="contumaceTable">
+          <thead class="table-light">
+            <tr>
+              <th>محكمة الاستئناف</th>
+              <th>رقم الملف</th>
+              <th>اسم المتهم</th>
+              <th>اسم الأب</th>
+              <th>اسم الأم</th>
+              <th>رقم البطاقة</th>
+              <th class="text-center">التفاصيل</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in records %}
+            <tr>
+              <td class="small">{{ rec.cour_appel }}</td>
+              <td class="font-monospace small">{{ rec.numero_dossier }}</td>
+              <td class="fw-bold text-danger">{{ rec.nom_accuse }}</td>
+              <td class="small">{{ rec.nom_pere|default:"—" }}</td>
+              <td class="small">{{ rec.nom_mere|default:"—" }}</td>
+              <td class="small font-monospace">{{ rec.numero_carte|default:"—" }}</td>
+              <td class="text-center">
+                {% if rec.details_text %}
+                <button class="btn btn-sm btn-outline-info" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#details-{{ rec.pk }}"
+                        aria-expanded="false">
+                  <i class="bi bi-eye"></i>
+                </button>
+                {% else %}
+                <span class="text-secondary">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% if rec.details_text %}
+            <tr class="collapse" id="details-{{ rec.pk }}">
+              <td colspan="7" class="bg-light">
+                <div class="p-3">
+                  <h6 class="text-info mb-2"><i class="bi bi-file-text ms-1"></i> تفاصيل الإعلان الغيابي</h6>
+                  <div class="border rounded p-3 bg-white" style="white-space: pre-wrap; line-height: 1.8;">{{ rec.details_text }}</div>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-secondary py-4">
+                {% if query %}
+                <i class="bi bi-search ms-1"></i>
+                لا توجد نتائج تطابق البحث "{{ query }}"
+                {% else %}
+                <i class="bi bi-info-circle ms-1"></i>
+                لا توجد سجلات. قم بالمزامنة أولا
+                <br>
+                <button class="btn btn-outline-danger btn-sm mt-2" onclick="showContumaceModal()">
+                  <i class="bi bi-cloud-download ms-1"></i> بدء المزامنة
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# --- Pagination --- #}
+  {% if is_paginated %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}">السابق</a>
+        </li>
+      {% endif %}
+      <li class="page-item disabled">
+        <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      </li>
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}">التالي</a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+
+{# ================================================================ #}
+{# --- Modal: Contumace Sync Progress --- #}
+{# ================================================================ #}
+<div class="modal fade" id="contumaceSyncModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger-subtle border-bottom-0 pb-1">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill text-danger ms-2"></i> مزامنة المسطرة الغيابية</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" id="contumaceModalClose"></button>
+      </div>
+      <div class="modal-body" id="contumaceModalBody">
+        <div class="text-center py-3">
+          <div class="spinner-border text-danger" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _contumaceTaskId = null;
+var _contumacePollTimer = null;
+
+function showContumaceModal() {
+  var modal = new bootstrap.Modal(document.getElementById('contumaceSyncModal'));
+  var body = document.getElementById('contumaceModalBody');
+
+  body.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-danger" role="status"></div></div>';
+  modal.show();
+
+  fetch("{% url 'cabinet:mahakim_preview_contumace' %}")
+    .then(function(r) { return r.text(); })
+    .then(function(html) { body.innerHTML = html; })
+    .catch(function() {
+      body.innerHTML = '<div class="text-center text-danger py-3">خطأ في تحميل النموذج</div>';
+    });
+}
+
+function startContumaceSync() {
+  var searchQuery = '';
+  var searchInput = document.getElementById('contumaceSearchQuery');
+  if (searchInput) searchQuery = searchInput.value.trim();
+
+  var body = document.getElementById('contumaceModalBody');
+  body.innerHTML = `
+    <div class="text-center py-3">
+      <div id="contumacePhaseLabel" class="fw-bold mb-3" style="font-size:1.15rem;">جاري بدء المهمة...</div>
+      <div class="progress mb-2" style="height: 36px; border-radius: 10px;">
+        <div id="contumaceProgressBar"
+             class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+             role="progressbar" style="width: 0%; font-size: 1.1rem; font-weight: 700;"
+             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      </div>
+      <div id="contumaceCounter" class="text-muted mb-2" style="font-size: 0.95rem;"></div>
+      <div id="contumaceResultBox" class="d-none mt-3"></div>
+    </div>
+  `;
+
+  // Remove close button during sync
+  document.getElementById('contumaceModalClose').classList.add('d-none');
+
+  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                  || getCookie('csrftoken') || '';
+
+  fetch("{% url 'cabinet:mahakim_sync_contumace' %}", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken, "Content-Type": "application/json" },
+    body: JSON.stringify({ search_query: searchQuery }),
+  })
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (data.ok && data.task_id) {
+      _contumaceTaskId = data.task_id;
+      _contumacePollTimer = setInterval(pollContumaceStatus, 2000);
+    } else {
+      showContumaceError(data.message || 'خطأ غير معروف');
+    }
+  })
+  .catch(function(err) {
+    showContumaceError('خطأ في الاتصال: ' + err);
+  });
+}
+
+function pollContumaceStatus() {
+  if (!_contumaceTaskId) return;
+
+  fetch("{% url 'cabinet:mahakim_sync_contumace_status' %}?task_id=" + _contumaceTaskId)
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      clearInterval(_contumacePollTimer);
+      showContumaceError(data.message);
+      return;
+    }
+
+    var bar = document.getElementById('contumaceProgressBar');
+    var label = document.getElementById('contumacePhaseLabel');
+    var counter = document.getElementById('contumaceCounter');
+
+    if (data.phase === 'page' && data.total_pages > 0) {
+      var pct = Math.round((data.current_page / data.total_pages) * 100);
+      bar.style.width = pct + '%';
+      bar.textContent = pct + '%';
+      label.textContent = data.message || ('صفحة ' + data.current_page + ' / ' + data.total_pages);
+      counter.textContent = 'سجلات: ' + data.records_count + ' | صفحة ' + data.current_page + ' / ' + data.total_pages;
+    } else if (data.phase === 'saving') {
+      bar.style.width = '90%';
+      bar.textContent = '90%';
+      label.textContent = 'جاري حفظ السجلات في قاعدة البيانات...';
+    } else if (data.phase === 'init' || data.phase === 'searching') {
+      label.textContent = data.message || 'جاري التحضير...';
+      bar.style.width = '5%';
+      bar.textContent = '';
+    }
+
+    if (data.status === 'done') {
+      clearInterval(_contumacePollTimer);
+      bar.style.width = '100%';
+      bar.textContent = '100%';
+      bar.classList.remove('progress-bar-animated');
+
+      label.textContent = data.message;
+      counter.textContent = '';
+
+      var resultBox = document.getElementById('contumaceResultBox');
+      resultBox.classList.remove('d-none');
+      resultBox.innerHTML = `
+        <div class="alert alert-success mb-2">
+          <i class="bi bi-check-circle-fill ms-1"></i>
+          ${data.message}
+        </div>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-outline-primary" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise ms-1"></i> تحديث الصفحة
+          </button>
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg ms-1"></i> إغلاق
+          </button>
+        </div>
+      `;
+      document.getElementById('contumaceModalClose').classList.remove('d-none');
+    }
+
+    if (data.status === 'error') {
+      clearInterval(_contumacePollTimer);
+      showContumaceError(data.message);
+    }
+  })
+  .catch(function(err) {
+    console.warn('Contumace poll error:', err);
+  });
+}
+
+function showContumaceError(msg) {
+  var bar = document.getElementById('contumaceProgressBar');
+  if (bar) {
+    bar.classList.remove('bg-danger', 'progress-bar-animated');
+    bar.classList.add('bg-warning');
+    bar.style.width = '100%';
+    bar.textContent = 'خطأ';
+  }
+  var label = document.getElementById('contumacePhaseLabel');
+  if (label) label.textContent = msg;
+  document.getElementById('contumaceModalClose').classList.remove('d-none');
+
+  var resultBox = document.getElementById('contumaceResultBox');
+  if (resultBox) {
+    resultBox.classList.remove('d-none');
+    resultBox.innerHTML = `
+      <div class="alert alert-danger mb-2"><i class="bi bi-x-circle ms-1"></i> ${msg}</div>
+      <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg ms-1"></i> إغلاق
+      </button>
+    `;
+  }
+}
+</script>
+{% endblock %}

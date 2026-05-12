@@ -1,0 +1,40 @@
+{% extends "portail/base.html" %}
+{% block title %}دخول إلى بوابة الموكلين{% endblock %}
+{% block body %}
+<div class="portail-login-wrap">
+  <div class="portail-login-card">
+    <div class="text-center text-white mb-4">
+      <i class="bi bi-shield-lock-fill" style="font-size: 3rem"></i>
+      <h2 class="mt-2">بوابة الموكلين</h2>
+      <p class="mb-0 opacity-75">اطلع على ملفاتكم وجلساتكم بأمان</p>
+    </div>
+    <div class="card portail-card">
+      <div class="card-body p-4">
+        <h5 class="mb-3">طلب رابط الدخول</h5>
+        <p class="small text-secondary">
+          أدخل بريدكم الإلكتروني أو رقم هاتفكم المسجل لدى المكتب،
+          وسنرسل لكم رابطًا آمنًا للدخول.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="identifier" class="form-label small fw-bold">البريد الإلكتروني أو الهاتف</label>
+            <input type="text" name="identifier" id="identifier" class="form-control form-control-lg"
+                   placeholder="exemple@email.com أو 0612345678" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 btn-lg">
+            <i class="bi bi-envelope-paper ms-1"></i> إرسال رابط الدخول
+          </button>
+        </form>
+        <div class="form-text small mt-3 text-center">
+          <i class="bi bi-info-circle ms-1"></i>
+          الرابط صالح لمدة 24 ساعة فقط.
+        </div>
+      </div>
+    </div>
+    <div class="text-center text-white-50 small mt-3">
+      © مكتب المحاماة — جميع الحقوق محفوظة
+    </div>
+  </div>
+</div>
+{% endblock %}

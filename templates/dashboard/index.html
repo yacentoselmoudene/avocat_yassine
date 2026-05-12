@@ -6,11 +6,143 @@
 {% block extra_css %}
 <style>
   .phase-link:hover { background: rgba(var(--bs-primary-rgb), .08); }
+  .phase-legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #cbd5e1;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
+
+  {# ── Today widget: ما عليّ اليوم ── #}
+  {% if today_widget.total_count %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 today-widget">
+        <div class="card-header zellige-section-header fw-bold d-flex justify-content-between align-items-center">
+          <span>
+            <i class="bi bi-sun ms-1 text-warning"></i>
+            ما عليّ اليوم
+          </span>
+          <span class="badge bg-warning text-dark fs-6">{{ today_widget.total_count }}</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="row g-0">
+
+            {# جلسات اليوم #}
+            <div class="col-12 col-md-6 col-xl-3 today-col">
+              <div class="today-col-inner">
+                <div class="today-col-header">
+                  <i class="bi bi-calendar-event text-primary ms-1"></i>
+                  جلسات اليوم
+                  <span class="badge bg-primary ms-1">{{ today_widget.audiences.count }}</span>
+                </div>
+                <ul class="list-unstyled m-0 today-list">
+                  {% for a in today_widget.audiences|slice:":5" %}
+                  <li class="d-flex justify-content-between align-items-start gap-2">
+                    <a href="{% url 'cabinet:audience_detail' a.pk %}" class="text-decoration-none text-dark flex-grow-1">
+                      <strong>{{ a.date_audience|time:"H:i" }}</strong>
+                      — {{ a.affaire.reference_interne }}
+                      <span class="d-block small text-secondary">{{ a.type_audience }} — {{ a.affaire.juridiction.nomtribunal_ar|default:'' }}</span>
+                    </a>
+                    <a href="{{ a.affaire.juridiction.google_maps_directions_url }}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-success" title="الطريق إلى المحكمة">
+                      <i class="bi bi-signpost"></i>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <li class="text-muted small">لا توجد جلسات اليوم</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            {# آجال الإنذارات #}
+            <div class="col-12 col-md-6 col-xl-3 today-col">
+              <div class="today-col-inner">
+                <div class="today-col-header">
+                  <i class="bi bi-exclamation-triangle text-danger ms-1"></i>
+                  إنذارات تنتهي قريبا
+                  <span class="badge bg-danger ms-1">{{ today_widget.avertissements.count }}</span>
+                </div>
+                <ul class="list-unstyled m-0 today-list">
+                  {% for av in today_widget.avertissements|slice:":5" %}
+                  <li>
+                    <a href="{% url 'cabinet:avertissement_detail' av.pk %}" class="text-decoration-none text-dark">
+                      <strong>{{ av.type_avertissement }}</strong>
+                      <span class="d-block small text-secondary">
+                        {{ av.affaire.reference_interne }} — {{ av.date_echeance|date:"d/m" }}
+                      </span>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <li class="text-muted small">لا توجد إنذارات</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            {# آجال الطعون #}
+            <div class="col-12 col-md-6 col-xl-3 today-col">
+              <div class="today-col-inner">
+                <div class="today-col-header">
+                  <i class="bi bi-arrow-90deg-left text-warning ms-1"></i>
+                  طعون تنتهي قريبا
+                  <span class="badge bg-warning text-dark ms-1">{{ today_widget.recours.count }}</span>
+                </div>
+                <ul class="list-unstyled m-0 today-list">
+                  {% for r in today_widget.recours|slice:":5" %}
+                  <li>
+                    <a href="{% url 'cabinet:voiederecours_detail' r.pk %}" class="text-decoration-none text-dark">
+                      <strong>{{ r.type_recours }}</strong>
+                      <span class="d-block small text-secondary">
+                        {{ r.decision.affaire.reference_interne }} — {{ r.date_echeance_recours|date:"d/m" }}
+                      </span>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <li class="text-muted small">لا توجد طعون</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            {# مهامي اليوم #}
+            <div class="col-12 col-md-6 col-xl-3 today-col">
+              <div class="today-col-inner">
+                <div class="today-col-header">
+                  <i class="bi bi-list-check text-success ms-1"></i>
+                  مهامي اليوم
+                  <span class="badge bg-success ms-1">{{ today_widget.taches|length }}</span>
+                </div>
+                <ul class="list-unstyled m-0 today-list">
+                  {% for t in today_widget.taches %}
+                  <li>
+                    <a href="{% url 'cabinet:tache_detail' t.pk %}" class="text-decoration-none text-dark">
+                      <strong>{{ t.titre }}</strong>
+                      <span class="d-block small text-secondary">
+                        {{ t.statut }}{% if t.echeance %} — {{ t.echeance|time:"H:i" }}{% endif %}
+                      </span>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <li class="text-muted small">لا توجد مهام</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {# ── KPI Stat Cards ── #}
   <div class="row g-3 mb-4">
@@ -122,11 +254,18 @@
         <ul class="list-group list-group-flush">
           {% for a in next_audiences %}
           <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>
+            <a href="{% url 'cabinet:audience_detail' a.pk %}" class="text-decoration-none text-dark flex-grow-1">
               <i class="bi bi-calendar3 ms-1 text-primary"></i>
               {{ a.type_audience }} — {{ a.affaire.reference_interne }}
+              <small class="text-secondary d-block">{{ a.affaire.juridiction.nomtribunal_ar|default:'' }}</small>
+            </a>
+            <span class="d-flex align-items-center gap-2">
+              <a href="{{ a.affaire.juridiction.google_maps_directions_url }}" target="_blank" rel="noopener"
+                 class="btn btn-sm btn-outline-success" title="الطريق إلى المحكمة">
+                <i class="bi bi-signpost"></i>
+              </a>
+              <span class="badge bg-secondary">{{ a.date_audience|date:"d/m H:i" }}</span>
             </span>
-            <span class="badge bg-secondary">{{ a.date_audience }}</span>
           </li>
           {% empty %}
           <li class="list-group-item text-muted text-center py-4">
@@ -194,8 +333,9 @@
   </div>
   {% endif %}
 
-  {# ── Phase Distribution ── #}
+  {# ── Phase Distribution (donut chart) ── #}
   {% if phase_distribution %}
+  {{ phase_distribution|json_script:"phaseDistributionData" }}
   <div class="row g-3 mb-4">
     <div class="col-12">
       <div class="card shadow-sm border-0">
@@ -203,15 +343,27 @@
           <i class="bi bi-pie-chart ms-1"></i> توزيع القضايا حسب المرحلة
         </div>
         <div class="card-body">
-          <div class="row text-center">
-            {% for p in phase_distribution %}
-            <div class="col">
-              <a href="{% url 'cabinet:affaire_list' %}?phase={{ p.phase_code }}" class="text-decoration-none d-block phase-link rounded p-2">
-                <div class="fs-4 fw-bold" style="color: var(--z-cobalt-dark);">{{ p.count }}</div>
-                <div class="small text-secondary">{{ p.phase }}</div>
-              </a>
+          <div class="row align-items-center">
+            <div class="col-12 col-lg-5 mb-3 mb-lg-0">
+              <div style="position:relative; height: 240px;">
+                <canvas id="phaseDonutChart"></canvas>
+              </div>
             </div>
-            {% endfor %}
+            <div class="col-12 col-lg-7">
+              <div class="row text-center g-2">
+                {% for p in phase_distribution %}
+                <div class="col-6 col-md-4">
+                  <a href="{% url 'cabinet:affaire_list' %}?phase={{ p.phase_code }}" class="text-decoration-none d-block phase-link rounded p-2">
+                    <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                      <span class="phase-legend-dot" data-phase-index="{{ forloop.counter0 }}"></span>
+                      <span class="fs-4 fw-bold" style="color: var(--z-cobalt-dark);">{{ p.count }}</span>
+                    </div>
+                    <div class="small text-secondary">{{ p.phase }}</div>
+                  </a>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -262,4 +414,69 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const dataEl = document.getElementById('phaseDistributionData');
+  const canvas = document.getElementById('phaseDonutChart');
+  if (!dataEl || !canvas || typeof Chart === 'undefined') return;
+
+  let phases;
+  try { phases = JSON.parse(dataEl.textContent); } catch(e) { return; }
+  if (!phases || !phases.length) return;
+
+  const palette = ['#1e3a8a','#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#7c3aed','#9333ea'];
+  const colors = phases.map((_, i) => palette[i % palette.length]);
+
+  // Synchroniser les puces de la légende
+  document.querySelectorAll('.phase-legend-dot').forEach(el => {
+    const idx = parseInt(el.dataset.phaseIndex, 10);
+    if (!isNaN(idx) && colors[idx]) el.style.background = colors[idx];
+  });
+
+  new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: phases.map(p => p.phase),
+      datasets: [{
+        data: phases.map(p => p.count),
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          rtl: true, bodyFont: { family: 'Cairo, Amiri, sans-serif' }, titleFont: { family: 'Cairo, Amiri, sans-serif' },
+          callbacks: {
+            label: function(ctx){
+              const total = ctx.dataset.data.reduce((s,v) => s+v, 0);
+              const pct = total ? Math.round((ctx.parsed*100)/total) : 0;
+              return ` ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      },
+      onClick: function(evt, elements){
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const phase = phases[idx];
+        if (phase && phase.phase_code) {
+          window.location.href = "{% url 'cabinet:affaire_list' %}?phase=" + encodeURIComponent(phase.phase_code);
+        }
+      }
+    }
+  });
+})();
+</script>
 {% endblock %}

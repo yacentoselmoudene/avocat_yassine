@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}قوالب واتساب{% endblock %}
+{% block page_title %}قوالب رسائل واتساب{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="text-secondary small">
+    <i class="bi bi-info-circle ms-1"></i>
+    استعمل المتغيرات داخل القالب:
+    <code>{% verbatim %}{{client}}{% endverbatim %}</code>
+    <code>{% verbatim %}{{ref}}{% endverbatim %}</code>
+    <code>{% verbatim %}{{tribunal}}{% endverbatim %}</code>
+    <code>{% verbatim %}{{date}}{% endverbatim %}</code>
+    <code>{% verbatim %}{{heure}}{% endverbatim %}</code>
+    <code>{% verbatim %}{{avocat}}{% endverbatim %}</code>
+  </div>
+  <a href="{% url 'cabinet:whatsapp_template_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle ms-1"></i> قالب جديد
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover m-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th>مفعّل</th>
+          <th>نص الرسالة</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in templates %}
+        <tr>
+          <td><strong>{{ t.nom }}</strong></td>
+          <td><span class="badge bg-info">{{ t.get_kind_display }}</span></td>
+          <td>{% if t.is_active %}<span class="badge bg-success">نعم</span>{% else %}<span class="badge bg-secondary">لا</span>{% endif %}</td>
+          <td class="small text-secondary" style="max-width:380px">{{ t.body|truncatechars:120 }}</td>
+          <td class="text-end">
+            <a href="{% url 'cabinet:whatsapp_template_update' t.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'cabinet:whatsapp_template_delete' t.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">لا توجد قوالب بعد. أنشئ القالب الأول.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

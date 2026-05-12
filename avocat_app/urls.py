@@ -1,12 +1,15 @@
 # avocat_app/urls.py
 from django.urls import path
-from . import views, views_audit
+from . import views, views_audit, views_portail
 
 app_name = "cabinet"
 
 urlpatterns = [
     # ====== الصفحة الرئيسية (يمكن جعلها لائحة القضايا) ======
     path("", views.DashboardView.as_view(), name="dashboard"),
+
+    # ====== Recherche globale (HTMX autocomplete) ======
+    path("search/", views.global_search, name="global_search"),
 
     # ====== Juridiction ======
     path("juridictions/", views.JuridictionList.as_view(), name="juridiction_list"),
@@ -181,8 +184,23 @@ urlpatterns = [
     path("mahakim/", views.MahakimSyncListView.as_view(), name="mahakim_sync"),
     path("mahakim/sync-all/", views.sync_all_mahakim, name="mahakim_sync_all"),
     path("mahakim/preview-all/", views.mahakim_preview_all, name="mahakim_preview_all"),
+    path("mahakim/fetch-ids/", views.fetch_mahakim_ids, name="mahakim_fetch_ids"),
+    path("mahakim/fetch-ids-status/", views.fetch_mahakim_ids_status, name="mahakim_fetch_ids_status"),
+    path("mahakim/fetch-ids-export/", views.fetch_mahakim_ids_export, name="mahakim_fetch_ids_export"),
     path("affaires/<uuid:pk>/sync-mahakim/", views.sync_affaire_mahakim, name="affaire_sync_mahakim"),
     path("affaires/<uuid:pk>/sync-preview/", views.mahakim_preview_single, name="mahakim_preview_single"),
+    path("mahakim/sync-sessions/", views.sync_sessions_mahakim, name="mahakim_sync_sessions"),
+    path("mahakim/preview-sessions/", views.mahakim_preview_sessions, name="mahakim_preview_sessions"),
+    path("mahakim/tribunaux-pi/", views.get_tribunaux_pi, name="mahakim_tribunaux_pi"),
+
+    # ====== المسطرة الغيابية (Contumace) ======
+    path("contumace/", views.ContumaceListView.as_view(), name="contumace_list"),
+    path("mahakim/sync-contumace/", views.sync_contumace_mahakim, name="mahakim_sync_contumace"),
+    path("mahakim/sync-contumace-status/", views.contumace_sync_status, name="mahakim_sync_contumace_status"),
+    path("mahakim/preview-contumace/", views.mahakim_preview_contumace, name="mahakim_preview_contumace"),
+
+    # ====== حاسبة الرسوم القضائية (Tax Calculator — حساب محلي) ======
+    path("tax-calculator/", views.TaxCalculatorView.as_view(), name="tax_calculator"),
 
     # ====== Document viewer & print ======
     path("viewer/", views.document_viewer, name="document_viewer"),
@@ -193,4 +211,32 @@ urlpatterns = [
 
     path("audit/", views_audit.AuditLogList.as_view(), name="audit_list"),
     path("audit/<uuid:pk>/", views_audit.AuditLogDetail.as_view(), name="audit_detail"),
+
+    # ====== Carte des juridictions (Leaflet) ======
+    path("map/", views.juridictions_map, name="juridictions_map"),
+
+    # ====== Recherche jurisprudentielle (sémantique) ======
+    path("search/jurisprudence/", views.jurisprudence_search, name="jurisprudence_search"),
+
+    # ====== Portail client (magic link) ======
+    path("parties/<uuid:partie_id>/portail-link/", views.portail_issue_link, name="portail_issue_link"),
+    path("portail/login/", views_portail.portail_login, name="portail_login"),
+    path("portail/access/<str:token>/", views_portail.portail_access, name="portail_access"),
+    path("portail/logout/", views_portail.portail_logout, name="portail_logout"),
+    path("portail/", views_portail.portail_dashboard, name="portail_dashboard"),
+    path("portail/affaire/<uuid:pk>/", views_portail.portail_affaire_detail, name="portail_affaire_detail"),
+
+    # ====== AI — Analyse de décision (Claude) ======
+    path("decisions/<uuid:pk>/ai-analyze/", views.decision_ai_analyze, name="decision_ai_analyze"),
+
+    # ====== WhatsApp Webhook entrant (Twilio) ======
+    path("webhooks/twilio/whatsapp/", views.whatsapp_webhook, name="whatsapp_webhook"),
+
+    # ====== WhatsApp (Twilio) ======
+    path("whatsapp/templates/", views.WhatsAppTemplateList.as_view(), name="whatsapp_template_list"),
+    path("whatsapp/templates/create/", views.WhatsAppTemplateCreate.as_view(), name="whatsapp_template_create"),
+    path("whatsapp/templates/<uuid:pk>/update/", views.WhatsAppTemplateUpdate.as_view(), name="whatsapp_template_update"),
+    path("whatsapp/templates/<uuid:pk>/delete/", views.WhatsAppTemplateDelete.as_view(), name="whatsapp_template_delete"),
+    path("whatsapp/messages/", views.WhatsAppMessageList.as_view(), name="whatsapp_message_list"),
+    path("audiences/<uuid:audience_id>/whatsapp-remind/", views.whatsapp_send_audience_reminder, name="whatsapp_send_audience_reminder"),
 ]

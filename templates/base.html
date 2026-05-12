@@ -69,6 +69,9 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'roles' %}"><i class="bi bi-person-badge ms-1"></i> أدوار المستخدمين</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'types-alerte' %}"><i class="bi bi-bell ms-1"></i> أنواع التنبيهات</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet_ref:ref_list' 'typeavertissement' %}"><i class="bi bi-exclamation-triangle ms-1"></i> أنواع الإنذارات</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:whatsapp_template_list' %}"><i class="bi bi-whatsapp ms-1"></i> قوالب واتساب</a></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:whatsapp_message_list' %}"><i class="bi bi-chat-dots ms-1"></i> سجل رسائل واتساب</a></li>
                 </ul>
               </li>
 
@@ -111,6 +114,20 @@
                 </a>
               </li>
 
+              <!-- Carte -->
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'cabinet:juridictions_map' %}">
+                  <i class="bi bi-geo-alt ms-1"></i> الخريطة
+                </a>
+              </li>
+
+              <!-- Recherche jurisprudentielle (IA) -->
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'cabinet:jurisprudence_search' %}">
+                  <i class="bi bi-stars ms-1"></i> اجتهادات
+                </a>
+              </li>
+
               <!-- Référentiel “archives” -->
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">الأرشيف والمرجع</a>
@@ -122,6 +139,26 @@
                 </ul>
               </li>
             </ul>
+
+            <!-- Recherche globale -->
+            {% if request.user.is_authenticated %}
+            <div class="global-search-wrap me-3 my-2 my-lg-0" id="globalSearchWrap">
+              <i class="bi bi-search gs-icon"></i>
+              <input
+                type="search"
+                name="q"
+                class="form-control form-control-sm"
+                placeholder="بحث عن قضية، طرف، محكمة، محامٍ…"
+                autocomplete="off"
+                hx-get="{% url 'cabinet:global_search' %}"
+                hx-trigger="keyup changed delay:300ms, focus"
+                hx-target="#globalSearchDropdown"
+                hx-swap="innerHTML"
+                aria-label="بحث عام"
+                id="globalSearchInput">
+              <div class="global-search-dropdown" id="globalSearchDropdown" role="listbox"></div>
+            </div>
+            {% endif %}
 
             <!-- Profil -->
             <ul class="navbar-nav mb-2 mb-lg-0">
@@ -257,8 +294,41 @@
         const form = q.closest('form');
         if (form) form.dispatchEvent(new Event('change', {bubbles:true}));
       }
+      // Fermer aussi le dropdown de recherche globale
+      const dd = document.getElementById('globalSearchDropdown');
+      if (dd) dd.classList.remove('is-open');
+      const gi = document.getElementById('globalSearchInput');
+      if (gi && document.activeElement === gi) gi.blur();
     }
   });
+
+  // Recherche globale: gérer l'ouverture/fermeture du dropdown
+  (function(){
+    const wrap = document.getElementById('globalSearchWrap');
+    if (!wrap) return;
+    const input = document.getElementById('globalSearchInput');
+    const dropdown = document.getElementById('globalSearchDropdown');
+
+    function openDd(){ dropdown.classList.add('is-open'); }
+    function closeDd(){ dropdown.classList.remove('is-open'); }
+
+    input.addEventListener('focus', function(){
+      if (input.value.trim().length >= 2 || dropdown.innerHTML.trim()) openDd();
+    });
+
+    document.addEventListener('click', function(e){
+      if (!wrap.contains(e.target)) closeDd();
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function(evt){
+      if (evt.target && evt.target.id === 'globalSearchDropdown') openDd();
+    });
+
+    // Si l'utilisateur clique sur un résultat, fermer le dropdown
+    dropdown.addEventListener('click', function(e){
+      if (e.target.closest('a')) closeDd();
+    });
+  })();
 </script>
 <script>
   document.body.addEventListener('htmx:beforeRequest', ()=> document.body.style.cursor='wait');

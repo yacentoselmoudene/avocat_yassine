@@ -28,6 +28,7 @@ from .models import (
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte, Expert, Barreau,
     Avertissement, PhaseAffaire, DocumentRequirement, MahakimSyncResult,
+    ContumaceRecord, WhatsAppTemplate, WhatsAppMessage, DecisionAnalysis,
 )
 
 from .filters import AffaireFilter, DepenseFilter, RecetteFilter, PieceJointeFilter, AudienceFilter
@@ -366,7 +367,146 @@ class DashboardView(SecureBase, TemplateView):
             for p in phase_dist
         ]
 
+        # Widget "ما عليّ اليوم" (Today's actionable items)
+        now = timezone.now()
+        today_start = timezone.make_aware(
+            timezone.datetime.combine(today, timezone.datetime.min.time())
+        ) if timezone.is_naive(now) else now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
+        deadline_24h = today + timedelta(days=1)
+
+        today_audiences = (
+            Audience.objects.select_related("affaire", "affaire__juridiction", "type_audience")
+            .filter(date_audience__gte=today_start, date_audience__lt=tomorrow_start)
+            .order_by("date_audience")
+        )
+
+        urgent_avertissements = (
+            Avertissement.objects.select_related("affaire", "type_avertissement")
+            .filter(date_echeance__range=(today, deadline_24h), resultat="en_attente")
+            .order_by("date_echeance")
+        )
+
+        urgent_recours = (
+            VoieDeRecours.objects.select_related("decision__affaire", "type_recours")
+            .filter(date_echeance_recours__range=(today, deadline_24h))
+            .order_by("date_echeance_recours")
+        )
+
+        try:
+            today_taches = list(
+                Tache.objects.select_related("statut", "assigne_a")
+                .filter(echeance__date=today)
+                .order_by("echeance")[:5]
+            )
+        except Exception:
+            today_taches = []
+
+        ctx["today_widget"] = {
+            "audiences": today_audiences,
+            "avertissements": urgent_avertissements,
+            "recours": urgent_recours,
+            "taches": today_taches,
+            "total_count": (
+                today_audiences.count()
+                + urgent_avertissements.count()
+                + urgent_recours.count()
+                + len(today_taches)
+            ),
+        }
+
         return ctx
+
+
+# =============================================================
+# RECHERCHE GLOBALE (HTMX autocomplete)
+# =============================================================
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def global_search(request: HttpRequest) -> HttpResponse:
+    """Recherche globale multi-modèles renvoyant un dropdown HTML pour HTMX."""
+    q = (request.GET.get("q") or "").strip()
+    ctx = {"q": q, "groups": [], "too_short": False}
+
+    if len(q) < 2:
+        ctx["too_short"] = True
+        return render(request, "_partials/_global_search_results.html", ctx)
+
+    LIMIT = 5
+
+    affaires = (
+        Affaire.objects.select_related("juridiction", "type_affaire")
+        .filter(
+            Q(reference_interne__icontains=q)
+            | Q(reference_tribunal__icontains=q)
+            | Q(numero_dossier__icontains=q)
+            | Q(objet__icontains=q)
+        )[:LIMIT]
+    )
+    parties = (
+        Partie.objects.filter(
+            Q(nom_complet__icontains=q)
+            | Q(telephone__icontains=q)
+            | Q(cin_ou_rc__icontains=q)
+            | Q(email__icontains=q)
+        )[:LIMIT]
+    )
+    juridictions = (
+        Juridiction.objects.filter(
+            Q(nomtribunal_ar__icontains=q)
+            | Q(nomtribunal_fr__icontains=q)
+            | Q(villetribunal_ar__icontains=q)
+            | Q(villetribunal_fr__icontains=q)
+            | Q(code__icontains=q)
+        )[:LIMIT]
+    )
+    avocats = (
+        Avocat.objects.filter(
+            Q(nom__icontains=q) | Q(telephone__icontains=q) | Q(email__icontains=q)
+        )[:LIMIT]
+    )
+
+    groups = []
+    if affaires:
+        groups.append({
+            "label": "القضايا", "icon": "bi-folder2",
+            "items": [{
+                "title": a.reference_interne,
+                "subtitle": f"{a.type_affaire} — {a.juridiction.nomtribunal_ar or a.juridiction.nomtribunal_fr or ''}",
+                "url": a.get_absolute_url(),
+            } for a in affaires],
+        })
+    if parties:
+        groups.append({
+            "label": "الأطراف", "icon": "bi-person",
+            "items": [{
+                "title": p.nom_complet,
+                "subtitle": f"{p.get_type_partie_display()} — {p.telephone or p.cin_ou_rc or p.email or ''}",
+                "url": p.get_absolute_url(),
+            } for p in parties],
+        })
+    if juridictions:
+        groups.append({
+            "label": "المحاكم", "icon": "bi-building",
+            "items": [{
+                "title": j.nomtribunal_ar or j.nomtribunal_fr or j.code,
+                "subtitle": j.villetribunal_ar or j.villetribunal_fr or "",
+                "url": j.get_absolute_url(),
+            } for j in juridictions],
+        })
+    if avocats:
+        groups.append({
+            "label": "المحامون", "icon": "bi-person-badge",
+            "items": [{
+                "title": a.nom,
+                "subtitle": a.telephone or a.email or "",
+                "url": a.get_absolute_url(),
+            } for a in avocats],
+        })
+
+    ctx["groups"] = groups
+    return render(request, "_partials/_global_search_results.html", ctx)
+
 
 # =============================================================
 # AFFAIRES
@@ -917,6 +1057,17 @@ class DecisionDetail(SecureBase, DetailView):
     model = Decision
     template_name = "avocat/decision_detail.html"
     permission_required = "cabinet.view_decision"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        try:
+            ctx["analysis"] = self.object.analysis
+        except DecisionAnalysis.DoesNotExist:
+            ctx["analysis"] = None
+        ctx["pdf_pieces"] = list(
+            self.object.affaire.pieces.filter(type_piece="PDF").order_by("-date_ajout")[:20]
+        )
+        return ctx
 
 class DecisionCreate(SecureBase, HTMXModalFormMixin, CreateView):
     model = Decision
@@ -2112,8 +2263,14 @@ class AvertissementCreateForAffaire(SecureBase, HTMXModalFormMixin, CreateView):
 
 import threading
 import logging as _logging
+import uuid as _uuid
+from io import BytesIO
 
 _mahakim_logger = _logging.getLogger(__name__)
+
+# --- Background task tracking for fetch_mahakim_ids ---
+_mahakim_fetch_lock = threading.Lock()
+_mahakim_fetch_tasks = {}  # task_id → {status, phase, current, total, name, message, result, errors}
 
 
 @login_required
@@ -2164,20 +2321,32 @@ def sync_affaire_mahakim(request, pk):
     try:
         from .services.mahakim_scraper import MahakimScraper
 
-        type_juridiction = None
-        if hasattr(affaire.juridiction, 'type') and affaire.juridiction.type:
-            type_juridiction = str(affaire.juridiction.type)
+        id_mahakim = None
+        is_premiere = False
+        nom_tribunal = None
+        nom_tribunal_appel = None
+        if affaire.juridiction:
+            id_mahakim = affaire.juridiction.id_mahakim
+            is_premiere = bool(affaire.juridiction.TribunalParent)
+            nom_tribunal = affaire.juridiction.nomtribunal_ar
+            if affaire.juridiction.TribunalParent:
+                nom_tribunal_appel = affaire.juridiction.TribunalParent.nomtribunal_ar
 
-        with MahakimScraper(headless=True, timeout=30) as scraper:
+        with MahakimScraper(headless=False, timeout=30) as scraper:
             result = scraper.scrape_affaire(
                 numero=affaire.numero_dossier,
                 code_categorie=affaire.code_categorie.code,
                 annee=affaire.annee_dossier,
-                type_juridiction=type_juridiction,
+                id_mahakim_tribunal=id_mahakim,
+                is_premiere_instance=is_premiere,
+                nom_tribunal=nom_tribunal,
+                nom_tribunal_appel=nom_tribunal_appel,
             )
+
 
         sync_obj = MahakimSyncResult.objects.create(
             affaire=affaire,
+            sync_type='dossier',
             statut_mahakim=result.get("statut_mahakim"),
             prochaine_audience=result.get("prochaine_audience"),
             juge=result.get("juge"),
@@ -2185,6 +2354,8 @@ def sync_affaire_mahakim(request, pk):
             raw_html=(result.get("raw_html") or "")[:50000],
             success=result.get("success", False),
             error_message=result.get("error_message"),
+            procedures_json=result.get("procedures") or None,
+            parties_json=result.get("parties") or None,
         )
 
         if result["success"]:
@@ -2195,6 +2366,9 @@ def sync_affaire_mahakim(request, pk):
                     "statut": result.get("statut_mahakim"),
                     "prochaine_audience": str(result.get("prochaine_audience") or ""),
                     "juge": result.get("juge"),
+                    "card_info": result.get("card_info", {}),
+                    "procedures": result.get("procedures", []),
+                    "parties": result.get("parties", []),
                 },
             })
         else:
@@ -2232,7 +2406,7 @@ class MahakimSyncListView(SecureBase, NoPostOnReadOnlyMixin, ListView):
             )
             .exclude(numero_dossier="")
             .exclude(annee_dossier="")
-            .select_related("code_categorie", "juridiction", "type_affaire", "statut_affaire")
+            .select_related("code_categorie", "juridiction", "juridiction__TribunalParent", "type_affaire", "statut_affaire")
             .order_by("-date_ouverture")
         )
 
@@ -2279,6 +2453,604 @@ def sync_all_mahakim(request):
         "ok": True,
         "message": "بدأت المزامنة في الخلفية. أعد تحميل الصفحة بعد دقائق لرؤية النتائج.",
     })
+
+
+@login_required
+def fetch_mahakim_ids(request):
+    """Lance la récupération des IDs des tribunaux en arrière-plan."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST فقط"}, status=405)
+
+    task_id = str(_uuid.uuid4())
+
+    with _mahakim_fetch_lock:
+        _mahakim_fetch_tasks[task_id] = {
+            "status": "running",
+            "phase": "init",
+            "current": 0,
+            "total": 0,
+            "name": "",
+            "message": "جاري بدء المهمة...",
+            "result": None,
+            "errors": [],
+        }
+
+    def _run_fetch(tid):
+        task = _mahakim_fetch_tasks[tid]
+        try:
+            from .services.mahakim_scraper import MahakimScraper
+
+            def _progress(phase, current, total, name, message):
+                with _mahakim_fetch_lock:
+                    task["phase"] = phase
+                    task["current"] = current
+                    task["total"] = total
+                    task["name"] = name
+                    task["message"] = message
+
+            with MahakimScraper(headless=False, timeout=120) as scraper:
+                data = scraper.fetch_tribunal_ids(progress_callback=_progress)
+
+            # Stocker les données brutes pour export Excel
+            with _mahakim_fetch_lock:
+                task["message"] = "جاري تحديث قاعدة البيانات..."
+                task["phase"] = "saving"
+
+            # Matching avec la BD
+            matched = 0
+            unmatched = []
+
+            for item in data.get("appel", []):
+                name = item.get("name", "").strip()
+                mahakim_id = str(item.get("id", "")).strip()
+                if not name or not mahakim_id:
+                    continue
+                qs = Juridiction.objects.filter(
+                    nomtribunal_ar__icontains=name, TribunalParent__isnull=True
+                )
+                if not qs.exists():
+                    qs = Juridiction.objects.filter(nomtribunal_ar__icontains=name)
+                if qs.exists():
+                    qs.update(id_mahakim=mahakim_id)
+                    matched += qs.count()
+                else:
+                    unmatched.append(name)
+
+            inserted = 0
+            import re as _re
+
+            def _normalize_ar(text):
+                """Normalize Arabic: alef variants → ا, remove diacritics."""
+                if not text:
+                    return ''
+                text = _re.sub('[إأآٱ]', 'ا', text)
+                text = _re.sub('[\u064B-\u065F\u0670]', '', text)
+                return _re.sub(r'\s+', ' ', text).strip()
+
+            for item in data.get("premiere_instance", []):
+                name = item.get("name", "").strip()
+                mahakim_id = str(item.get("id", "")).strip()
+                parent_name = item.get("parent_appel_name", "").strip()
+                if not name or not mahakim_id:
+                    continue
+
+                # Resolve parent appeal court
+                parent_jur = None
+                if parent_name:
+                    parent_jur = Juridiction.objects.filter(
+                        nomtribunal_ar__icontains=parent_name,
+                        TribunalParent__isnull=True,
+                    ).first()
+
+                # 1. Try exact icontains match (with parent)
+                qs = Juridiction.objects.filter(
+                    nomtribunal_ar__icontains=name, TribunalParent__isnull=False
+                )
+                if parent_name and qs.count() > 1:
+                    qs_refined = qs.filter(TribunalParent__nomtribunal_ar__icontains=parent_name)
+                    if qs_refined.exists():
+                        qs = qs_refined
+
+                # 2. Fallback: try without parent filter
+                if not qs.exists():
+                    qs = Juridiction.objects.filter(nomtribunal_ar__icontains=name)
+
+                # 3. Fallback: normalized matching (handles alef/hamza differences)
+                if not qs.exists():
+                    norm_name = _normalize_ar(name)
+                    for j in Juridiction.objects.filter(is_deleted=False).exclude(
+                        nomtribunal_ar__icontains='استئناف'
+                    ):
+                        if _normalize_ar(j.nomtribunal_ar) == norm_name:
+                            qs = Juridiction.objects.filter(pk=j.pk)
+                            break
+
+                if qs.exists():
+                    # Update id_mahakim AND TribunalParent if missing
+                    update_fields = {'id_mahakim': mahakim_id}
+                    if parent_jur:
+                        update_fields['TribunalParent'] = parent_jur
+                    qs.filter(TribunalParent__isnull=True).update(**update_fields)
+                    qs.filter(TribunalParent__isnull=False).update(id_mahakim=mahakim_id)
+                    matched += qs.count()
+                else:
+                    # Auto-insert: create new Juridiction linked to parent cour d'appel
+                    if parent_jur:
+                        from .models import TypeJuridiction
+                        type_pi = TypeJuridiction.objects.filter(code_type="TPI").first()
+                        if type_pi:
+                            Juridiction.objects.create(
+                                code=mahakim_id,
+                                nomtribunal_ar=name,
+                                nomtribunal_fr=name,
+                                type=type_pi,
+                                TribunalParent=parent_jur,
+                                id_mahakim=mahakim_id,
+                            )
+                            inserted += 1
+                            matched += 1
+                        else:
+                            unmatched.append(name)
+                    else:
+                        unmatched.append(name)
+
+            total_fetched = len(data.get("appel", [])) + len(data.get("premiere_instance", []))
+
+            msg_parts = [f"تم جلب {total_fetched} محكمة", f"تم ربط {matched}"]
+            if inserted:
+                msg_parts.append(f"تم إنشاء {inserted} محكمة جديدة")
+            if unmatched:
+                msg_parts.append(f"لم يُطابَق {len(unmatched)}")
+
+            with _mahakim_fetch_lock:
+                task["status"] = "done"
+                task["phase"] = "done"
+                task["message"] = " — ".join(msg_parts)
+                task["result"] = {
+                    "appel": data.get("appel", []),
+                    "premiere_instance": data.get("premiere_instance", []),
+                    "matched": matched,
+                    "inserted": inserted,
+                    "unmatched": unmatched,
+                    "total_fetched": total_fetched,
+                }
+                task["errors"] = data.get("errors", [])
+
+        except ImportError:
+            with _mahakim_fetch_lock:
+                task["status"] = "error"
+                task["message"] = "مكتبة Selenium غير مثبتة. قم بتثبيتها: pip install selenium"
+        except Exception as e:
+            _mahakim_logger.exception("Erreur fetch_mahakim_ids: %s", e)
+            with _mahakim_fetch_lock:
+                task["status"] = "error"
+                task["message"] = f"خطأ: {str(e)[:200]}"
+
+    thread = threading.Thread(target=_run_fetch, args=(task_id,), daemon=True)
+    thread.start()
+
+    return JsonResponse({"ok": True, "task_id": task_id})
+
+
+@login_required
+def fetch_mahakim_ids_status(request):
+    """Retourne le statut de la tâche fetch_mahakim_ids (polling)."""
+    task_id = request.GET.get("task_id", "")
+    with _mahakim_fetch_lock:
+        task = _mahakim_fetch_tasks.get(task_id)
+    if not task:
+        return JsonResponse({"ok": False, "message": "مهمة غير موجودة"}, status=404)
+
+    with _mahakim_fetch_lock:
+        return JsonResponse({
+            "ok": True,
+            "status": task["status"],
+            "phase": task["phase"],
+            "current": task["current"],
+            "total": task["total"],
+            "name": task["name"],
+            "message": task["message"],
+            "errors": task.get("errors", []),
+            "result": task.get("result") if task["status"] == "done" else None,
+        })
+
+
+@login_required
+def fetch_mahakim_ids_export(request):
+    """Exporte les résultats du fetch en Excel."""
+    task_id = request.GET.get("task_id", "")
+    with _mahakim_fetch_lock:
+        task = _mahakim_fetch_tasks.get(task_id)
+
+    if not task or task["status"] != "done" or not task.get("result"):
+        return JsonResponse({"ok": False, "message": "لا توجد نتائج للتصدير"}, status=404)
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    except ImportError:
+        return JsonResponse({"ok": False, "message": "مكتبة openpyxl غير مثبتة"}, status=500)
+
+    result = task["result"]
+    wb = openpyxl.Workbook()
+
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="2C6B4F", end_color="2C6B4F", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin"), right=Side(style="thin"),
+        top=Side(style="thin"), bottom=Side(style="thin"),
+    )
+
+    # --- Feuille 1: Cours d'appel ---
+    ws_appel = wb.active
+    ws_appel.title = "محاكم الاستئناف"
+    ws_appel.sheet_view.rightToLeft = True
+    headers_a = ["#", "معرف محاكم.ما", "اسم المحكمة"]
+    for col, h in enumerate(headers_a, 1):
+        cell = ws_appel.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+    for i, court in enumerate(result.get("appel", []), 1):
+        ws_appel.cell(row=i + 1, column=1, value=i).border = thin_border
+        ws_appel.cell(row=i + 1, column=2, value=court.get("id", "")).border = thin_border
+        ws_appel.cell(row=i + 1, column=3, value=court.get("name", "")).border = thin_border
+    ws_appel.column_dimensions["A"].width = 8
+    ws_appel.column_dimensions["B"].width = 18
+    ws_appel.column_dimensions["C"].width = 45
+
+    # --- Feuille 2: Tribunaux de 1ère instance ---
+    ws_pi = wb.create_sheet("المحاكم الابتدائية")
+    ws_pi.sheet_view.rightToLeft = True
+    headers_p = ["#", "معرف محاكم.ما", "اسم المحكمة", "محكمة الاستئناف الأم"]
+    for col, h in enumerate(headers_p, 1):
+        cell = ws_pi.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+    for i, court in enumerate(result.get("premiere_instance", []), 1):
+        ws_pi.cell(row=i + 1, column=1, value=i).border = thin_border
+        ws_pi.cell(row=i + 1, column=2, value=court.get("id", "")).border = thin_border
+        ws_pi.cell(row=i + 1, column=3, value=court.get("name", "")).border = thin_border
+        ws_pi.cell(row=i + 1, column=4, value=court.get("parent_appel_name", "")).border = thin_border
+    ws_pi.column_dimensions["A"].width = 8
+    ws_pi.column_dimensions["B"].width = 18
+    ws_pi.column_dimensions["C"].width = 45
+    ws_pi.column_dimensions["D"].width = 40
+
+    # --- Feuille 3: Non-appariés ---
+    unmatched = result.get("unmatched", [])
+    if unmatched:
+        ws_un = wb.create_sheet("غير مطابقة")
+        ws_un.sheet_view.rightToLeft = True
+        headers_u = ["#", "اسم المحكمة"]
+        for col, h in enumerate(headers_u, 1):
+            cell = ws_un.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = PatternFill(start_color="C0392B", end_color="C0392B", fill_type="solid")
+            cell.alignment = header_align
+            cell.border = thin_border
+        for i, name in enumerate(unmatched, 1):
+            ws_un.cell(row=i + 1, column=1, value=i).border = thin_border
+            ws_un.cell(row=i + 1, column=2, value=name).border = thin_border
+        ws_un.column_dimensions["A"].width = 8
+        ws_un.column_dimensions["B"].width = 50
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    response = HttpResponse(
+        buf.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="mahakim_tribunaux.xlsx"'
+    return response
+
+
+# =============================================================
+# MAHAKIM — SESSION SYNC (مزامنة جدول الجلسات)
+# =============================================================
+
+@login_required
+def mahakim_preview_sessions(request):
+    """Returns modal HTML for session sync with court selector + date picker."""
+    # Appeal courts for the main dropdown
+    appel = Juridiction.objects.filter(
+        nomtribunal_ar__icontains='استئناف',
+        is_deleted=False,
+    ).select_related("type").order_by("nomtribunal_ar")
+
+    html = render_to_string("modals/_mahakim_preview_sessions.html", {
+        "juridictions_appel": appel,
+    }, request=request)
+    return HttpResponse(html)
+
+
+@login_required
+def get_tribunaux_pi(request):
+    """API: returns PI tribunals for a given appeal court (parent)."""
+    parent_id = request.GET.get("parent_id")
+    if not parent_id:
+        return JsonResponse({"tribunaux": []})
+
+    tribunaux = Juridiction.objects.filter(
+        TribunalParent_id=parent_id,
+        is_deleted=False,
+    ).order_by("nomtribunal_ar").values("pk", "nomtribunal_ar", "id_mahakim")
+
+    return JsonResponse({
+        "tribunaux": [
+            {"pk": str(t["pk"]), "nom": t["nomtribunal_ar"], "id_mahakim": t["id_mahakim"] or ""}
+            for t in tribunaux
+        ]
+    })
+
+
+@login_required
+def sync_sessions_mahakim(request):
+    """Sync session schedule from mahakim.ma for a given court + date."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST فقط"}, status=405)
+
+    import json as _j
+    try:
+        body = _j.loads(request.body)
+    except (ValueError, TypeError):
+        body = request.POST
+
+    juridiction_id = body.get("juridiction_id")
+    date_seance = body.get("date")
+    type_seance = body.get("type_seance") or None
+
+    if not juridiction_id or not date_seance:
+        return JsonResponse({
+            "ok": False,
+            "message": "يجب اختيار المحكمة والتاريخ"
+        })
+
+    try:
+        juridiction = Juridiction.objects.get(pk=juridiction_id)
+    except Juridiction.DoesNotExist:
+        return JsonResponse({"ok": False, "message": "المحكمة غير موجودة"})
+
+    try:
+        from .services.mahakim_scraper import MahakimScraper
+
+        # Auto-resolve parent appeal court for first-instance tribunals
+        is_premiere = bool(juridiction.TribunalParent)
+        nom_tribunal = juridiction.nomtribunal_ar
+
+        if is_premiere:
+            # First-instance court → use parent appeal court for scraping
+            parent = juridiction.TribunalParent
+            nom_tribunal_appel = parent.nomtribunal_ar
+            id_mahakim = parent.id_mahakim or juridiction.id_mahakim or None
+        else:
+            # Already an appeal court (or CC)
+            nom_tribunal_appel = None
+            id_mahakim = juridiction.id_mahakim or None
+
+        with MahakimScraper(headless=False, timeout=30) as scraper:
+            result = scraper.scrape_sessions(
+                id_mahakim_tribunal=id_mahakim,
+                date_seance=date_seance,
+                type_seance=type_seance,
+                is_premiere_instance=is_premiere,
+                nom_tribunal=nom_tribunal,
+                nom_tribunal_appel=nom_tribunal_appel,
+            )
+
+        # Store sync result
+        MahakimSyncResult.objects.create(
+            sync_type='sessions',
+            statut_mahakim=f"جلسات {juridiction.nomtribunal_ar} — {date_seance}",
+            observations=f"{len(result.get('sessions', []))} جلسة",
+            raw_html=(result.get("raw_html") or "")[:50000],
+            success=result.get("success", False),
+            error_message=result.get("error_message"),
+            procedures_json=result.get("sessions"),
+        )
+
+        if result["success"]:
+            return JsonResponse({
+                "ok": True,
+                "message": f"تم جلب {len(result.get('sessions', []))} جلسة",
+                "sessions": result.get("sessions", []),
+            })
+        else:
+            return JsonResponse({
+                "ok": False,
+                "message": result.get("error_message", "فشلت المزامنة"),
+            })
+
+    except ImportError:
+        return JsonResponse({
+            "ok": False,
+            "message": "مكتبة Selenium غير مثبتة. قم بتثبيتها: pip install selenium",
+        })
+    except Exception as e:
+        _mahakim_logger.exception("Erreur sync sessions mahakim")
+        return JsonResponse({
+            "ok": False,
+            "message": f"خطأ: {str(e)[:200]}",
+        })
+
+
+# =============================================================
+# المسطرة الغيابية — CONTUMACE SYNC
+# =============================================================
+
+_contumace_sync_lock = threading.Lock()
+_contumace_sync_tasks = {}  # task_id → {status, phase, current_page, total_pages, records_count, message}
+
+
+class ContumaceListView(SecureBase, SearchListMixin, ListView):
+    model = ContumaceRecord
+    template_name = "cabinet/contumace_list.html"
+    context_object_name = "records"
+    paginate_by = 50
+    permission_required = ''
+    search_fields = ["nom_accuse", "numero_dossier", "cour_appel", "numero_carte", "nom_pere", "nom_mere"]
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["total_records"] = ContumaceRecord.objects.count()
+        return ctx
+
+
+@login_required
+def mahakim_preview_contumace(request):
+    """Returns modal HTML for contumace sync explanation + optional search."""
+    html = render_to_string("modals/_mahakim_preview_contumace.html", {}, request=request)
+    return HttpResponse(html)
+
+
+@login_required
+def sync_contumace_mahakim(request):
+    """Lance le scraping de la page contumace en arrière-plan."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST فقط"}, status=405)
+
+    import json as _j
+    try:
+        body = _j.loads(request.body)
+    except (ValueError, TypeError):
+        body = request.POST
+
+    search_query = (body.get("search_query") or "").strip() or None
+
+    task_id = str(_uuid.uuid4())
+
+    with _contumace_sync_lock:
+        _contumace_sync_tasks[task_id] = {
+            "status": "running",
+            "phase": "init",
+            "current_page": 0,
+            "total_pages": 0,
+            "records_count": 0,
+            "message": "جاري بدء المهمة...",
+        }
+
+    def _run_contumace(tid):
+        task = _contumace_sync_tasks[tid]
+        scraper = None
+        try:
+            from .services.mahakim_scraper import MahakimScraper
+
+            def _progress(phase, current_page, total_pages, records_count, message):
+                with _contumace_sync_lock:
+                    task["phase"] = phase
+                    task["current_page"] = current_page
+                    task["total_pages"] = total_pages
+                    task["records_count"] = records_count
+                    task["message"] = message
+
+            # Load existing (numero_dossier, cour_appel) keys from DB
+            # so the scraper can skip records that are already stored
+            existing_keys = set(
+                ContumaceRecord.objects.values_list('numero_dossier', 'cour_appel')
+            )
+
+            # Don't use 'with' — on error we keep the browser open for debugging
+            scraper = MahakimScraper(headless=False, timeout=60)
+            scraper._create_driver()
+            data = scraper.scrape_contumace(
+                search_query=search_query,
+                progress_callback=_progress,
+                existing_keys=existing_keys,
+            )
+
+            if data["success"]:
+                # Success: close browser, save records
+                scraper.close()
+
+                with _contumace_sync_lock:
+                    task["phase"] = "saving"
+                    task["message"] = "جاري حفظ السجلات في قاعدة البيانات..."
+
+                saved = 0
+                for rec in data.get("records", []):
+                    if not rec.get("numero_dossier"):
+                        continue
+                    ContumaceRecord.objects.update_or_create(
+                        numero_dossier=rec["numero_dossier"],
+                        cour_appel=rec["cour_appel"],
+                        defaults={
+                            "nom_accuse": rec.get("nom_accuse", ""),
+                            "nom_pere": rec.get("nom_pere", ""),
+                            "nom_mere": rec.get("nom_mere", ""),
+                            "numero_carte": rec.get("numero_carte", ""),
+                            "details_text": rec.get("details_text", ""),
+                        }
+                    )
+                    saved += 1
+
+                with _contumace_sync_lock:
+                    task["status"] = "done"
+                    task["phase"] = "done"
+                    task["records_count"] = saved
+                    task["message"] = f"تم جلب وحفظ {saved} سجل بنجاح"
+            else:
+                # Error from scraper: keep browser open for debugging
+                with _contumace_sync_lock:
+                    task["status"] = "error"
+                    task["message"] = (
+                        (data.get("error_message") or "فشلت المزامنة")
+                        + " — المتصفح مفتوح للتشخيص"
+                    )
+
+        except ImportError:
+            with _contumace_sync_lock:
+                task["status"] = "error"
+                task["message"] = "مكتبة Selenium غير مثبتة. قم بتثبيتها: pip install selenium"
+        except Exception as e:
+            _mahakim_logger.exception("Erreur sync contumace: %s", e)
+            # Keep browser open on unexpected error
+            with _contumace_sync_lock:
+                task["status"] = "error"
+                task["message"] = f"خطأ: {str(e)[:200]} — المتصفح مفتوح للتشخيص"
+
+    thread = threading.Thread(target=_run_contumace, args=(task_id,), daemon=True)
+    thread.start()
+
+    return JsonResponse({"ok": True, "task_id": task_id})
+
+
+@login_required
+def contumace_sync_status(request):
+    """Retourne le statut de la tâche sync contumace (polling)."""
+    task_id = request.GET.get("task_id", "")
+    with _contumace_sync_lock:
+        task = _contumace_sync_tasks.get(task_id)
+
+    if not task:
+        return JsonResponse({"ok": False, "message": "مهمة غير موجودة"})
+
+    with _contumace_sync_lock:
+        return JsonResponse({
+            "ok": True,
+            "status": task["status"],
+            "phase": task["phase"],
+            "current_page": task["current_page"],
+            "total_pages": task["total_pages"],
+            "records_count": task["records_count"],
+            "message": task["message"],
+        })
+
+
+# =============================================================
+# حاسبة الرسوم القضائية — TAX CALCULATOR (محلي)
+# ملحق المرسوم رقم 2.58.1151 — المصاريف القضائية
+# =============================================================
+
+
+class TaxCalculatorView(SecureBase, TemplateView):
+    template_name = "cabinet/tax_calculator.html"
+    permission_required = ''
 
 
 # =============================================================
@@ -2397,3 +3169,258 @@ def print_documents(request):
 @login_required
 def user_guide(request):
     return render(request, "guide/user_guide.html", {"today": timezone.localdate()})
+
+
+# =============================================================
+# WHATSAPP (Twilio) — Templates + Journal + Envoi manuel
+# =============================================================
+
+class WhatsAppTemplateList(SecureBase, ListView):
+    model = WhatsAppTemplate
+    template_name = "whatsapp/template_list.html"
+    context_object_name = "templates"
+    permission_required = "cabinet.view_affaire"
+    paginate_by = 20
+
+
+class WhatsAppTemplateCreate(SecureBase, CreateView):
+    model = WhatsAppTemplate
+    template_name = "whatsapp/template_form.html"
+    fields = ["nom", "kind", "body", "is_active", "twilio_content_sid"]
+    permission_required = "cabinet.change_affaire"
+    success_url = reverse_lazy("cabinet:whatsapp_template_list")
+
+
+class WhatsAppTemplateUpdate(SecureBase, UpdateView):
+    model = WhatsAppTemplate
+    template_name = "whatsapp/template_form.html"
+    fields = ["nom", "kind", "body", "is_active", "twilio_content_sid"]
+    permission_required = "cabinet.change_affaire"
+    success_url = reverse_lazy("cabinet:whatsapp_template_list")
+
+
+class WhatsAppTemplateDelete(SecureBase, DeleteView):
+    model = WhatsAppTemplate
+    template_name = "whatsapp/template_confirm_delete.html"
+    permission_required = "cabinet.change_affaire"
+    success_url = reverse_lazy("cabinet:whatsapp_template_list")
+
+
+class WhatsAppMessageList(SecureBase, ListView):
+    model = WhatsAppMessage
+    template_name = "whatsapp/message_list.html"
+    context_object_name = "messages_qs"
+    permission_required = "cabinet.view_affaire"
+    paginate_by = 30
+
+    def get_queryset(self):
+        return (
+            WhatsAppMessage.objects.select_related("affaire", "audience", "template")
+            .order_by("-created_at")
+        )
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def portail_issue_link(request: HttpRequest, partie_id) -> HttpResponse:
+    """Action back-office: générer et envoyer un magic link à une partie."""
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
+    partie = get_object_or_404(Partie, pk=partie_id)
+    from .services.portail_auth import issue_token, send_magic_link
+    tok = issue_token(partie, request=request)
+    base_url = f"{request.scheme}://{request.get_host()}"
+    sent = send_magic_link(partie, tok.token, base_url=base_url)
+    channels = []
+    if sent.get("email"):
+        channels.append("بريد إلكتروني")
+    if sent.get("whatsapp"):
+        channels.append("واتساب")
+    if channels:
+        messages.success(request, f"تم إرسال رابط البوابة عبر: {', '.join(channels)}.")
+    else:
+        messages.warning(request, f"تم إنشاء الرابط لكن لم يُرسل (لا بريد/هاتف). الرابط: {sent.get('url')}")
+    return redirect(request.POST.get("next") or reverse("cabinet:partie_detail", kwargs={"pk": partie.pk}))
+
+
+@csrf_exempt
+@require_POST
+def whatsapp_webhook(request: HttpRequest) -> HttpResponse:
+    """Webhook Twilio pour les messages WhatsApp entrants.
+
+    Twilio envoie un POST x-www-form-urlencoded contenant entre autres:
+    From, Body, ProfileName, MessageSid, NumMedia.
+
+    Réponse TwiML XML pour que Twilio renvoie le message à l'utilisateur.
+    """
+    from_number = request.POST.get("From", "")
+    body = request.POST.get("Body", "")
+    profile_name = request.POST.get("ProfileName", "")
+    message_sid = request.POST.get("MessageSid", "")
+
+    # Validation optionnelle de signature Twilio (production)
+    try:
+        from .services.twilio_security import validate_twilio_signature
+        if not validate_twilio_signature(request):
+            return HttpResponse("Invalid signature", status=403)
+    except Exception:
+        # En dev / sans signature → on accepte
+        pass
+
+    from .services.whatsapp_bot import handle_inbound_message
+    try:
+        reply = handle_inbound_message(from_number, body,
+                                       profile_name=profile_name,
+                                       message_sid=message_sid)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).exception("WhatsApp bot failed")
+        reply = "⚠️ حدث خطأ مؤقت. حاول مجددا لاحقًا."
+
+    # Réponse TwiML
+    from xml.sax.saxutils import escape
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response>'
+        f'<Message>{escape(reply)}</Message>'
+        '</Response>'
+    )
+    return HttpResponse(xml, content_type="application/xml")
+
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def whatsapp_send_audience_reminder(request: HttpRequest, audience_id) -> HttpResponse:
+    """Envoi manuel d'un rappel WhatsApp pour une audience donnée."""
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
+
+    audience = get_object_or_404(Audience.objects.select_related("affaire", "affaire__juridiction"), pk=audience_id)
+    from .services.twilio_client import send_audience_reminder
+    msg = send_audience_reminder(audience, manual=True)
+
+    if msg and msg.status in ("sent", "dry_run"):
+        messages.success(request, f"تم إرسال التذكير عبر واتساب ({msg.get_status_display()}).")
+    else:
+        err = (msg.error_message if msg else "خطأ غير معروف") or "خطأ"
+        messages.warning(request, f"فشل الإرسال: {err}")
+
+    next_url = request.POST.get("next") or reverse("cabinet:audience_detail", kwargs={"pk": audience.pk})
+    return redirect(next_url)
+
+
+# =============================================================
+# Recherche jurisprudentielle sémantique
+# =============================================================
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def jurisprudence_search(request: HttpRequest) -> HttpResponse:
+    """Recherche sémantique sur les analyses de décisions (embeddings)."""
+    from .services.embeddings import search_decisions
+    from .models import DecisionAnalysis
+
+    q = (request.GET.get("q") or "").strip()
+    results = []
+    if q and len(q) >= 3:
+        scored = search_decisions(q, top_k=10)
+        for analysis, score in scored:
+            results.append({
+                "analysis": analysis,
+                "decision": analysis.decision,
+                "affaire": analysis.decision.affaire,
+                "score": round(score, 4),
+                "score_pct": int(round(score * 100)),
+            })
+
+    total_indexed = DecisionAnalysis.objects.exclude(embedding__isnull=True).count()
+    total_decisions = DecisionAnalysis.objects.count()
+
+    return render(request, "cabinet/jurisprudence_search.html", {
+        "q": q,
+        "results": results,
+        "total_indexed": total_indexed,
+        "total_decisions": total_decisions,
+    })
+
+
+# =============================================================
+# Carte des juridictions (Leaflet + OpenStreetMap)
+# =============================================================
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def juridictions_map(request: HttpRequest) -> HttpResponse:
+    """Page de carte affichant les juridictions géolocalisées."""
+    from django.db.models import Count
+
+    qs = (
+        Juridiction.objects
+        .annotate(affaires_count=Count("affaire", distinct=True))
+        .order_by("villetribunal_ar")
+    )
+
+    points = []
+    missing = []
+    for j in qs:
+        if j.latitude is not None and j.longitude is not None:
+            points.append({
+                "id": j.pk,
+                "nom_ar": j.nomtribunal_ar or "",
+                "nom_fr": j.nomtribunal_fr or "",
+                "ville": j.villetribunal_ar or j.villetribunal_fr or "",
+                "lat": float(j.latitude),
+                "lng": float(j.longitude),
+                "telephone": j.telephonetribunal or "",
+                "affaires_count": j.affaires_count,
+                "url_detail": j.get_absolute_url(),
+                "url_affaires": reverse("cabinet:affaire_list") + f"?juridiction={j.pk}",
+                "url_directions": j.google_maps_directions_url,
+            })
+        else:
+            missing.append(j)
+
+    return render(request, "cabinet/juridictions_map.html", {
+        "points": points,
+        "missing": missing,
+        "missing_count": len(missing),
+        "total_count": len(points) + len(missing),
+    })
+
+
+# =============================================================
+# AI — Analyse de décision via Claude
+# =============================================================
+
+@login_required(login_url=reverse_lazy('authui:login'))
+def decision_ai_analyze(request: HttpRequest, pk) -> HttpResponse:
+    """Lance une analyse IA sur une Decision (texte saisi ou PDF joint)."""
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
+
+    decision = get_object_or_404(Decision.objects.select_related("affaire"), pk=pk)
+    source_text = (request.POST.get("source_text") or "").strip()
+    piece_id = request.POST.get("piece_jointe_id") or None
+
+    piece_jointe = None
+    if piece_id:
+        try:
+            piece_jointe = PieceJointe.objects.filter(pk=piece_id, affaire=decision.affaire).first()
+        except Exception:
+            piece_jointe = None
+
+    from .services.ai_client import analyze_decision
+    try:
+        analysis = analyze_decision(decision, source_text=source_text or None, piece_jointe=piece_jointe)
+    except Exception as e:
+        messages.error(request, f"فشل التحليل: {e}")
+        return redirect(reverse("cabinet:decision_detail", kwargs={"pk": pk}))
+
+    if analysis.error_message:
+        messages.warning(request, f"تم الحفظ مع خطأ: {analysis.error_message[:200]}")
+    elif analysis.is_dry_run:
+        messages.info(request, "تمت المحاكاة بنجاح (لم يتم تكوين مفتاح Anthropic).")
+    else:
+        messages.success(request, f"تم التحليل بنجاح بواسطة {analysis.model_used}.")
+
+    return redirect(reverse("cabinet:decision_detail", kwargs={"pk": pk}))

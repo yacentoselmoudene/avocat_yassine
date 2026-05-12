@@ -1,0 +1,51 @@
+{# FILE: templates/modals/_mahakim_preview_contumace.html #}
+{# معاينة مزامنة المسطرة الغيابية #}
+
+<div id="contumaceSyncPanel">
+  <h6 class="text-danger mb-3"><i class="bi bi-exclamation-triangle-fill ms-1"></i> مزامنة المسطرة الغيابية</h6>
+
+  <div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle ms-1"></i>
+    <strong>ما هي هذه المزامنة؟</strong><br>
+    جلب سجلات المسطرة الغيابية (الحكم الغيابي) من بوابة mahakim.ma.
+    هذه صفحة عمومية لا تحتاج معلومات مسبقة.
+  </div>
+
+  <div class="card border-0 bg-light mb-3">
+    <div class="card-body small">
+      <h6 class="fw-bold mb-2"><i class="bi bi-list-check ms-1"></i> البيانات التي يتم جلبها:</h6>
+      <ul class="mb-0">
+        <li><strong>محكمة الاستئناف</strong> — المحكمة المصدرة للحكم الغيابي</li>
+        <li><strong>رقم الملف</strong> — مرجع الملف في المحكمة</li>
+        <li><strong>اسم المتهم</strong> — الاسم الكامل للمتهم</li>
+        <li><strong>اسم الأب والأم</strong> — معلومات الهوية</li>
+        <li><strong>رقم البطاقة الوطنية</strong></li>
+        <li><strong>تفاصيل الإعلان</strong> — نص الإعلان الغيابي كاملا (التهم، العنوان...)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card border-0 bg-light mb-3">
+    <div class="card-body">
+      <label class="form-label fw-bold small">بحث (اختياري)</label>
+      <input type="text" id="contumaceSearchQuery" class="form-control form-control-sm"
+             placeholder="بحث بالاسم أو رقم الملف... (اتركه فارغا لجلب الكل)">
+      <div class="form-text">إذا تركت هذا الحقل فارغا سيتم جلب جميع السجلات من جميع الصفحات.</div>
+    </div>
+  </div>
+
+  <div class="alert alert-warning py-2 small">
+    <i class="bi bi-clock-history ms-1"></i>
+    <strong>ملاحظة:</strong> قد تستغرق هذه العملية عدة دقائق حسب عدد الصفحات.
+    سيتم فتح متصفح Chrome في الخلفية لجلب البيانات.
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="button" class="btn btn-danger btn-sm" onclick="startContumaceSync()">
+      <i class="bi bi-cloud-download ms-1"></i> بدء المزامنة
+    </button>
+  </div>
+</div>

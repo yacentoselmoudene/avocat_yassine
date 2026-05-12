@@ -452,12 +452,44 @@ class Juridiction(TimeStampedSoftDeleteModel):
     type = models.ForeignKey(TypeJuridiction, on_delete=models.PROTECT, verbose_name='نوع المحكمة')
     TribunalParent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
                                related_name="juridictions_filles", verbose_name="تنتمي إلى")
+    id_mahakim = models.CharField(
+        max_length=20, null=True, blank=True,
+        verbose_name='معرف محاكم.ما',
+        help_text='المعرف الرقمي للمحكمة في بوابة mahakim.ma'
+    )
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        verbose_name='خط العرض', help_text='Latitude (ex: 33.589886)'
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        verbose_name='خط الطول', help_text='Longitude (ex: -7.603869)'
+    )
 
     class Meta:
         db_table = 'juridiction'
         verbose_name = 'محكمة'
         verbose_name_plural = 'محاكم'
         indexes = [models.Index(fields=['villetribunal_ar'])]
+
+    @property
+    def has_coords(self) -> bool:
+        return self.latitude is not None and self.longitude is not None
+
+    @property
+    def google_maps_directions_url(self) -> str:
+        if self.has_coords:
+            return f"https://www.google.com/maps/dir/?api=1&destination={self.latitude},{self.longitude}"
+        name = self.nomtribunal_ar or self.nomtribunal_fr or self.code
+        ville = self.villetribunal_ar or self.villetribunal_fr or ""
+        from urllib.parse import quote
+        return f"https://www.google.com/maps/dir/?api=1&destination={quote(f'{name} {ville}')}"
+
+    @property
+    def waze_url(self) -> str:
+        if self.has_coords:
+            return f"https://waze.com/ul?ll={self.latitude},{self.longitude}&navigate=yes"
+        return ""
 
     def __str__(self):
         return f"{self.nomtribunal_ar} - {self.villetribunal_ar}"
@@ -1123,9 +1155,16 @@ class AuthToken(TimeStampedSoftDeleteModel):
 
 
 class MahakimSyncResult(TimeStampedSoftDeleteModel):
+    SYNC_TYPE_CHOICES = [
+        ('dossier', 'ملف/محضر/شكاية'),
+        ('sessions', 'جدول الجلسات'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, related_name='mahakim_syncs', verbose_name='القضية')
+    affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, related_name='mahakim_syncs', verbose_name='القضية',
+                                null=True, blank=True)
     date_sync = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المزامنة')
+    sync_type = models.CharField(max_length=20, default='dossier', choices=SYNC_TYPE_CHOICES, verbose_name='نوع المزامنة')
     statut_mahakim = models.CharField(max_length=200, null=True, blank=True, verbose_name='حالة القضية بمحاكم')
     prochaine_audience = models.DateField(null=True, blank=True, verbose_name='الجلسة القادمة')
     juge = models.CharField(max_length=200, null=True, blank=True, verbose_name='القاضي')
@@ -1133,6 +1172,8 @@ class MahakimSyncResult(TimeStampedSoftDeleteModel):
     raw_html = models.TextField(null=True, blank=True, verbose_name='HTML خام')
     success = models.BooleanField(default=False, verbose_name='نجاح المزامنة')
     error_message = models.TextField(null=True, blank=True, verbose_name='رسالة الخطأ')
+    procedures_json = models.JSONField(null=True, blank=True, verbose_name='الإجراءات المستخرجة')
+    parties_json = models.JSONField(null=True, blank=True, verbose_name='الأطراف المستخرجة')
 
     class Meta:
         db_table = 'mahakim_sync_result'
@@ -1142,9 +1183,247 @@ class MahakimSyncResult(TimeStampedSoftDeleteModel):
 
     def __str__(self):
         status = "✓" if self.success else "✗"
-        return f"{status} مزامنة {self.affaire.reference_interne} — {self.date_sync:%Y-%m-%d %H:%M}"
+        ref = self.affaire.reference_interne if self.affaire else self.get_sync_type_display()
+        return f"{status} مزامنة {ref} — {self.date_sync:%Y-%m-%d %H:%M}"
 
 
+class ContumaceRecord(TimeStampedSoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    cour_appel = models.CharField(max_length=200, verbose_name='محكمة الاستئناف')
+    numero_dossier = models.CharField(max_length=100, verbose_name='رقم الملف')
+    nom_accuse = models.CharField(max_length=200, verbose_name='اسم المتهم')
+    nom_pere = models.CharField(max_length=200, null=True, blank=True, verbose_name='اسم الأب')
+    nom_mere = models.CharField(max_length=200, null=True, blank=True, verbose_name='اسم الأم')
+    numero_carte = models.CharField(max_length=50, null=True, blank=True, verbose_name='رقم البطاقة')
+    details_text = models.TextField(null=True, blank=True, verbose_name='التفاصيل')
+    date_sync = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ المزامنة')
+
+    class Meta:
+        db_table = 'contumace_record'
+        verbose_name = 'سجل المسطرة الغيابية'
+        verbose_name_plural = 'سجلات المسطرة الغيابية'
+        ordering = ['-date_sync']
+        unique_together = [('numero_dossier', 'cour_appel')]
+
+    def __str__(self):
+        return f"{self.nom_accuse} — {self.numero_dossier} ({self.cour_appel})"
 
 
+class TaxCalculatorCache(models.Model):
+    """
+    Cache les options du calculateur de taxes judiciaires
+    (caisseenligne.justice.gov.ma/CalculTaxes/CalculTaxes).
 
+    Stocke l'arbre complet des options cascadées en JSON:
+    {
+        "مدني": {
+            "options_type_maqal": [
+                {
+                    "value": "...", "label": "...",
+                    "categories": [
+                        {"value": "...", "label": "...", "types_qadiya": ["..."]}
+                    ]
+                }
+            ]
+        },
+        ...
+    }
+    """
+    id = models.AutoField(primary_key=True)
+    options_tree = models.JSONField(default=dict, verbose_name='شجرة الخيارات')
+    date_sync = models.DateTimeField(auto_now=True, verbose_name='تاريخ المزامنة')
+
+    class Meta:
+        db_table = 'tax_calculator_cache'
+        verbose_name = 'ذاكرة حاسبة الرسوم'
+
+    def __str__(self):
+        return f"Tax Cache — {self.date_sync:%Y-%m-%d %H:%M}"
+
+
+# =============================================================
+# WhatsApp / Twilio messaging
+# =============================================================
+
+class WhatsAppTemplate(TimeStampedSoftDeleteModel):
+    """Modèle de message WhatsApp réutilisable avec variables {{...}}.
+    Variables disponibles selon le contexte (audience J-1):
+    - {{client}} : nom du client
+    - {{ref}} : référence interne de l'affaire
+    - {{tribunal}} : nom du tribunal
+    - {{date}} : date de l'audience (JJ/MM/AAAA)
+    - {{heure}} : heure de l'audience (HH:MM)
+    - {{avocat}} : nom de l'avocat responsable
+    """
+    KIND_CHOICES = [
+        ('audience_j1', 'تذكير بجلسة (يوم قبل)'),
+        ('audience_j0', 'تذكير بجلسة (اليوم)'),
+        ('decision_rendue', 'إشعار بصدور حكم'),
+        ('piece_manquante', 'طلب وثيقة'),
+        ('rdv', 'تأكيد موعد'),
+        ('autre', 'أخرى'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    nom = models.CharField(max_length=120, verbose_name='اسم القالب')
+    kind = models.CharField(max_length=30, choices=KIND_CHOICES, default='audience_j1', verbose_name='النوع')
+    body = models.TextField(verbose_name='نص الرسالة',
+                            help_text='يمكن استعمال المتغيرات: {{client}} {{ref}} {{tribunal}} {{date}} {{heure}} {{avocat}}')
+    is_active = models.BooleanField(default=True, verbose_name='مفعّل')
+    twilio_content_sid = models.CharField(max_length=64, null=True, blank=True,
+                                          verbose_name='Twilio Content SID',
+                                          help_text='إذا كانت Twilio تتطلب قالب معتمد (Business)')
+
+    class Meta:
+        db_table = 'whatsapp_template'
+        verbose_name = 'قالب واتساب'
+        verbose_name_plural = 'قوالب واتساب'
+        ordering = ['kind', 'nom']
+
+    def __str__(self):
+        return f"{self.nom} ({self.get_kind_display()})"
+
+    def render(self, context: dict) -> str:
+        text = self.body or ""
+        for k, v in (context or {}).items():
+            text = text.replace("{{" + k + "}}", str(v if v is not None else ""))
+        return text
+
+
+class WhatsAppMessage(TimeStampedSoftDeleteModel):
+    """Journal des messages WhatsApp envoyés via Twilio."""
+    STATUS_CHOICES = [
+        ('pending', 'في الانتظار'),
+        ('sent', 'تم الإرسال'),
+        ('delivered', 'تم التسليم'),
+        ('read', 'تمت القراءة'),
+        ('failed', 'فشل الإرسال'),
+        ('dry_run', 'محاكاة (بدون إرسال)'),
+        ('received', 'وارد'),
+    ]
+    DIRECTION_CHOICES = [
+        ('outbound', 'صادر'),
+        ('inbound', 'وارد'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='outbound',
+                                 verbose_name='الاتجاه')
+    affaire = models.ForeignKey(Affaire, null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name='whatsapp_messages', verbose_name='القضية')
+    audience = models.ForeignKey(Audience, null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name='whatsapp_messages', verbose_name='الجلسة')
+    template = models.ForeignKey(WhatsAppTemplate, null=True, blank=True, on_delete=models.SET_NULL,
+                                 verbose_name='القالب')
+    to_number = models.CharField(max_length=30, verbose_name='رقم المستلم',
+                                 help_text='بصيغة E.164 (+212...)')
+    to_name = models.CharField(max_length=180, null=True, blank=True, verbose_name='اسم المستلم')
+    body = models.TextField(verbose_name='نص الرسالة المُرسلة')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='الحالة')
+    twilio_sid = models.CharField(max_length=64, null=True, blank=True, verbose_name='معرف Twilio')
+    error_message = models.TextField(null=True, blank=True, verbose_name='رسالة الخطأ')
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإرسال')
+
+    class Meta:
+        db_table = 'whatsapp_message'
+        verbose_name = 'رسالة واتساب'
+        verbose_name_plural = 'رسائل واتساب'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['to_number']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['direction']),
+        ]
+
+    def __str__(self):
+        arrow = "←" if self.direction == "inbound" else "→"
+        return f"WA {arrow} {self.to_number} ({self.get_status_display()})"
+
+
+# =============================================================
+# AI — Résumé automatique de décision (Claude)
+# =============================================================
+
+class DecisionAnalysis(TimeStampedSoftDeleteModel):
+    """Résumé et extraction structurée d'une décision par l'IA (Claude)."""
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    decision = models.OneToOneField(Decision, on_delete=models.CASCADE,
+                                    related_name='analysis', verbose_name='الحكم')
+    source_text = models.TextField(null=True, blank=True, verbose_name='النص المصدر',
+                                   help_text='Texte source soumis à l\'IA (extrait du PDF ou saisi).')
+    resume_ar = models.TextField(null=True, blank=True, verbose_name='ملخص بالعربية')
+    resume_fr = models.TextField(null=True, blank=True, verbose_name='Résumé en français')
+    decision_essentielle = models.TextField(null=True, blank=True, verbose_name='القرار الجوهري')
+    parties_extraites = models.JSONField(null=True, blank=True, verbose_name='الأطراف المستخرجة',
+                                         help_text='[{nom, role}]')
+    motifs = models.JSONField(null=True, blank=True, verbose_name='الحيثيات',
+                              help_text='[{titre, contenu}]')
+    delai_appel_jours = models.IntegerField(null=True, blank=True, verbose_name='أجل الاستئناف (أيام)')
+    dates_importantes = models.JSONField(null=True, blank=True, verbose_name='تواريخ مهمة',
+                                         help_text='[{label, date_iso}]')
+    raw_response = models.TextField(null=True, blank=True, verbose_name='الاستجابة الخام')
+    model_used = models.CharField(max_length=64, null=True, blank=True, verbose_name='النموذج')
+    is_dry_run = models.BooleanField(default=False, verbose_name='محاكاة (بدون استدعاء API)')
+    error_message = models.TextField(null=True, blank=True, verbose_name='رسالة الخطأ')
+    generated_at = models.DateTimeField(null=True, blank=True, verbose_name='وقت التحليل')
+    embedding = models.JSONField(null=True, blank=True, verbose_name='التضمين',
+                                 help_text='Vecteur de similarité sémantique (list[float]).')
+    embedding_model = models.CharField(max_length=64, null=True, blank=True,
+                                       verbose_name='نموذج التضمين')
+
+    class Meta:
+        db_table = 'decision_analysis'
+        verbose_name = 'تحليل الحكم'
+        verbose_name_plural = 'تحاليل الأحكام'
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f"تحليل — {self.decision.numero_decision}"
+
+
+# =============================================================
+# Portail client — Accès sécurisé par magic link
+# =============================================================
+
+class PortailAccess(TimeStampedSoftDeleteModel):
+    """Token magique pour l'accès au portail client par une Partie.
+
+    Le token est généré, envoyé par email ou WhatsApp, et permet une
+    session lecture seule de courte durée (par défaut 24h).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    partie = models.ForeignKey(Partie, on_delete=models.CASCADE,
+                               related_name='portail_accesses', verbose_name='الطرف')
+    token = models.CharField(max_length=80, unique=True, verbose_name='رمز الوصول')
+    expires_at = models.DateTimeField(verbose_name='ينتهي في')
+    used_at = models.DateTimeField(null=True, blank=True, verbose_name='تم الاستعمال في')
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='عنوان IP')
+    user_agent = models.CharField(max_length=256, null=True, blank=True, verbose_name='User Agent')
+    revoked = models.BooleanField(default=False, verbose_name='ملغى')
+
+    class Meta:
+        db_table = 'portail_access'
+        verbose_name = 'وصول إلى البوابة'
+        verbose_name_plural = 'وصولات إلى البوابة'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['partie', 'revoked']),
+        ]
+
+    def __str__(self):
+        return f"Portail — {self.partie.nom_complet} (expire {self.expires_at:%Y-%m-%d %H:%M})"
+
+    @property
+    def is_valid(self) -> bool:
+        from django.utils import timezone
+        return (
+            not self.revoked
+            and self.expires_at > timezone.now()
+        )
+
+    def revoke(self):
+        if not self.revoked:
+            self.revoked = True
+            self.save(update_fields=["revoked"])

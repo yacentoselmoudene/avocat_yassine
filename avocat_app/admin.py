@@ -13,6 +13,7 @@ from .models import (
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte, TypeDepense,
     TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte, StatutAffaire, TypeAffaire, TypeMesure,
     TypeRecours, TypeExecution, TypeRecette, TypeAlerte, StatutRecours, StatutExecution,
+    WhatsAppTemplate, WhatsAppMessage,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -316,6 +317,21 @@ class StatutExecutionAdmin(SoftDeleteAdminMixin):
 @admin.register(TypeDepense)
 class TypeDepenseAdmin(SoftDeleteAdminMixin):
     pass
+
+
+@admin.register(WhatsAppTemplate)
+class WhatsAppTemplateAdmin(admin.ModelAdmin):
+    list_display = ("nom", "kind", "is_active", "updated_at")
+    list_filter = ("kind", "is_active")
+    search_fields = ("nom", "body")
+
+
+@admin.register(WhatsAppMessage)
+class WhatsAppMessageAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "to_number", "to_name", "status", "affaire", "audience")
+    list_filter = ("status",)
+    search_fields = ("to_number", "to_name", "body", "twilio_sid")
+    readonly_fields = ("twilio_sid", "sent_at", "created_at", "updated_at")
 
 
 """"Commande Django pour générer les alertes d'échéance 

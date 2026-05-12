@@ -17,6 +17,8 @@ SAFE_PREFIXES = (
     "/static/",
     "/media/",
     "/favicon",
+    "/portail/",
+    "/webhooks/",
 )
 
 MIN_TOUCH_INTERVAL = int(getattr(settings, "TOKEN_MIN_TOUCH_INTERVAL_SECONDS", 60))

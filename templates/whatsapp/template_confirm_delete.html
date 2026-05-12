@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}حذف قالب{% endblock %}
+{% block page_title %}حذف قالب واتساب{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p>هل أنت متأكد من حذف القالب <strong>{{ object.nom }}</strong> ({{ object.get_kind_display }})؟</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash ms-1"></i> حذف</button>
+      <a href="{% url 'cabinet:whatsapp_template_list' %}" class="btn btn-outline-secondary">إلغاء</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
