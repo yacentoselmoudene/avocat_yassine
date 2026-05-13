@@ -1128,14 +1128,25 @@ class AuthToken(TimeStampedSoftDeleteModel):
         idle_seconds = int(getattr(settings, "TOKEN_IDLE_TIMEOUT_SECONDS", 300))
         now = timezone.now()
         tok = secrets.token_urlsafe(48)
+        ua = None
+        ip = None
+        if request is not None:
+            ua = (request.META.get("HTTP_USER_AGENT") or "")[:256] or None
+            xff = request.META.get("HTTP_X_FORWARDED_FOR")
+            if xff:
+                ip = xff.split(",")[0].strip()
+            else:
+                ip = request.META.get("REMOTE_ADDR")
+            if ip and ":" in ip and "." not in ip:
+                ip = ip.split("%")[0]
         return cls.objects.create(
             user=user,
             token=tok,
             date_expiration=now + timedelta(seconds=idle_seconds),
             last_seen=now,
             is_active=True,
-            user_agent=(request.META.get("HTTP_USER_AGENT")[:256] if request else None),
-            ip_addr=(request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR")) if request else None,
+            user_agent=ua,
+            ip_addr=ip,
         )
 
     def touch(self):
