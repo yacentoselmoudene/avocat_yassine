@@ -18,14 +18,9 @@ class LoginView(DjangoLoginView):
     def form_valid(self, form):
         response = super().form_valid(form)
         user = self.request.user
-        # ملاحظة: FK اسمها "utilisateur"
         token = AuthToken.issue(user=user, request=self.request)
         set_token_cookie(response, token.token)
 
-        # سجل تدقيق (اختياري)
-        print("تسجيل دخول المستخدم في سجل التدقيق")
-        print(f"المستخدم: {user}, المسار: {self.request.path}")
-        print(f"وكيل المستخدم: {self.request}")
         try:
             log_audit_safe(
                 actor=self.request.user, action=AuditAction.LOGIN,
@@ -37,8 +32,7 @@ class LoginView(DjangoLoginView):
                 session_key=getattr(self.request, "session", None) and self.request.session.session_key,
                 token_id=getattr(self.request, "auth_token_id", None),
             )
-        except Exception as e:
-            print( "فشل تسجيل الدخول في سجل التدقيق" , e)
+        except Exception:
             pass
 
         messages.success(self.request, "تم تسجيل الدخول بنجاح.")
