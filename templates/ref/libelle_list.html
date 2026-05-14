@@ -23,7 +23,7 @@
       </thead>
       <tbody>
         {% for it in items %}
-          <tr>
+          <tr id="row-{{ it.pk }}">
             <td>{{ forloop.counter }}</td>
             <td>{{ it.libelle }}</td>
             <td class="text-end">

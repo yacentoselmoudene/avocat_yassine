@@ -277,6 +277,16 @@
       </div>
     </div>
 
+    <!-- Toast global -->
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1080;">
+      <div id="liveToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3500">
+        <div class="d-flex">
+          <div class="toast-body" id="toastBody">—</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="إغلاق"></button>
+        </div>
+      </div>
+    </div>
+
     {% block extra_js %}
         <script>
   // Touche ESC pour effacer rapidement le champ de recherche
@@ -345,28 +355,40 @@
         const token = getCookie('csrftoken'); if (token) evt.detail.headers['X-CSRFToken'] = token;
       });
 
-      // Traiter réponses JSON standardisées {ok:true, message?, refreshTarget?, refreshUrl?, closeModal?}
+      // Traiter réponses JSON standardisées {ok, message?, refreshTarget?, refreshUrl?, closeModal?}
       document.body.addEventListener('htmx:afterOnLoad', function (evt) {
         const xhr = evt.detail.xhr; if (!xhr) return;
+        const ct = (xhr.getResponseHeader('Content-Type') || '');
+        if (!ct.includes('application/json')) return;
         let data = null; try { data = JSON.parse(xhr.responseText || '{}'); } catch(e) { return; }
-        if (!data || !data.ok) return;
+        if (!data) return;
+
+        // Toast (succès ou erreur)
+        if (data.message) {
+          const tb = document.querySelector('#toastBody'); if (tb) tb.textContent = data.message;
+          const toastEl = document.querySelector('#liveToast');
+          if (toastEl) {
+            toastEl.classList.remove('text-bg-success', 'text-bg-danger');
+            toastEl.classList.add(data.ok === false ? 'text-bg-danger' : 'text-bg-success');
+            new bootstrap.Toast(toastEl).show();
+          }
+        }
+        if (data.ok === false) return;
 
         if (data.closeModal) {
           const el = document.getElementById('mainModal');
           if (el) (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).hide();
         }
-        // Redirect (e.g. after affaire create → detail page)
         if (data.redirect) {
           window.location.href = data.redirect;
           return;
         }
+        if (data.removeTarget) {
+          const node = document.querySelector(data.removeTarget);
+          if (node) node.remove();
+        }
         if (data.refreshTarget && data.refreshUrl) {
           htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
-        }
-        // Toast simple
-        if (data.message) {
-          const tb = document.querySelector('#toastBody'); if (tb) tb.textContent = data.message;
-          const toastEl = document.querySelector('#liveToast'); if (toastEl) new bootstrap.Toast(toastEl).show();
         }
       });
 

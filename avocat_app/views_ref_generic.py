@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Type
 
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
@@ -267,14 +267,30 @@ class RefDelete(RefBase, HTMXModalFormMixin, DeleteView):
         return super().get(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
+        from django.db import IntegrityError, ProtectedError
+        from django.http import JsonResponse
         self.object = self.get_object()
-        # si SoftDelete:
-        # self.object.is_deleted = True; self.object.save(update_fields=["is_deleted"])
-        self.object.delete()
+        pk = self.object.pk
+        try:
+            self.object.delete()
+        except (IntegrityError, ProtectedError):
+            if self.htmx():
+                return JsonResponse({
+                    "ok": False,
+                    "message": "تعذّر الحذف: هذا العنصر مرتبط بسجلات أخرى.",
+                    "closeModal": True,
+                }, status=409)
+            messages.error(self.request, "تعذّر الحذف: هذا العنصر مرتبط بسجلات أخرى.")
+            return redirect(self.get_success_url())
         if self.htmx():
-            return self._success_json_refresh_list()
+            return JsonResponse({
+                "ok": True,
+                "message": "تم الحذف.",
+                "closeModal": True,
+                "removeTarget": f"#row-{pk}",
+            })
         messages.success(self.request, "تم الحذف.")
-        return super().delete(request, *args, **kwargs)
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse_lazy("cabinet_ref:ref_list", args=[self.kwargs["refname"]])

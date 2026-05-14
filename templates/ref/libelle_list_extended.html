@@ -26,7 +26,7 @@
       </thead>
       <tbody>
         {% for it in items %}
-          <tr>
+          <tr id="row-{{ it.pk }}">
             <td>{{ forloop.counter }}</td>
             <td>{{ it.libelle }}</td>
             {% for f in extra_fields %}

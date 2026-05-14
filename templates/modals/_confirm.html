@@ -1,8 +1,8 @@
 {# templates/modals/_confirm.html #}
 <form method="post"
-      action="{{ action_url|default:request.path }}"     {# ⬅️ /ref/degres-juridiction/<pk>/delete/ #}
-      hx-post="{{ action_url|default:request.path }}"    {# idem en HTMX #}
-      hx-target="#modalBody" hx-swap="outerHTML">
+      action="{{ action_url|default:request.path }}"
+      hx-post="{{ action_url|default:request.path }}"
+      hx-swap="none">
   {% csrf_token %}
   <h5 class="mb-3">{{ title|default:"تأكيد" }}</h5>
   <p class="mb-4">{{ question|default:"هل تريد المتابعة؟" }}</p>
