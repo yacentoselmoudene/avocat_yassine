@@ -1,0 +1,105 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 3cm 1.5cm 2.5cm 1.5cm;
+    @frame header_frame { -pdf-frame-content: header_content; top: 0.6cm; margin-left: 1.5cm; margin-right: 1.5cm; height: 2.2cm; }
+    @frame footer_frame { -pdf-frame-content: footer_content; bottom: 0.5cm; margin-left: 1.5cm; margin-right: 1.5cm; height: 1.6cm; }
+  }
+  body { font-family: "Helvetica", sans-serif; font-size: 10pt; color: #1f2937; direction: rtl; }
+  h1 { font-size: 16pt; color: #0f3a73; margin: 0 0 6pt 0; text-align: center; }
+  .meta { color: #6b7280; font-size: 9pt; text-align: center; margin-bottom: 12pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6pt; }
+  th { background-color: #0f3a73; color: white; padding: 6pt 4pt; text-align: right; font-weight: bold; font-size: 9pt; border: 0.5pt solid #0f3a73; }
+  td { padding: 5pt 4pt; border: 0.5pt solid #e5e7eb; font-size: 9pt; text-align: right; }
+  tr.even td { background-color: #f9fafb; }
+  .header-table { width: 100%; border: none; margin: 0; }
+  .header-table td { border: none; padding: 0; vertical-align: middle; }
+  .cabinet-name { font-size: 11pt; font-weight: bold; color: #0f3a73; }
+  .cabinet-line { font-size: 9pt; color: #374151; }
+  .devise { text-align: center; font-size: 10pt; font-weight: bold; color: #0f3a73; padding-bottom: 4pt; border-bottom: 1pt solid #0f3a73; margin-bottom: 6pt; }
+  .footer { font-size: 8pt; color: #6b7280; text-align: center; border-top: 0.5pt solid #d1d5db; padding-top: 4pt; }
+  .pagenum:before { content: counter(page); }
+  .pagetotal:before { content: counter(pages); }
+</style>
+</head>
+<body>
+
+<div id="header_content">
+  {% if params.devise_ar %}<div class="devise">{{ params.devise_ar }}</div>{% endif %}
+  <table class="header-table">
+    <tr>
+      <td width="20%">
+        {% if params.logo_cabinet %}<img src="{{ params.logo_cabinet.path }}" style="max-height:55pt;">{% endif %}
+      </td>
+      <td width="60%" align="center">
+        <div class="cabinet-name">{{ params.nom_cabinet_ar|default:params.nom_avocat_ar }}</div>
+        {% if params.nom_avocat_ar and params.nom_cabinet_ar %}<div class="cabinet-line">الأستاذ {{ params.nom_avocat_ar }}</div>{% endif %}
+        {% if params.barreau %}<div class="cabinet-line">{{ params.barreau }}</div>{% endif %}
+      </td>
+      <td width="20%" align="left">
+        {% if params.logo_ministere %}<img src="{{ params.logo_ministere.path }}" style="max-height:55pt;">{% endif %}
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div id="footer_content">
+  <div class="footer">
+    {% if params.adresse %}{{ params.adresse }}{% if params.ville %} — {{ params.ville }}{% endif %}<br>{% endif %}
+    {% if params.telephone %}الهاتف: {{ params.telephone }}{% endif %}
+    {% if params.fax %} — الفاكس: {{ params.fax }}{% endif %}
+    {% if params.email %} — {{ params.email }}{% endif %}
+    {% if params.site_web %} — {{ params.site_web }}{% endif %}
+    <br>
+    {% if params.ice %}ICE: {{ params.ice }}{% endif %}
+    {% if params.rib %} — RIB: {{ params.rib }}{% endif %}
+    {% if params.pied_page_ar %}<br>{{ params.pied_page_ar }}{% endif %}
+    <br>صفحة <span class="pagenum"></span> / <span class="pagetotal"></span>
+  </div>
+</div>
+
+<h1>{{ title }}</h1>
+<div class="meta">
+  تاريخ الإصدار: {{ generated_at|date:"d/m/Y H:i" }} — عدد العناصر: {{ items|length }}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th width="6%">#</th>
+      <th>الاسم</th>
+      {% for f in fields %}
+        {% if f != "libelle" %}
+          <th>{% for k, v in labels.items %}{% if k == f %}{{ v }}{% endif %}{% endfor %}</th>
+        {% endif %}
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+      <tr class="{% cycle 'odd' 'even' %}">
+        <td>{{ forloop.counter }}</td>
+        <td>{{ it.libelle }}</td>
+        {% for f in fields %}
+          {% if f != "libelle" %}
+            <td>
+              {% if f == "domaine" %}{{ it.get_domaine_display|default:"—" }}
+              {% elif f == "delai_legal_jours" %}{{ it.delai_legal_jours|default:"—" }}{% if it.delai_legal_jours %} يوم{% endif %}
+              {% elif f == "base_legale" %}{{ it.base_legale|default:"—" }}
+              {% else %}—{% endif %}
+            </td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+    {% empty %}
+      <tr><td colspan="10" align="center">لا توجد عناصر.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+</body>
+</html>

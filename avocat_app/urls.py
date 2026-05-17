@@ -1,12 +1,21 @@
 # avocat_app/urls.py
 from django.urls import path
-from . import views, views_audit, views_portail
+from . import views, views_audit, views_portail, views_cabinet_params, views_users
 
 app_name = "cabinet"
 
 urlpatterns = [
     # ====== الصفحة الرئيسية (يمكن جعلها لائحة القضايا) ======
     path("", views.DashboardView.as_view(), name="dashboard"),
+
+    # ====== Paramètres du cabinet ======
+    path("parametres/cabinet/", views_cabinet_params.cabinet_params_view, name="cabinet_params"),
+
+    # ====== Gestion des utilisateurs ======
+    path("parametres/users/", views_users.user_list, name="user_list"),
+    path("parametres/users/create/", views_users.user_create, name="user_create"),
+    path("parametres/users/<int:user_id>/edit/", views_users.user_edit, name="user_edit"),
+    path("parametres/users/<int:user_id>/delete/", views_users.user_delete, name="user_delete"),
 
     # ====== Recherche globale (HTMX autocomplete) ======
     path("search/", views.global_search, name="global_search"),

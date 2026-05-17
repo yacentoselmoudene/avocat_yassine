@@ -1438,3 +1438,60 @@ class PortailAccess(TimeStampedSoftDeleteModel):
         if not self.revoked:
             self.revoked = True
             self.save(update_fields=["revoked"])
+
+
+# =============================================================
+# Paramètres du cabinet — utilisés pour les en-têtes/footers PDF
+# =============================================================
+
+class CabinetParams(TimeStampedSoftDeleteModel):
+    """Paramètres du cabinet d'avocat (singleton).
+
+    Utilisé pour générer les en-têtes / pieds de page des PDFs imprimés,
+    et personnaliser l'application multi-tenant.
+    Toujours récupéré via CabinetParams.get_solo().
+    """
+    nom_cabinet_ar = models.CharField(max_length=200, blank=True, default='',
+                                       verbose_name='اسم المكتب (عربية)')
+    nom_cabinet_fr = models.CharField(max_length=200, blank=True, default='',
+                                       verbose_name='اسم المكتب (فرنسية)')
+    nom_avocat_ar = models.CharField(max_length=200, blank=True, default='',
+                                      verbose_name='اسم المحامي (عربية)')
+    nom_avocat_fr = models.CharField(max_length=200, blank=True, default='',
+                                      verbose_name='اسم المحامي (فرنسية)')
+    barreau = models.CharField(max_length=120, blank=True, default='',
+                                verbose_name='الهيئة')
+    numero_carte_pro = models.CharField(max_length=60, blank=True, default='',
+                                          verbose_name='رقم البطاقة المهنية')
+    adresse = models.TextField(blank=True, default='', verbose_name='العنوان')
+    ville = models.CharField(max_length=120, blank=True, default='', verbose_name='المدينة')
+    telephone = models.CharField(max_length=30, blank=True, default='', verbose_name='الهاتف')
+    fax = models.CharField(max_length=30, blank=True, default='', verbose_name='الفاكس')
+    email = models.EmailField(blank=True, default='', verbose_name='البريد الإلكتروني')
+    site_web = models.URLField(blank=True, default='', verbose_name='الموقع الإلكتروني')
+    ice = models.CharField(max_length=30, blank=True, default='',
+                            verbose_name='ICE')
+    rib = models.CharField(max_length=40, blank=True, default='',
+                            verbose_name='RIB')
+    logo_cabinet = models.ImageField(upload_to='cabinet/', blank=True, null=True,
+                                       verbose_name='شعار المكتب')
+    logo_ministere = models.ImageField(upload_to='cabinet/', blank=True, null=True,
+                                         verbose_name='شعار وزارة العدل (اختياري)')
+    devise_ar = models.CharField(max_length=200, blank=True,
+                                  default='المملكة المغربية — وزارة العدل',
+                                  verbose_name='الشعار (الرأس)')
+    pied_page_ar = models.TextField(blank=True, default='',
+                                     verbose_name='نص أسفل الصفحة')
+
+    class Meta:
+        db_table = 'cabinet_params'
+        verbose_name = 'إعدادات المكتب'
+        verbose_name_plural = 'إعدادات المكتب'
+
+    def __str__(self):
+        return self.nom_cabinet_ar or self.nom_avocat_ar or 'إعدادات المكتب'
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

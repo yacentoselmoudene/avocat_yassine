@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block page_title %}إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div></div>
+  <button class="btn btn-primary"
+          data-bs-toggle="modal" data-bs-target="#mainModal"
+          onclick="document.getElementById('modalBody').innerHTML = document.getElementById('newUserForm').innerHTML;">
+    <i class="bi bi-person-plus ms-1"></i> مستخدم جديد
+  </button>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>اسم المستخدم</th>
+          <th>الاسم</th>
+          <th>البريد</th>
+          <th>المجموعات</th>
+          <th>النشاط</th>
+          <th>المدير</th>
+          <th class="text-end" style="width:200px;">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr id="user-row-{{ u.pk }}">
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ u.username }}</strong></td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td><small>{{ u.email|default:"—" }}</small></td>
+            <td>
+              {% for g in u.groups.all %}
+                <span class="badge bg-info">{{ g.name }}</span>
+              {% empty %}<span class="text-secondary">—</span>{% endfor %}
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge bg-success">نشط</span>
+              {% else %}
+                <span class="badge bg-secondary">معطّل</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.is_superuser %}
+                <span class="badge bg-danger">رئيسي</span>
+              {% elif u.is_staff %}
+                <span class="badge bg-warning">إداري</span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'cabinet:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i> تعديل
+              </a>
+              {% if not u.is_superuser and u.pk != request.user.pk %}
+                <button class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#mainModal"
+                        hx-get="#"
+                        onclick="setupDeleteUser({{ u.pk }}, '{{ u.username|escapejs }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="text-center text-secondary py-4">لا يوجد مستخدمون.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Template du formulaire création (injecté dans le modal) -->
+<template id="newUserForm">
+  <form hx-post="{% url 'cabinet:user_create' %}" hx-swap="none">
+    {% csrf_token %}
+    <h5 class="mb-3">إضافة مستخدم جديد</h5>
+    <div class="mb-3">
+      <label class="form-label">اسم المستخدم *</label>
+      <input name="username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input name="email" type="email" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">كلمة المرور (8 أحرف على الأقل) *</label>
+      <input name="password" type="password" class="form-control" required minlength="8">
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+      <button type="submit" class="btn btn-primary">إنشاء</button>
+    </div>
+  </form>
+</template>
+
+<script>
+function setupDeleteUser(pk, username) {
+  const html = `
+    <form hx-post="/parametres/users/${pk}/delete/" hx-swap="none">
+      <input type="hidden" name="csrfmiddlewaretoken" value="${document.cookie.split('csrftoken=')[1]?.split(';')[0] || ''}">
+      <h5 class="mb-3">تأكيد التعطيل</h5>
+      <p>هل تريد تعطيل المستخدم <strong>${username}</strong> ؟</p>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button type="submit" class="btn btn-danger">تعطيل</button>
+      </div>
+    </form>`;
+  document.getElementById('modalBody').innerHTML = html;
+  if (window.htmx) htmx.process(document.getElementById('modalBody'));
+}
+</script>
+{% endblock %}

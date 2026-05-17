@@ -3,7 +3,9 @@
 {% block page_title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <div></div>
+  <a href="{% url 'cabinet_ref:ref_print' refname %}" target="_blank" class="btn btn-outline-secondary">
+    <i class="bi bi-printer ms-1"></i> طباعة PDF
+  </a>
   <button class="btn btn-primary"
         data-bs-toggle="modal" data-bs-target="#mainModal"
         hx-get="{{ create_url }}" hx-target="#modalBody">
@@ -19,7 +21,7 @@
           <th style="width:60px;">#</th>
           <th>الاسم</th>
           {% for f in extra_fields %}
-            <th>{{ field_labels|default_if_none:"" }}{% for key, val in field_labels.items %}{% if key == f %}{{ val }}{% endif %}{% endfor %}{% if not field_labels %}{{ f }}{% endif %}</th>
+            <th>{% for key, val in field_labels.items %}{% if key == f %}{{ val }}{% endif %}{% endfor %}{% if not field_labels %}{{ f }}{% endif %}</th>
           {% endfor %}
           <th style="width:150px;" class="text-end">إجراءات</th>
         </tr>

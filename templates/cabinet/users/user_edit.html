@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}تعديل المستخدم — {{ target.username }}{% endblock %}
+{% block page_title %}تعديل المستخدم : {{ target.username }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'cabinet:user_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-right ms-1"></i> رجوع
+  </a>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-person ms-1"></i> المعلومات الأساسية
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">اسم المستخدم</label>
+            <input class="form-control" value="{{ target.username }}" disabled>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">الاسم</label>
+            <input name="first_name" class="form-control" value="{{ target.first_name }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">اللقب</label>
+            <input name="last_name" class="form-control" value="{{ target.last_name }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">البريد الإلكتروني</label>
+            <input name="email" type="email" class="form-control" value="{{ target.email }}">
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" {% if target.is_active %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">نشط</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="is_staff" value="1" id="is_staff" {% if target.is_staff %}checked{% endif %}>
+            <label class="form-check-label" for="is_staff">إداري (يدخل /admin/)</label>
+          </div>
+
+          <hr>
+          <h6 class="text-primary">تغيير كلمة المرور (اختياري)</h6>
+          <input name="new_password" type="password" class="form-control" placeholder="اتركها فارغة لعدم التغيير" minlength="8">
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-people ms-1"></i> المجموعات
+        </div>
+        <div class="card-body">
+          <p class="small text-secondary">المجموعات تجمع صلاحيات مشتركة (مثال: محامي، سكرتارية).</p>
+          {% for g in groups %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="groups" value="{{ g.pk }}" id="g{{ g.pk }}" {% if g.pk in user_group_ids %}checked{% endif %}>
+              <label class="form-check-label" for="g{{ g.pk }}">{{ g.name }}</label>
+            </div>
+          {% empty %}
+            <p class="text-secondary small">لا توجد مجموعات. أضف مجموعات من <a href="/admin/auth/group/">/admin/auth/group/</a>.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-list-ul ms-1"></i> صلاحيات عرض الأقسام
+        </div>
+        <div class="card-body" style="max-height:400px; overflow-y:auto;">
+          <p class="small text-secondary">أيّ أقسام يستطيع هذا المستخدم رؤيتها في القائمة العلوية.</p>
+          {% for p in tab_perms %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="ui_perms" value="{{ p.codename }}" id="p{{ p.pk }}" {% if p.codename in user_ui_codes %}checked{% endif %}>
+              <label class="form-check-label" for="p{{ p.pk }}">{{ p.name }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header zellige-section-header fw-bold">
+          <i class="bi bi-toggles ms-1"></i> صلاحيات الأزرار والإجراءات
+        </div>
+        <div class="card-body">
+          <p class="small text-secondary">أزرار وإجراءات يمكن للمستخدم استعمالها (إضافة / تعديل / حذف / طباعة...).</p>
+          <div class="row">
+            {% for p in btn_perms %}
+              <div class="col-md-4 col-lg-3 mb-2">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="ui_perms" value="{{ p.codename }}" id="bp{{ p.pk }}" {% if p.codename in user_ui_codes %}checked{% endif %}>
+                  <label class="form-check-label" for="bp{{ p.pk }}">{{ p.name }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end mt-3 gap-2">
+    <a href="{% url 'cabinet:user_list' %}" class="btn btn-secondary">إلغاء</a>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-circle ms-1"></i> حفظ
+    </button>
+  </div>
+</form>
+{% endblock %}

@@ -4,6 +4,7 @@
 {# Blocks: title, extra_css, header, content, extra_js, footer   #}
 {# ============================================================= #}
 {% load static %}
+{% load ui_perms %}
 <!doctype html>
 <html lang="ar" dir="rtl">
   <head>
@@ -72,6 +73,11 @@
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:whatsapp_template_list' %}"><i class="bi bi-whatsapp ms-1"></i> قوالب واتساب</a></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:whatsapp_message_list' %}"><i class="bi bi-chat-dots ms-1"></i> سجل رسائل واتساب</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="{% url 'cabinet:cabinet_params' %}"><i class="bi bi-building-gear ms-1"></i> إعدادات المكتب</a></li>
+                  {% if user.is_superuser %}
+                  <li><a class="dropdown-item" href="{% url 'cabinet:user_list' %}"><i class="bi bi-people ms-1"></i> إدارة المستخدمين</a></li>
+                  {% endif %}
                 </ul>
               </li>
 

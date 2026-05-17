@@ -2,12 +2,14 @@
 from django.urls import path
 from . import views_ref as v
 from .views_ref_generic import RefList, RefCreate, RefUpdate, RefDelete
+from .views_cabinet_params import ref_print_pdf
 
 
 app_name = "cabinet_ref"
 
 urlpatterns = [
     path("<slug:refname>/", RefList.as_view(), name="ref_list"),
+    path("<slug:refname>/print/", ref_print_pdf, name="ref_print"),
     path("<slug:refname>/new/", RefCreate.as_view(), name="ref_create"),
     path("<slug:refname>/<int:pk>/edit/", RefUpdate.as_view(), name="ref_update"),
     path("<slug:refname>/<int:pk>/delete/", RefDelete.as_view(), name="ref_delete"),

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}إعدادات المكتب{% endblock %}
+{% block page_title %}إعدادات المكتب{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <h5 class="mb-3 text-primary"><i class="bi bi-building ms-1"></i> معلومات المكتب</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">اسم المكتب (عربية)</label>
+          <input name="nom_cabinet_ar" class="form-control" value="{{ obj.nom_cabinet_ar }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Nom du cabinet</label>
+          <input name="nom_cabinet_fr" class="form-control" value="{{ obj.nom_cabinet_fr }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">اسم المحامي (عربية)</label>
+          <input name="nom_avocat_ar" class="form-control" value="{{ obj.nom_avocat_ar }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Nom de l'avocat</label>
+          <input name="nom_avocat_fr" class="form-control" value="{{ obj.nom_avocat_fr }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">الهيئة</label>
+          <input name="barreau" class="form-control" value="{{ obj.barreau }}" placeholder="هيئة المحامين بـ...">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">رقم البطاقة المهنية</label>
+          <input name="numero_carte_pro" class="form-control" value="{{ obj.numero_carte_pro }}">
+        </div>
+      </div>
+
+      <h5 class="mb-3 text-primary"><i class="bi bi-geo-alt ms-1"></i> التواصل</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-8">
+          <label class="form-label">العنوان</label>
+          <textarea name="adresse" class="form-control" rows="2">{{ obj.adresse }}</textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">المدينة</label>
+          <input name="ville" class="form-control" value="{{ obj.ville }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">الهاتف</label>
+          <input name="telephone" class="form-control" value="{{ obj.telephone }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">الفاكس</label>
+          <input name="fax" class="form-control" value="{{ obj.fax }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">البريد الإلكتروني</label>
+          <input name="email" type="email" class="form-control" value="{{ obj.email }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">الموقع الإلكتروني</label>
+          <input name="site_web" type="url" class="form-control" value="{{ obj.site_web }}" placeholder="https://...">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ICE</label>
+          <input name="ice" class="form-control" value="{{ obj.ice }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">RIB</label>
+          <input name="rib" class="form-control" value="{{ obj.rib }}">
+        </div>
+      </div>
+
+      <h5 class="mb-3 text-primary"><i class="bi bi-image ms-1"></i> الشعارات</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">شعار المكتب</label>
+          {% if obj.logo_cabinet %}
+            <div class="mb-2"><img src="{{ obj.logo_cabinet.url }}" alt="" style="max-height:80px;"></div>
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" name="clear_logo_cabinet" value="1" id="clear_lc">
+              <label class="form-check-label small" for="clear_lc">حذف الشعار الحالي</label>
+            </div>
+          {% endif %}
+          <input type="file" name="logo_cabinet" class="form-control" accept="image/*">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">شعار وزارة العدل (اختياري)</label>
+          {% if obj.logo_ministere %}
+            <div class="mb-2"><img src="{{ obj.logo_ministere.url }}" alt="" style="max-height:80px;"></div>
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" name="clear_logo_ministere" value="1" id="clear_lm">
+              <label class="form-check-label small" for="clear_lm">حذف الشعار الحالي</label>
+            </div>
+          {% endif %}
+          <input type="file" name="logo_ministere" class="form-control" accept="image/*">
+        </div>
+      </div>
+
+      <h5 class="mb-3 text-primary"><i class="bi bi-file-text ms-1"></i> رأس وأسفل المطبوعات</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">الشعار (يُطبع في الرأس)</label>
+          <input name="devise_ar" class="form-control" value="{{ obj.devise_ar }}">
+          <div class="form-text">مثال : المملكة المغربية — وزارة العدل</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">نص أسفل الصفحة</label>
+          <textarea name="pied_page_ar" class="form-control" rows="2">{{ obj.pied_page_ar }}</textarea>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle ms-1"></i> حفظ
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
