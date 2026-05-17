@@ -1,6 +1,6 @@
 {# FILE: templates/avocat/affaire_list.html #}
 {% extends 'base.html' %}
-{% load form_extras %}
+{% load form_extras ui_perms %}
 {% block title %}القضايا{% endblock %}
 {% block page_title %}القضايا{% endblock %}
 
@@ -21,9 +21,11 @@
     <a class="btn btn-outline-secondary {% if view_mode == 'table' %}active{% endif %}" href="?view=table&q={{ query|urlencode }}"><i class="bi bi-table"></i></a>
     <a class="btn btn-outline-secondary {% if view_mode == 'cards' %}active{% endif %}" href="?view=cards&q={{ query|urlencode }}"><i class="bi bi-grid-3x3-gap"></i></a>
   </div>
+  {% if user|can_see:"ui_btn_add" %}
   <a href="{% url 'cabinet:affaire_create' %}" class="btn btn-primary">
     <i class="bi bi-plus-circle ms-1"></i> إضافة قضية
   </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -64,10 +66,14 @@
           </div>
           <div class="card-footer bg-transparent d-flex gap-2">
             <a class="btn btn-sm btn-outline-secondary flex-fill" href="{% url 'cabinet:affaire_detail' obj.pk %}"><i class="bi bi-eye"></i> عرض</a>
+            {% if user|can_see:"ui_btn_edit" %}
             <a class="btn btn-sm btn-primary flex-fill" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
                hx-get="{% url 'cabinet:affaire_update' obj.pk %}" hx-target="#modalBody"><i class="bi bi-pencil"></i> تعديل</a>
+            {% endif %}
+            {% if user|can_see:"ui_btn_delete" %}
             <a class="btn btn-sm btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
                hx-get="{% url 'cabinet:affaire_delete' obj.pk %}" hx-target="#modalBody"><i class="bi bi-trash"></i></a>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -113,8 +119,12 @@
             <td class="text-center">
               <div class="btn-group btn-group-sm">
                 <a class="btn btn-outline-secondary" href="{% url 'cabinet:affaire_detail' obj.pk %}" title="عرض"><i class="bi bi-eye"></i></a>
+                {% if user|can_see:"ui_btn_edit" %}
                 <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:affaire_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+                {% endif %}
+                {% if user|can_see:"ui_btn_delete" %}
                 <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:affaire_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+                {% endif %}
               </div>
             </td>
           </tr>

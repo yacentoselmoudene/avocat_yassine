@@ -1,6 +1,6 @@
 {# FILE: templates/avocat/depense_list.html #}
 {% extends 'base.html' %}
-{% load form_extras %}
+{% load form_extras ui_perms %}
 {% block title %}المصاريف{% endblock %}
 {% block page_title %}المصاريف{% endblock %}
 
@@ -21,11 +21,13 @@
      target="_blank" class="btn btn-outline-info me-2">
     <i class="bi bi-printer ms-1"></i> طباعة المستندات
   </a>
+  {% if user|can_see:"ui_btn_add" %}
   <a href="{% url 'cabinet:depense_create' %}" class="btn btn-primary"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:depense_create' %}" hx-target="#modalBody">
     <i class="bi bi-plus-circle ms-1"></i> إضافة مصروف
   </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -148,8 +150,12 @@
               </span>
               {% endif %}
               <a class="btn btn-outline-secondary" href="{% url 'cabinet:depense_detail' obj.pk %}" title="عرض"><i class="bi bi-info-circle"></i></a>
+              {% if user|can_see:"ui_btn_edit" %}
               <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:depense_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+              {% endif %}
+              {% if user|can_see:"ui_btn_delete" %}
               <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:depense_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+              {% endif %}
             </div>
           </td>
         </tr>

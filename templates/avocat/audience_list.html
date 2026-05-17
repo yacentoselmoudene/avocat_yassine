@@ -1,6 +1,6 @@
 {# FILE: templates/avocat/audience_list.html #}
 {% extends 'base.html' %}
-{% load form_extras %}
+{% load form_extras ui_perms %}
 {% block title %}الجلسات{% endblock %}
 {% block page_title %}الجلسات{% endblock %}
 
@@ -17,11 +17,13 @@
       <i class="bi bi-search"></i>
     </button>
   </div>
+  {% if user|can_see:"ui_btn_add" %}
   <a href="{% url 'cabinet:audience_create' %}" class="btn btn-primary"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:audience_create' %}" hx-target="#modalBody">
     <i class="bi bi-plus-circle ms-1"></i> إضافة جلسة
   </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -49,8 +51,12 @@
           <td class="text-center">
             <div class="btn-group btn-group-sm">
               <a class="btn btn-outline-secondary" href="{% url 'cabinet:audience_detail' obj.pk %}" title="عرض"><i class="bi bi-eye"></i></a>
+              {% if user|can_see:"ui_btn_edit" %}
               <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+              {% endif %}
+              {% if user|can_see:"ui_btn_delete" %}
               <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+              {% endif %}
             </div>
           </td>
         </tr>

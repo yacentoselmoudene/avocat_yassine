@@ -1,5 +1,6 @@
 {# FILE: templates/avocat/avertissement_list.html #}
 {% extends 'base.html' %}
+{% load ui_perms %}
 {% block title %}الإنذارات{% endblock %}
 {% block page_title %}الإنذارات{% endblock %}
 
@@ -16,11 +17,13 @@
       <i class="bi bi-search"></i>
     </button>
   </div>
+  {% if user|can_see:"ui_btn_add" %}
   <a href="{% url 'cabinet:avertissement_create' %}" class="btn btn-primary"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:avertissement_create' %}" hx-target="#modalBody">
     <i class="bi bi-plus-circle ms-1"></i> إضافة إنذار
   </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -64,8 +67,12 @@
           <td class="text-center">
             <div class="btn-group btn-group-sm">
               <a class="btn btn-outline-secondary" href="{% url 'cabinet:avertissement_detail' obj.pk %}" title="عرض"><i class="bi bi-eye"></i></a>
+              {% if user|can_see:"ui_btn_edit" %}
               <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:avertissement_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+              {% endif %}
+              {% if user|can_see:"ui_btn_delete" %}
               <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:avertissement_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+              {% endif %}
             </div>
           </td>
         </tr>

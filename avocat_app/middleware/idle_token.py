@@ -1,10 +1,13 @@
 # avocat_app/middleware/idle_token.py
+from urllib.parse import quote, urlencode
+
 from django.conf import settings
 from django.contrib import auth, messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction, DatabaseError
 
 from ..models import AuthToken
@@ -73,26 +76,61 @@ class IdleTokenAuthMiddleware:
         return self.get_response(request)
 
     # === دالة إعادة التوجيه إلى تسجيل الدخول ===
+    def _build_login_url(self, request) -> str:
+        """Construit l'URL de login avec ?next=<chemin actuel> pour retour
+        automatique après reconnexion.
+
+        Pour HTMX/AJAX : utilise le header HX-Current-URL (URL réelle de la
+        page courante côté navigateur) plutôt que request.path (qui est l'URL
+        de la requête AJAX).
+        """
+        base_url = settings.LOGIN_URL or reverse("authui:login")
+        target = None
+        if request.headers.get("HX-Request"):
+            current = request.headers.get("HX-Current-URL", "")
+            if current:
+                from urllib.parse import urlparse
+                p = urlparse(current)
+                target = p.path + (("?" + p.query) if p.query else "")
+        if not target:
+            target = request.get_full_path()
+
+        # Ne pas créer de boucle si on est déjà sur /auth/login/
+        if target and target.startswith("/auth/login"):
+            return base_url
+
+        # Vérifier que la cible est interne (sécurité)
+        if not url_has_allowed_host_and_scheme(
+            target,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return base_url
+
+        sep = "&" if "?" in base_url else "?"
+        return f"{base_url}{sep}next={quote(target, safe='/?&=')}"
+
     def _redirect_to_login(self, request, reason: str):
         """
         إذا انتهى التوكن أو الجلسة، يعيد المستخدم إلى صفحة تسجيل الدخول،
         ويمسح الكوكي. يدعم HTMX/AJAX وطلبات عادية.
+        Le ?next= préserve l'URL d'origine pour retour automatique.
         """
         auth.logout(request)
-        login_url = settings.LOGIN_URL or reverse("authui:login")
+        login_url = self._build_login_url(request)
 
-        # 🔸 في حالة HTMX
+        # 🔸 HTMX
         if request.headers.get("HX-Request"):
             response = JsonResponse({
                 "ok": False,
                 "detail": reason,
-                "redirect": login_url
+                "redirect": login_url,
             })
             response["HX-Redirect"] = login_url
             clear_token_cookie(response)
             return response
 
-        # 🔸 في حالة AJAX (fetch / XMLHttpRequest)
+        # 🔸 AJAX (fetch / XMLHttpRequest)
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             response = JsonResponse({
                 "ok": False,
@@ -102,7 +140,7 @@ class IdleTokenAuthMiddleware:
             clear_token_cookie(response)
             return response
 
-        # 🔸 في الطلبات العادية (navigateur classique)
+        # 🔸 Requêtes standard
         messages.warning(request, reason)
         response = HttpResponseRedirect(login_url)
         clear_token_cookie(response)

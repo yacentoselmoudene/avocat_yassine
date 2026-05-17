@@ -1,5 +1,6 @@
 {# FILE: templates/avocat/juridiction_list.html #}
 {% extends "base.html" %}
+{% load ui_perms %}
 {% block title %}المحاكم{% endblock %}
 {% block page_title %}المحاكم{% endblock %}
 
@@ -18,11 +19,13 @@
   </button>
 </form>
 
+{% if user|can_see:"ui_btn_add" %}
 <a href="#" class="btn btn-primary"
    data-bs-toggle="modal" data-bs-target="#mainModal"
    hx-get="{% url 'cabinet:juridiction_create' %}" hx-target="#modalBody">
   <i class="bi bi-plus-circle ms-1"></i> إضافة محكمة
 </a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
