@@ -49,6 +49,7 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
               <!-- Paramétrage (référentiels génériques) -->
+              {% if user|can_see:"ui_tab_settings" %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="paramDropdown"
                    role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -75,75 +76,94 @@
                   <li><a class="dropdown-item" href="{% url 'cabinet:whatsapp_message_list' %}"><i class="bi bi-chat-dots ms-1"></i> سجل رسائل واتساب</a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="{% url 'cabinet:cabinet_params' %}"><i class="bi bi-building-gear ms-1"></i> إعدادات المكتب</a></li>
-                  {% if user.is_superuser %}
+                  {% if user|can_see:"ui_tab_users" %}
                   <li><a class="dropdown-item" href="{% url 'cabinet:user_list' %}"><i class="bi bi-people ms-1"></i> إدارة المستخدمين</a></li>
                   {% endif %}
                 </ul>
               </li>
+              {% endif %}
 
               <!-- Dossiers -->
+              {% if user|can_see:"ui_tab_affaires" or user|can_see:"ui_tab_audiences" %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">القضايا</a>
                 <ul class="dropdown-menu">
+                  {% if user|can_see:"ui_tab_affaires" %}
                   <li><a class="dropdown-item" href="{% url 'cabinet:affaire_list' %}"><i class="bi bi-journal-text ms-1"></i> لائحة القضايا</a></li>
+                  {% if user|can_see:"ui_btn_add" %}
                   <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:affaire_create' %}" hx-target="#modalBody"><i class="bi bi-plus-circle ms-1"></i> إضافة قضية</a></li>
+                  {% endif %}
                   <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:audience_list' %}"><i class="bi bi-calendar3 ms-1"></i> الجلسات</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:decision_list' %}"><i class="bi bi-hammer ms-1"></i> الأحكام</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:notification_list' %}"><i class="bi bi-envelope-paper ms-1"></i> التبليغات</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:avertissement_list' %}"><i class="bi bi-exclamation-triangle ms-1"></i> الإنذارات</a></li>
+                  {% endif %}
+                  {% if user|can_see:"ui_tab_audiences" %}<li><a class="dropdown-item" href="{% url 'cabinet:audience_list' %}"><i class="bi bi-calendar3 ms-1"></i> الجلسات</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_affaires" %}<li><a class="dropdown-item" href="{% url 'cabinet:decision_list' %}"><i class="bi bi-hammer ms-1"></i> الأحكام</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_affaires" %}<li><a class="dropdown-item" href="{% url 'cabinet:notification_list' %}"><i class="bi bi-envelope-paper ms-1"></i> التبليغات</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_affaires" %}<li><a class="dropdown-item" href="{% url 'cabinet:avertissement_list' %}"><i class="bi bi-exclamation-triangle ms-1"></i> الإنذارات</a></li>{% endif %}
                 </ul>
               </li>
+              {% endif %}
 
               <!-- Finance -->
+              {% if user|can_see:"ui_tab_depenses" or user|can_see:"ui_tab_recettes" %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">المالية</a>
                 <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="{% url 'cabinet:depense_list' %}"><i class="bi bi-cash-coin ms-1"></i> المصاريف</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:recette_list' %}"><i class="bi bi-coin ms-1"></i> المداخيل</a></li>
+                  {% if user|can_see:"ui_tab_depenses" %}<li><a class="dropdown-item" href="{% url 'cabinet:depense_list' %}"><i class="bi bi-cash-coin ms-1"></i> المصاريف</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_recettes" %}<li><a class="dropdown-item" href="{% url 'cabinet:recette_list' %}"><i class="bi bi-coin ms-1"></i> المداخيل</a></li>{% endif %}
                 </ul>
               </li>
+              {% endif %}
 
               <!-- Exécution / Recours -->
+              {% if user|can_see:"ui_tab_executions" or user|can_see:"ui_tab_recours" %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">التنفيذ والطعن</a>
                 <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="{% url 'cabinet:execution_list' %}"><i class="bi bi-gear ms-1"></i> التنفيذ</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:voiederecours_list' %}"><i class="bi bi-arrow-90deg-left ms-1"></i> طرق الطعن</a></li>
+                  {% if user|can_see:"ui_tab_executions" %}<li><a class="dropdown-item" href="{% url 'cabinet:execution_list' %}"><i class="bi bi-gear ms-1"></i> التنفيذ</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_recours" %}<li><a class="dropdown-item" href="{% url 'cabinet:voiederecours_list' %}"><i class="bi bi-arrow-90deg-left ms-1"></i> طرق الطعن</a></li>{% endif %}
                 </ul>
               </li>
+              {% endif %}
 
               <!-- Mahakim.ma -->
+              {% if user|can_see:"ui_btn_mahakim_sync" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'cabinet:mahakim_sync' %}">
                   <i class="bi bi-cloud-download ms-1"></i> محاكم
                 </a>
               </li>
+              {% endif %}
 
               <!-- Carte -->
+              {% if user|can_see:"ui_tab_juridictions" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'cabinet:juridictions_map' %}">
                   <i class="bi bi-geo-alt ms-1"></i> الخريطة
                 </a>
               </li>
+              {% endif %}
 
               <!-- Recherche jurisprudentielle (IA) -->
+              {% if user|can_see:"ui_tab_jurisprudence" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'cabinet:jurisprudence_search' %}">
                   <i class="bi bi-stars ms-1"></i> اجتهادات
                 </a>
               </li>
+              {% endif %}
 
-              <!-- Référentiel “archives” -->
+              <!-- Référentiel "archives" -->
+              {% if user|can_see:"ui_tab_pieces" or user|can_see:"ui_tab_juridictions" or user|can_see:"ui_tab_avocats" %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">الأرشيف والمرجع</a>
                 <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="{% url 'cabinet:piecejointe_list' %}"><i class="bi bi-folder2-open ms-1"></i> المرفقات</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:juridiction_list' %}"><i class="bi bi-building ms-1"></i> المحاكم</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:avocat_list' %}"><i class="bi bi-person-vcard ms-1"></i> المحامون</a></li>
-                  <li><a class="dropdown-item" href="{% url 'cabinet:barreau_list' %}"><i class="bi bi-people ms-1"></i> هيئة المحامين</a></li>
+                  {% if user|can_see:"ui_tab_pieces" %}<li><a class="dropdown-item" href="{% url 'cabinet:piecejointe_list' %}"><i class="bi bi-folder2-open ms-1"></i> المرفقات</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_juridictions" %}<li><a class="dropdown-item" href="{% url 'cabinet:juridiction_list' %}"><i class="bi bi-building ms-1"></i> المحاكم</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_avocats" %}<li><a class="dropdown-item" href="{% url 'cabinet:avocat_list' %}"><i class="bi bi-person-vcard ms-1"></i> المحامون</a></li>{% endif %}
+                  {% if user|can_see:"ui_tab_avocats" %}<li><a class="dropdown-item" href="{% url 'cabinet:barreau_list' %}"><i class="bi bi-people ms-1"></i> هيئة المحامين</a></li>{% endif %}
                 </ul>
               </li>
+              {% endif %}
             </ul>
 
             <!-- Recherche globale -->
