@@ -1,5 +1,6 @@
 {# FILE: templates/avocat/partie_detail.html #}
 {% extends 'generic/detail.html' %}
+{% load ui_perms %}
 
 {% block title %}تفاصيل الطرف{% endblock %}
 {% block page_title %}تفاصيل الطرف{% endblock %}
@@ -11,11 +12,13 @@
 {% endblock %}
 
 {% block header_actions %}
+  {% if user|can_see:"ui_btn_edit" %}
   <a class="btn btn-primary" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:partie_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
+  {% endif %}
   <a class="btn btn-outline-secondary" href="{% url 'cabinet:partie_list' %}">
     <i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع
   </a>
@@ -59,11 +62,13 @@
 {% endblock %}
 
 {% block detail_actions %}
+  {% if user|can_see:"ui_btn_edit" %}
   <a class="btn btn-sm btn-outline-primary w-100 mb-2" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:partie_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </a>
+  {% endif %}
 
   {# ── Envoyer rappel portail ── #}
   {% if object.email or object.telephone %}
@@ -82,11 +87,13 @@
     </div>
   {% endif %}
 
+  {% if user|can_see:"ui_btn_delete" %}
   <a class="btn btn-sm btn-outline-danger w-100 mb-2" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:partie_delete' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-trash ms-1"></i> حذف
   </a>
+  {% endif %}
   <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'cabinet:partie_list' %}">
     <i class="bi bi-list-ul ms-1"></i> العودة للقائمة
   </a>

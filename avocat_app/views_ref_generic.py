@@ -12,7 +12,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
-from .views_mixins import SecureBase  # ta base Login+Perms+success_json(...)
+from .views_mixins import SecureBase, UIPermRequiredMixin  # ta base Login+Perms+success_json(...)
 from .models import (
     TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte,
     TypeRecours, StatutExecution, TypeExecution, StatutAffaire, TypeAffaire,
@@ -195,8 +195,9 @@ class RefList(RefBase, ListView):
 # ---------------------------
 # CREATE
 # ---------------------------
-class RefCreate(RefBase, HTMXModalFormMixin, CreateView):
+class RefCreate(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, CreateView):
     permission_required = "cabinet.add_ref"  # ou fin par ref
+    ui_perm = "ui_btn_add"
     page_template = "ref/libelle_form.html"  # si accès complet
 
     def get_form_class(self):
@@ -224,8 +225,9 @@ class RefCreate(RefBase, HTMXModalFormMixin, CreateView):
 # ---------------------------
 # UPDATE
 # ---------------------------
-class RefUpdate(RefBase, HTMXModalFormMixin, UpdateView):
+class RefUpdate(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, UpdateView):
     permission_required = "cabinet.change_ref"
+    ui_perm = "ui_btn_edit"
     page_template = "ref/libelle_form.html"
 
     def get_form_class(self):
@@ -254,8 +256,9 @@ class RefUpdate(RefBase, HTMXModalFormMixin, UpdateView):
 # ---------------------------
 # DELETE
 # ---------------------------
-class RefDelete(RefBase, HTMXModalFormMixin, DeleteView):
+class RefDelete(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, DeleteView):
     permission_required = "cabinet.delete_ref"
+    ui_perm = "ui_btn_delete"
     page_template = "ref/libelle_confirm_delete.html"
 
     def get(self, request, *args, **kwargs):

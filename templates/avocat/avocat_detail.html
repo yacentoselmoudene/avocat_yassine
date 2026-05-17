@@ -1,12 +1,15 @@
 
 {# FILE: templates/avocat_app/avocat_detail.html #}
 {% extends 'generic/detail.html' %}
+{% load ui_perms %}
 {% block title %}تفاصيل محامٍ{% endblock %}
 {% block page_title %}تفاصيل محامٍ{% endblock %}
 {% block header_actions %}
   <a class="btn btn-outline-secondary" href="{% url 'cabinet:avocat_list' %}"><i class="bi bi-arrow-counterclockwise ms-1"></i> رجوع</a>
+  {% if user|can_see:"ui_btn_edit" %}
   <a class="btn btn-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:avocat_update' object.pk %}" hx-target="#modalBody"><i class="bi bi-pencil ms-1"></i> تعديل</a>
+  {% endif %}
 {% endblock %}
 {% block detail_body %}
 <dl class="row">
@@ -17,5 +20,7 @@
 </dl>
 {% endblock %}
 {% block detail_actions %}
+  {% if user|can_see:"ui_btn_delete" %}
   <a class="btn btn-sm btn-outline-danger w-100" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:avocat_delete' object.pk %}" hx-target="#modalBody"><i class="bi bi-trash"></i> حذف</a>
+  {% endif %}
 {% endblock %}

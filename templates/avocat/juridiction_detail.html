@@ -1,18 +1,23 @@
 {% extends "base.html" %}
+{% load ui_perms %}
 {% block title %}تفاصيل المحكمة{% endblock %}
 {% block page_title %}تفاصيل المحكمة{% endblock %}
 
 {% block header_actions %}
+{% if user|can_see:"ui_btn_edit" %}
 <a href="#" class="btn btn-outline-primary"
    data-bs-toggle="modal" data-bs-target="#mainModal"
    hx-get="{% url 'cabinet:juridiction_update' object.pk %}" hx-target="#modalBody">
   <i class="bi bi-pencil ms-1"></i> تعديل
 </a>
+{% endif %}
+{% if user|can_see:"ui_btn_delete" %}
 <a href="#" class="btn btn-outline-danger"
    data-bs-toggle="modal" data-bs-target="#mainModal"
    hx-get="{% url 'cabinet:juridiction_delete' object.pk %}" hx-target="#modalBody">
   <i class="bi bi-trash ms-1"></i> حذف
 </a>
+{% endif %}
 {% endblock %}
 
 {% block content %}

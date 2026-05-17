@@ -152,6 +152,48 @@ class SecureBase(LoginRequiredMixin, PermissionRequiredMixin, HTMXViewMixin):
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         return super().dispatch(request, *args, **kwargs)
 
+
+class UIPermRequiredMixin:
+    """Refuse la requête si l'utilisateur n'a pas la permission UI.
+
+    Logique cohérente avec le filtre template can_see :
+    - superuser : accordé
+    - user avec perm ui.<codename> : accordé
+    - user sans AUCUNE perm UI configurée : accordé (compat)
+    - sinon : 403
+    """
+    ui_perm: str | None = None  # codename sans préfixe app, ex: "ui_btn_add"
+
+    def dispatch(self, request, *args, **kwargs):
+        from django.http import HttpResponseForbidden, JsonResponse
+
+        if not self.ui_perm:
+            return super().dispatch(request, *args, **kwargs)
+
+        user = getattr(request, "user", None)
+        allowed = False
+        if user and user.is_authenticated:
+            if user.is_superuser:
+                allowed = True
+            elif user.has_perm(f"ui.{self.ui_perm}"):
+                allowed = True
+            else:
+                has_any = (
+                    user.user_permissions.filter(codename__startswith="ui_").exists()
+                    or user.groups.filter(permissions__codename__startswith="ui_").exists()
+                )
+                allowed = not has_any  # default-allow si rien configuré
+
+        if not allowed:
+            if request.headers.get("HX-Request") or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({
+                    "ok": False,
+                    "message": "ليس لديك صلاحية لهذا الإجراء.",
+                    "closeModal": True,
+                }, status=403)
+            return HttpResponseForbidden("Permission denied.")
+        return super().dispatch(request, *args, **kwargs)
+
 # =============================================================
 # OUTILS SPÉCIFIQUES AFFAIRE
 # =============================================================

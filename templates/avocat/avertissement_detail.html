@@ -1,5 +1,6 @@
 {# FILE: templates/avocat/avertissement_detail.html #}
 {% extends 'generic/detail.html' %}
+{% load ui_perms %}
 {% block title %}{{ object.type_avertissement }} — إنذار{% endblock %}
 {% block page_title %}تفاصيل الإنذار{% endblock %}
 
@@ -118,12 +119,16 @@
 {% endblock %}
 
 {% block detail_actions %}
+  {% if user|can_see:"ui_btn_edit" %}
   <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#mainModal"
           hx-get="{% url 'cabinet:avertissement_update' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-pencil ms-1"></i> تعديل
   </button>
+  {% endif %}
+  {% if user|can_see:"ui_btn_delete" %}
   <button class="btn btn-outline-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#mainModal"
           hx-get="{% url 'cabinet:avertissement_delete' object.pk %}" hx-target="#modalBody">
     <i class="bi bi-trash ms-1"></i> حذف
   </button>
+  {% endif %}
 {% endblock %}

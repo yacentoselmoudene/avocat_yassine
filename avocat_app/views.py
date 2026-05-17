@@ -21,7 +21,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .views_mixins import (
     NoPostOnReadOnlyMixin, HTMXViewMixin, SoftDeleteQuerysetMixin,
     ModalCreateView, ModalUpdateView, ModalDeleteView, HTMXModalFormMixin,
-)
+    UIPermRequiredMixin,)
 
 from .models import (
     Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
@@ -643,17 +643,20 @@ class _AffaireFormMixin(HTMXModalFormMixin):
     def get_success_url(self):
         return reverse_lazy("cabinet:affaire_detail", args=[self.object.pk])
 
-class AffaireCreate(SecureBase, _AffaireFormMixin, CreateView):
+class AffaireCreate(UIPermRequiredMixin, SecureBase, _AffaireFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Affaire
     permission_required = "cabinet.add_affaire"
     success_message = "تم إنشاء القضية."
 
-class AffaireUpdate(SecureBase, _AffaireFormMixin, UpdateView):
+class AffaireUpdate(UIPermRequiredMixin, SecureBase, _AffaireFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Affaire
     permission_required = "cabinet.change_affaire"
     success_message = "تم تحديث القضية."
 
-class AffaireDelete(SecureBase, ModalDeleteView, DeleteView):
+class AffaireDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Affaire
     permission_required = "cabinet.delete_affaire"
     def get_success_url(self): return reverse_lazy("cabinet:affaire_list")
@@ -687,7 +690,8 @@ class JuridictionDetail(SecureBase, DetailView):
     template_name = "avocat/juridiction_detail.html"
     permission_required = "cabinet.view_juridiction"
 
-class JuridictionCreate(SecureBase, ModalCreateView, CreateView):
+class JuridictionCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Juridiction
     form_class = JuridictionForm
     permission_required = "cabinet.add_juridiction"
@@ -695,7 +699,8 @@ class JuridictionCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/juridiction_form.html"
     def get_success_url(self): return self.request.GET.get("next") or reverse_lazy("cabinet:juridiction_list")
 
-class JuridictionUpdate(SecureBase, ModalUpdateView, UpdateView):
+class JuridictionUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Juridiction
     form_class = JuridictionForm
     permission_required = "cabinet.change_juridiction"
@@ -703,7 +708,8 @@ class JuridictionUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/juridiction_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:juridiction_detail", args=[self.object.pk])
 
-class JuridictionDelete(SecureBase, ModalDeleteView, DeleteView):
+class JuridictionDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Juridiction
     permission_required = "cabinet.delete_juridiction"
     def get_success_url(self): return reverse_lazy("cabinet:juridiction_list")
@@ -734,7 +740,8 @@ class AvocatDetail(SecureBase, DetailView):
     template_name = "avocat/avocat_detail.html"
     permission_required = "cabinet.view_avocat"
 
-class AvocatCreate(SecureBase, ModalCreateView, CreateView):
+class AvocatCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Avocat
     form_class = AvocatForm
     permission_required = "cabinet.add_avocat"
@@ -742,7 +749,8 @@ class AvocatCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "avocat/avocat_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:avocat_detail", args=[self.object.pk])
 
-class AvocatUpdate(SecureBase, ModalUpdateView, UpdateView):
+class AvocatUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Avocat
     form_class = AvocatForm
     permission_required = "cabinet.change_avocat"
@@ -750,7 +758,8 @@ class AvocatUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "avocat/avocat_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:avocat_detail", args=[self.object.pk])
 
-class AvocatDelete(SecureBase, ModalDeleteView, DeleteView):
+class AvocatDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Avocat
     permission_required = "cabinet.delete_avocat"
     def get_success_url(self): return reverse_lazy("cabinet:avocat_list")
@@ -778,7 +787,8 @@ class BarreauDetail(SecureBase, DetailView):
     template_name = "avocat/barreau_detail.html"
     permission_required = "cabinet.view_barreau"
 
-class BarreauCreate(SecureBase, ModalCreateView, CreateView):
+class BarreauCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Barreau
     form_class = BarreauForm
     permission_required = "cabinet.add_barreau"
@@ -787,7 +797,8 @@ class BarreauCreate(SecureBase, ModalCreateView, CreateView):
     refresh_target = "#ref-list"
     def get_success_url(self): return reverse_lazy("cabinet:barreau_list")
 
-class BarreauUpdate(SecureBase, ModalUpdateView, UpdateView):
+class BarreauUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Barreau
     form_class = BarreauForm
     permission_required = "cabinet.change_barreau"
@@ -796,7 +807,8 @@ class BarreauUpdate(SecureBase, ModalUpdateView, UpdateView):
     refresh_target = "#ref-list"
     def get_success_url(self): return reverse_lazy("cabinet:barreau_list")
 
-class BarreauDelete(SecureBase, ModalDeleteView, DeleteView):
+class BarreauDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Barreau
     permission_required = "cabinet.delete_barreau"
     def get_success_url(self): return reverse_lazy("cabinet:barreau_list")
@@ -828,7 +840,8 @@ class AudienceDetail(SecureBase, DetailView):
     template_name = "avocat/audience_detail.html"
     permission_required = "cabinet.view_audience"
 
-class AudienceCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class AudienceCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Audience
     form_class = AudienceForm
     permission_required = "cabinet.add_audience"
@@ -851,7 +864,8 @@ class AudienceCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:audience_list")
 
-class AudienceUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class AudienceUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Audience
     form_class = AudienceForm
     permission_required = "cabinet.change_audience"
@@ -868,7 +882,8 @@ class AudienceUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:audience_list")
 
-class AudienceDelete(SecureBase, ModalDeleteView, DeleteView):
+class AudienceDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Audience
     permission_required = "cabinet.delete_audience"
     def get_success_url(self): return reverse_lazy("cabinet:audience_list")
@@ -895,7 +910,8 @@ class MesureDetail(SecureBase, DetailView):
     template_name = "avocat/mesure_detail.html"
     permission_required = "cabinet.view_mesure"
 
-class MesureCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class MesureCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Mesure
     form_class = MesureForm
     permission_required = "cabinet.add_mesure"
@@ -919,7 +935,8 @@ class MesureCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:mesure_list")
 
-class MesureUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class MesureUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Mesure
     form_class = MesureForm
     permission_required = "cabinet.change_mesure"
@@ -935,7 +952,8 @@ class MesureUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:mesure_list")
 
-class MesureDelete(SecureBase, ModalDeleteView, DeleteView):
+class MesureDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Mesure
     permission_required = "cabinet.delete_mesure"
     def get_success_url(self): return reverse_lazy("cabinet:mesure_list")
@@ -961,7 +979,8 @@ class ExpertiseDetail(SecureBase, DetailView):
     template_name = "avocat/expertise_detail.html"
     permission_required = "cabinet.view_expertise"
 
-class ExpertiseCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class ExpertiseCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Expertise
     form_class = ExpertiseForm
     permission_required = "cabinet.add_expertise"
@@ -984,7 +1003,8 @@ class ExpertiseCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:expertise_list")
 
-class ExpertiseUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class ExpertiseUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Expertise
     form_class = ExpertiseForm
     permission_required = "cabinet.change_expertise"
@@ -1001,12 +1021,14 @@ class ExpertiseUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:expertise_list")
 
-class ExpertiseDelete(SecureBase, ModalDeleteView, DeleteView):
+class ExpertiseDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Expertise
     permission_required = "cabinet.delete_expertise"
     def get_success_url(self): return reverse_lazy("cabinet:expertise_list")
 
-class ExpertCreate(SecureBase, ModalCreateView, CreateView):
+class ExpertCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     """Création d’un Expert depuis un select2 (+ Ajouter جديد)."""
     model = Expert
     form_class = ExpertForm
@@ -1069,7 +1091,8 @@ class DecisionDetail(SecureBase, DetailView):
         )
         return ctx
 
-class DecisionCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class DecisionCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Decision
     form_class = DecisionForm
     permission_required = "cabinet.add_decision"
@@ -1091,7 +1114,8 @@ class DecisionCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:decision_list")
 
-class DecisionUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class DecisionUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Decision
     form_class = DecisionForm
     permission_required = "cabinet.change_decision"
@@ -1107,7 +1131,8 @@ class DecisionUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:decision_list")
 
-class DecisionDelete(SecureBase, ModalDeleteView, DeleteView):
+class DecisionDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Decision
     permission_required = "cabinet.delete_decision"
     def get_success_url(self): return reverse_lazy("cabinet:decision_list")
@@ -1134,7 +1159,8 @@ class NotificationDetail(SecureBase, DetailView):
     template_name = "avocat/notification_detail.html"
     permission_required = "cabinet.view_notification"
 
-class NotificationCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class NotificationCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Notification
     form_class = NotificationForm
     permission_required = "cabinet.add_notification"
@@ -1158,7 +1184,8 @@ class NotificationCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:notification_list")
 
-class NotificationUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class NotificationUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Notification
     form_class = NotificationForm
     permission_required = "cabinet.change_notification"
@@ -1175,7 +1202,8 @@ class NotificationUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:notification_list")
 
-class NotificationDelete(SecureBase, ModalDeleteView, DeleteView):
+class NotificationDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Notification
     permission_required = "cabinet.delete_notification"
     def get_success_url(self): return reverse_lazy("cabinet:notification_list")
@@ -1202,7 +1230,8 @@ class VoieDeRecoursDetail(SecureBase, DetailView):
     template_name = "avocat/voiederecours_detail.html"
     permission_required = "cabinet.view_voiederecours"
 
-class VoieDeRecoursCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class VoieDeRecoursCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = VoieDeRecours
     form_class = VoieDeRecoursForm
     permission_required = "cabinet.add_voiederecours"
@@ -1225,7 +1254,8 @@ class VoieDeRecoursCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:voiederecours_list")
 
-class VoieDeRecoursUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class VoieDeRecoursUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = VoieDeRecours
     form_class = VoieDeRecoursForm
     permission_required = "cabinet.change_voiederecours"
@@ -1241,7 +1271,8 @@ class VoieDeRecoursUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:voiederecours_list")
 
-class VoieDeRecoursDelete(SecureBase, ModalDeleteView, DeleteView):
+class VoieDeRecoursDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = VoieDeRecours
     permission_required = "cabinet.delete_voiederecours"
     def get_success_url(self): return reverse_lazy("cabinet:voiederecours_list")
@@ -1269,7 +1300,8 @@ class ExecutionDetail(SecureBase, DetailView):
     permission_required = "cabinet.view_execution"
 
 
-class ExecutionCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class ExecutionCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Execution
     form_class = ExecutionForm
     permission_required = "cabinet.add_execution"
@@ -1293,7 +1325,8 @@ class ExecutionCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:execution_list")
 
-class ExecutionUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class ExecutionUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Execution
     form_class = ExecutionForm
     permission_required = "cabinet.change_execution"
@@ -1310,7 +1343,8 @@ class ExecutionUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return super().form_valid(form)
     def get_success_url(self): return reverse_lazy("cabinet:execution_list")
 
-class ExecutionDelete(SecureBase, ModalDeleteView, DeleteView):
+class ExecutionDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Execution
     permission_required = "cabinet.delete_execution"
     def get_success_url(self): return reverse_lazy("cabinet:execution_list")
@@ -1340,7 +1374,8 @@ class AlerteDetail(SecureBase, DetailView):
     template_name = "avocat/alerte_detail.html"
     permission_required = "cabinet.view_alerte"
 
-class AlerteCreate(SecureBase, ModalCreateView, CreateView):
+class AlerteCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Alerte
     form_class = AlerteForm
     permission_required = "cabinet.add_alerte"
@@ -1348,7 +1383,8 @@ class AlerteCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/alerte_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:alerte_list")
 
-class AlerteUpdate(SecureBase, ModalUpdateView, UpdateView):
+class AlerteUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Alerte
     form_class = AlerteForm
     permission_required = "cabinet.change_alerte"
@@ -1356,7 +1392,8 @@ class AlerteUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/alerte_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:alerte_list")
 
-class AlerteDelete(SecureBase, ModalDeleteView, DeleteView):
+class AlerteDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Alerte
     permission_required = "cabinet.delete_alerte"
     def get_success_url(self): return reverse_lazy("cabinet:alerte_list")
@@ -1382,7 +1419,8 @@ class TacheDetail(SecureBase, DetailView):
     template_name = "avocat/tache_detail.html"
     permission_required = "cabinet.view_tache"
 
-class TacheCreate(SecureBase, ModalCreateView, CreateView):
+class TacheCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Tache
     form_class = TacheForm
     permission_required = "cabinet.add_tache"
@@ -1390,7 +1428,8 @@ class TacheCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/tache_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:tache_list")
 
-class TacheUpdate(SecureBase, ModalUpdateView, UpdateView):
+class TacheUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Tache
     form_class = TacheForm
     permission_required = "cabinet.change_tache"
@@ -1398,7 +1437,8 @@ class TacheUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/tache_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:tache_list")
 
-class TacheDelete(SecureBase, ModalDeleteView, DeleteView):
+class TacheDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Tache
     permission_required = "cabinet.delete_tache"
     def get_success_url(self): return reverse_lazy("cabinet:tache_list")
@@ -1424,7 +1464,8 @@ class PieceJointeDetail(SecureBase, DetailView):
     template_name = "avocat/piecejointe_detail.html"
     permission_required = "cabinet.view_piecejointe"
 
-class PieceJointeCreate(SecureBase, ModalCreateView, CreateView):
+class PieceJointeCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = PieceJointe
     form_class = PieceJointeForm
     permission_required = "cabinet.add_piecejointe"
@@ -1432,7 +1473,8 @@ class PieceJointeCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/piecejointe_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:piecejointe_list")
 
-class PieceJointeUpdate(SecureBase, ModalUpdateView, UpdateView):
+class PieceJointeUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = PieceJointe
     form_class = PieceJointeForm
     permission_required = "cabinet.change_piecejointe"
@@ -1440,7 +1482,8 @@ class PieceJointeUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/piecejointe_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:piecejointe_list")
 
-class PieceJointeDelete(SecureBase, ModalDeleteView, DeleteView):
+class PieceJointeDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = PieceJointe
     permission_required = "cabinet.delete_piecejointe"
     def get_success_url(self): return reverse_lazy("cabinet:piecejointe_list")
@@ -1466,7 +1509,8 @@ class PartieDetail(SecureBase, DetailView):
     template_name = "avocat/partie_detail.html"
     permission_required = "cabinet.view_partie"
 
-class PartieCreate(SecureBase, ModalCreateView, CreateView):
+class PartieCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = Partie
     form_class = PartieForm
     permission_required = "cabinet.add_partie"
@@ -1474,7 +1518,8 @@ class PartieCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/partie_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:partie_list")
 
-class PartieUpdate(SecureBase, ModalUpdateView, UpdateView):
+class PartieUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Partie
     form_class = PartieForm
     permission_required = "cabinet.change_partie"
@@ -1482,7 +1527,8 @@ class PartieUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/partie_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:partie_list")
 
-class PartieDelete(SecureBase, ModalDeleteView, DeleteView):
+class PartieDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Partie
     permission_required = "cabinet.delete_partie"
     def get_success_url(self): return reverse_lazy("cabinet:partie_list")
@@ -1507,7 +1553,8 @@ class AffaireAvocatDetail(SecureBase, DetailView):
     template_name = "avocat/affaireavocat_detail.html"
     permission_required = "cabinet.view_affaireavocat"
 
-class AffaireAvocatCreate(SecureBase, ModalCreateView, CreateView):
+class AffaireAvocatCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = AffaireAvocat
     form_class = AffaireAvocatForm
     permission_required = "cabinet.add_affaireavocat"
@@ -1515,7 +1562,8 @@ class AffaireAvocatCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/affaireavocat_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:affaireavocat_list")
 
-class AffaireAvocatUpdate(SecureBase, ModalUpdateView, UpdateView):
+class AffaireAvocatUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = AffaireAvocat
     form_class = AffaireAvocatForm
     permission_required = "cabinet.change_affaireavocat"
@@ -1523,7 +1571,8 @@ class AffaireAvocatUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/affaireavocat_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:affaireavocat_list")
 
-class AffaireAvocatDelete(SecureBase, ModalDeleteView, DeleteView):
+class AffaireAvocatDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = AffaireAvocat
     permission_required = "cabinet.delete_affaireavocat"
     def get_success_url(self): return reverse_lazy("cabinet:affaireavocat_list")
@@ -1548,7 +1597,8 @@ class AffairePartieDetail(SecureBase, DetailView):
     template_name = "avocat/affairepartie_detail.html"
     permission_required = "cabinet.view_affairepartie"
 
-class AffairePartieCreate(SecureBase, ModalCreateView, CreateView):
+class AffairePartieCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, CreateView):
+    ui_perm = "ui_btn_add"
     model = AffairePartie
     form_class = AffairePartieForm
     permission_required = "cabinet.add_affairepartie"
@@ -1556,7 +1606,8 @@ class AffairePartieCreate(SecureBase, ModalCreateView, CreateView):
     page_template = "cabinet/affairepartie_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:affairepartie_list")
 
-class AffairePartieUpdate(SecureBase, ModalUpdateView, UpdateView):
+class AffairePartieUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = AffairePartie
     form_class = AffairePartieForm
     permission_required = "cabinet.change_affairepartie"
@@ -1564,7 +1615,8 @@ class AffairePartieUpdate(SecureBase, ModalUpdateView, UpdateView):
     page_template = "cabinet/affairepartie_form.html"
     def get_success_url(self): return reverse_lazy("cabinet:affairepartie_list")
 
-class AffairePartieDelete(SecureBase, ModalDeleteView, DeleteView):
+class AffairePartieDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = AffairePartie
     permission_required = "cabinet.delete_affairepartie"
     def get_success_url(self): return reverse_lazy("cabinet:affairepartie_list")
@@ -1730,7 +1782,8 @@ class ExpertDetail(SecureBase, DetailView):
     model = Expert
     template_name = 'avocat/expert_detail.html'
     permission_required = 'cabinet.view_expert'
-class ExpertUpdate(SecureBase, UpdateView):
+class ExpertUpdate(UIPermRequiredMixin, SecureBase, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Expert
     form_class = ExpertForm
     permission_required = 'cabinet.change_expert'
@@ -1750,7 +1803,8 @@ class ExpertUpdate(SecureBase, UpdateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل خبرة', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class ExpertDelete(SecureBase, DeleteView):
+class ExpertDelete(UIPermRequiredMixin, SecureBase, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Expert
     permission_required = 'cabinet.delete_expert'
     success_url = reverse_lazy('cabinet:expert_list')
@@ -1792,7 +1846,8 @@ class UtilisateurDetail(SecureBase, DetailView):
     template_name = 'avocat/utilisateur_detail.html'
     permission_required = 'cabinet.view_utilisateur'
 
-class UtilisateurCreate(SecureBase, CreateView):
+class UtilisateurCreate(UIPermRequiredMixin, SecureBase, CreateView):
+    ui_perm = "ui_btn_add"
     model = Utilisateur
     form_class = UtilisateurForm
     permission_required = 'cabinet.add_utilisateur'
@@ -1811,7 +1866,8 @@ class UtilisateurCreate(SecureBase, CreateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة مستخدم', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class UtilisateurUpdate(SecureBase, UpdateView):
+class UtilisateurUpdate(UIPermRequiredMixin, SecureBase, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Utilisateur
     form_class = UtilisateurForm
     permission_required = 'cabinet.change_utilisateur'
@@ -1831,7 +1887,8 @@ class UtilisateurUpdate(SecureBase, UpdateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل مستخدم', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class UtilisateurDelete(SecureBase, DeleteView):
+class UtilisateurDelete(UIPermRequiredMixin, SecureBase, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Utilisateur
     permission_required = 'cabinet.delete_utilisateur'
     success_url = reverse_lazy('cabinet:utilisateur_list')
@@ -1874,7 +1931,8 @@ class RecetteDetail(SecureBase, DetailView):
     template_name = 'avocat/recette_detail.html'
     permission_required = 'cabinet.view_recette'
 
-class RecetteCreate(SecureBase, CreateView):
+class RecetteCreate(UIPermRequiredMixin, SecureBase, CreateView):
+    ui_perm = "ui_btn_add"
     model = Recette
     form_class = RecetteForm
     permission_required = 'cabinet.add_recette'
@@ -1900,7 +1958,8 @@ class RecetteCreate(SecureBase, CreateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة دخل', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class RecetteUpdate(SecureBase, UpdateView):
+class RecetteUpdate(UIPermRequiredMixin, SecureBase, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Recette
     form_class = RecetteForm
     permission_required = 'cabinet.change_recette'
@@ -1920,7 +1979,8 @@ class RecetteUpdate(SecureBase, UpdateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل دخل', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class RecetteDelete(SecureBase, DeleteView):
+class RecetteDelete(UIPermRequiredMixin, SecureBase, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Recette
     permission_required = 'cabinet.delete_recette'
     success_url = reverse_lazy('cabinet:recette_list')
@@ -1999,7 +2059,8 @@ class DepenseDetail(SecureBase, DetailView):
     template_name = 'avocat/depense_detail.html'
     permission_required = 'cabinet.view_depense'
 
-class DepenseCreate(SecureBase, CreateView):
+class DepenseCreate(UIPermRequiredMixin, SecureBase, CreateView):
+    ui_perm = "ui_btn_add"
     model = Depense
     form_class = DepenseForm
     permission_required = 'cabinet.add_depense'
@@ -2025,7 +2086,8 @@ class DepenseCreate(SecureBase, CreateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'إضافة مصروف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class DepenseUpdate(SecureBase, UpdateView):
+class DepenseUpdate(UIPermRequiredMixin, SecureBase, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Depense
     form_class = DepenseForm
     permission_required = 'cabinet.change_depense'
@@ -2045,7 +2107,8 @@ class DepenseUpdate(SecureBase, UpdateView):
             return self.render_modal('modals/_form.html', {'form': form, 'title': 'تعديل مصروف', 'action': request.path})
         return super().get(request, *args, **kwargs)
 
-class DepenseDelete(SecureBase, DeleteView):
+class DepenseDelete(UIPermRequiredMixin, SecureBase, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Depense
     permission_required = 'cabinet.delete_depense'
     success_url = reverse_lazy('cabinet:depense_list')
@@ -2175,7 +2238,8 @@ class AvertissementDetail(SecureBase, DetailView):
     permission_required = "cabinet.view_avertissement"
 
 
-class AvertissementCreate(SecureBase, HTMXModalFormMixin, CreateView):
+class AvertissementCreate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, CreateView):
+    ui_perm = "ui_btn_add"
     model = Avertissement
     form_class = AvertissementForm
     permission_required = "cabinet.add_avertissement"
@@ -2203,7 +2267,8 @@ class AvertissementCreate(SecureBase, HTMXModalFormMixin, CreateView):
         return reverse_lazy("cabinet:avertissement_list")
 
 
-class AvertissementUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
+class AvertissementUpdate(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = Avertissement
     form_class = AvertissementForm
     permission_required = "cabinet.change_avertissement"
@@ -2224,7 +2289,8 @@ class AvertissementUpdate(SecureBase, HTMXModalFormMixin, UpdateView):
         return reverse_lazy("cabinet:avertissement_list")
 
 
-class AvertissementDelete(SecureBase, ModalDeleteView, DeleteView):
+class AvertissementDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = Avertissement
     permission_required = "cabinet.delete_avertissement"
     def get_success_url(self): return reverse_lazy("cabinet:avertissement_list")
@@ -3183,7 +3249,8 @@ class WhatsAppTemplateList(SecureBase, ListView):
     paginate_by = 20
 
 
-class WhatsAppTemplateCreate(SecureBase, CreateView):
+class WhatsAppTemplateCreate(UIPermRequiredMixin, SecureBase, CreateView):
+    ui_perm = "ui_btn_add"
     model = WhatsAppTemplate
     template_name = "whatsapp/template_form.html"
     fields = ["nom", "kind", "body", "is_active", "twilio_content_sid"]
@@ -3191,7 +3258,8 @@ class WhatsAppTemplateCreate(SecureBase, CreateView):
     success_url = reverse_lazy("cabinet:whatsapp_template_list")
 
 
-class WhatsAppTemplateUpdate(SecureBase, UpdateView):
+class WhatsAppTemplateUpdate(UIPermRequiredMixin, SecureBase, UpdateView):
+    ui_perm = "ui_btn_edit"
     model = WhatsAppTemplate
     template_name = "whatsapp/template_form.html"
     fields = ["nom", "kind", "body", "is_active", "twilio_content_sid"]
@@ -3199,7 +3267,8 @@ class WhatsAppTemplateUpdate(SecureBase, UpdateView):
     success_url = reverse_lazy("cabinet:whatsapp_template_list")
 
 
-class WhatsAppTemplateDelete(SecureBase, DeleteView):
+class WhatsAppTemplateDelete(UIPermRequiredMixin, SecureBase, DeleteView):
+    ui_perm = "ui_btn_delete"
     model = WhatsAppTemplate
     template_name = "whatsapp/template_confirm_delete.html"
     permission_required = "cabinet.change_affaire"
