@@ -381,6 +381,15 @@
         const token = getCookie('csrftoken'); if (token) evt.detail.headers['X-CSRFToken'] = token;
       });
 
+      // Empêcher le swap quand la réponse est JSON (évite d'injecter du JSON brut dans le DOM)
+      document.body.addEventListener('htmx:beforeSwap', function (evt) {
+        const xhr = evt.detail.xhr; if (!xhr) return;
+        const ct = (xhr.getResponseHeader('Content-Type') || '');
+        if (ct.includes('application/json')) {
+          evt.detail.shouldSwap = false;
+        }
+      });
+
       // Traiter réponses JSON standardisées {ok, message?, refreshTarget?, refreshUrl?, closeModal?}
       document.body.addEventListener('htmx:afterOnLoad', function (evt) {
         const xhr = evt.detail.xhr; if (!xhr) return;
