@@ -423,7 +423,13 @@
           if (node) node.remove();
         }
         if (data.refreshTarget && data.refreshUrl) {
-          htmx.ajax('GET', data.refreshUrl, { target: data.refreshTarget, swap: 'outerHTML' });
+          // select: pour ne récupérer que la portion ciblée et éviter d'injecter
+          // la page complète (navbar/footer) dans le DOM.
+          htmx.ajax('GET', data.refreshUrl, {
+            target: data.refreshTarget,
+            swap: 'outerHTML',
+            select: data.refreshTarget,
+          });
         }
       });
 
