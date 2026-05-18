@@ -1,10 +1,13 @@
 """Vues pour les paramètres du cabinet + impression PDF des listes /ref/."""
 from __future__ import annotations
 
+import os
 from io import BytesIO
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles import finders
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
@@ -13,6 +16,22 @@ from django.views.decorators.http import require_http_methods
 
 from .models import CabinetParams
 from .ref_registry import REF_REGISTRY
+
+
+def _pdf_link_callback(uri: str, rel: str | None = None) -> str:
+    """Résout les URLs (static/media) vers des chemins absolus pour xhtml2pdf."""
+    if uri.startswith(settings.STATIC_URL):
+        path = finders.find(uri.replace(settings.STATIC_URL, "", 1))
+        if path:
+            return path
+        return os.path.join(str(settings.BASE_DIR), "static", uri.replace(settings.STATIC_URL, "", 1))
+    if uri.startswith(settings.MEDIA_URL):
+        return os.path.join(str(settings.MEDIA_ROOT), uri.replace(settings.MEDIA_URL, "", 1))
+    if uri.startswith("/"):
+        candidate = os.path.join(str(settings.BASE_DIR), uri.lstrip("/"))
+        if os.path.exists(candidate):
+            return candidate
+    return uri
 
 
 @login_required
@@ -88,7 +107,12 @@ def ref_print_pdf(request, refname: str):
         return HttpResponse(html)
 
     pdf_buffer = BytesIO()
-    result = pisa.CreatePDF(html, dest=pdf_buffer, encoding="utf-8")
+    result = pisa.CreatePDF(
+        html,
+        dest=pdf_buffer,
+        encoding="utf-8",
+        link_callback=_pdf_link_callback,
+    )
     if result.err:
         return HttpResponse(html)
 
