@@ -26,6 +26,37 @@
     <!-- Zellige Theme + Mahakim.ma design -->
     <link href="{% static 'css/zellige.css' %}?v=2" rel="stylesheet">
 
+    <style>
+      /* Auto-dismiss alerts: slide-up + fade pour un effet élégant */
+      .alert.js-auto-dismiss {
+        animation: alertSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        position: relative;
+        box-shadow: 0 4px 16px rgba(13, 44, 84, 0.08);
+        border-right: 4px solid currentColor;
+      }
+      .alert.js-auto-dismiss.is-dismissing {
+        animation: alertSlideOut 0.5s cubic-bezier(0.7, 0, 0.84, 0) both;
+      }
+      @keyframes alertSlideIn {
+        from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes alertSlideOut {
+        from { opacity: 1; transform: translateY(0) scale(1); max-height: 200px; padding-top: var(--bs-alert-padding-y); padding-bottom: var(--bs-alert-padding-y); margin-bottom: 1rem; }
+        to   { opacity: 0; transform: translateY(-10px) scale(0.98); max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+      }
+
+      /* Toast: léger glissement + ombre dorée façon mahakim.ma */
+      #liveToast.toast {
+        box-shadow: 0 8px 24px rgba(13, 44, 84, 0.18);
+        border-radius: 0.5rem;
+        animation: toastSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      @keyframes toastSlideIn {
+        from { opacity: 0; transform: translate(-50%, -20px); }
+        to   { opacity: 1; transform: translate(-50%, 0); }
+      }
+    </style>
     {% block extra_css %}{% endblock %}
   </head>
   <body class="zellige-body">
@@ -216,7 +247,7 @@
         {% if messages %}
           <div class="mb-3">
             {% for message in messages %}
-              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show js-auto-dismiss" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
@@ -439,6 +470,36 @@
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('padding-right');
       });
+
+      // Auto-dismiss des alertes Django (success/warning/error/info) après 5s
+      // avec animation slide-up + fade. La timer se réinitialise au survol.
+      (function () {
+        const AUTO_DISMISS_MS = 5000;
+        function scheduleDismiss(el) {
+          if (el.dataset.autoDismissScheduled === '1') return;
+          el.dataset.autoDismissScheduled = '1';
+          let timer = setTimeout(() => dismiss(el), AUTO_DISMISS_MS);
+          el.addEventListener('mouseenter', () => clearTimeout(timer));
+          el.addEventListener('mouseleave', () => {
+            timer = setTimeout(() => dismiss(el), AUTO_DISMISS_MS);
+          });
+        }
+        function dismiss(el) {
+          if (!el || !el.isConnected) return;
+          el.classList.add('is-dismissing');
+          el.addEventListener('animationend', () => el.remove(), { once: true });
+        }
+        function init() {
+          document.querySelectorAll('.alert.js-auto-dismiss').forEach(scheduleDismiss);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
+        // Réappliquer après un swap HTMX (au cas où des alertes seraient injectées)
+        document.body.addEventListener('htmx:afterSwap', init);
+      })();
 
       // Redirection login si 401 pendant une requête HTMX
       document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
