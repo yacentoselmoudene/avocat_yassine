@@ -2217,7 +2217,8 @@ class AudienceCreateForAffaire(SecureBase, HTMXModalFormMixin, CreateView):
     success_message = "تمت إضافة الجلسة."
 
     def get_affaire(self):
-        affaire_pk = self.kwargs.get("affaire_pk")
+        # URL kwarg est "affaire_id" (cf. urls.py: <uuid:affaire_id>)
+        affaire_pk = self.kwargs.get("affaire_id") or self.kwargs.get("affaire_pk")
         return get_object_or_404(Affaire, pk=affaire_pk)
 
     def dispatch(self, request, *args, **kwargs):
