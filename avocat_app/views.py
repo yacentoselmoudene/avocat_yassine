@@ -591,17 +591,21 @@ class AffaireDetail(SecureBase, NoPostOnReadOnlyMixin, DetailView):
             ctx["workflow_path"] = "دعوى مباشرة"
             ctx["workflow_path_code"] = "C"
 
-        # Document checklist
+        # Document checklist : on inclut aussi la PieceJointe (si elle existe)
+        # pour permettre à la template d'afficher un bouton "œil" (visionneur)
+        # ou un bouton "upload" selon le cas.
         requirements = DocumentRequirement.objects.filter(phase=phase)
-        existing_titles = set(
-            PieceJointe.objects.filter(affaire=affaire).values_list("titre", flat=True)
-        )
+        existing_pieces = {
+            p.titre: p for p in PieceJointe.objects.filter(affaire=affaire)
+        }
         doc_checklist = []
         for req in requirements:
+            piece = existing_pieces.get(req.nom_document)
             doc_checklist.append({
                 "nom": req.nom_document,
                 "obligatoire": req.obligatoire,
-                "present": req.nom_document in existing_titles,
+                "present": piece is not None,
+                "piece_pk": piece.pk if piece else None,
             })
         ctx["doc_checklist"] = doc_checklist
 
@@ -1538,6 +1542,21 @@ class PieceJointeCreate(UIPermRequiredMixin, SecureBase, ModalCreateView, Create
     permission_required = "cabinet.add_piecejointe"
     success_message = "تمّ حفظ المرفق."
     page_template = "cabinet/piecejointe_form.html"
+
+    def get_initial(self):
+        """Pré-remplit affaire + titre depuis les query params (?affaire=&titre=)."""
+        initial = super().get_initial()
+        affaire_id = self.request.GET.get("affaire")
+        titre = self.request.GET.get("titre")
+        if affaire_id:
+            try:
+                initial["affaire"] = get_object_or_404(Affaire, pk=affaire_id)
+            except Exception:
+                pass
+        if titre:
+            initial["titre"] = titre
+        return initial
+
     def get_success_url(self): return reverse_lazy("cabinet:piecejointe_list")
 
 class PieceJointeUpdate(UIPermRequiredMixin, SecureBase, ModalUpdateView, UpdateView):

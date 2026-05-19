@@ -230,16 +230,33 @@
   <h6 class="text-secondary"><i class="bi bi-file-earmark-check ms-1"></i> الوثائق المطلوبة</h6>
   <ul class="list-unstyled small">
     {% for doc in doc_checklist %}
-    <li class="mb-1">
+    <li class="mb-2 d-flex align-items-center gap-2">
       {% if doc.present %}
-        <i class="bi bi-check-circle-fill text-success ms-1"></i>
+        <i class="bi bi-check-circle-fill text-success"></i>
       {% elif doc.obligatoire %}
-        <i class="bi bi-x-circle-fill text-danger ms-1"></i>
+        <i class="bi bi-x-circle-fill text-danger"></i>
       {% else %}
-        <i class="bi bi-circle text-secondary ms-1"></i>
+        <i class="bi bi-circle text-secondary"></i>
       {% endif %}
-      {{ doc.nom }}
-      {% if doc.obligatoire %}<span class="text-danger">*</span>{% endif %}
+      <span class="flex-grow-1">
+        {{ doc.nom }}
+        {% if doc.obligatoire %}<span class="text-danger">*</span>{% endif %}
+      </span>
+      {% if doc.present %}
+        <a href="#" class="btn btn-sm btn-outline-info py-0 px-2"
+           data-bs-toggle="modal" data-bs-target="#mainModal"
+           hx-get="{% url 'cabinet:document_viewer' %}?model=piecejointe&pk={{ doc.piece_pk }}"
+           hx-target="#modalBody" title="عرض الوثيقة">
+          <i class="bi bi-eye"></i>
+        </a>
+      {% else %}
+        <a href="#" class="btn btn-sm btn-outline-primary py-0 px-2"
+           data-bs-toggle="modal" data-bs-target="#mainModal"
+           hx-get="{% url 'cabinet:piecejointe_create' %}?affaire={{ object.pk }}&titre={{ doc.nom|urlencode }}"
+           hx-target="#modalBody" title="رفع الوثيقة">
+          <i class="bi bi-cloud-upload"></i>
+        </a>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
