@@ -1,213 +1,250 @@
-{% load static %}<!doctype html>
+{% load static arabic_pdf %}<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <style>
-  /* Police arabe Amiri – élégante, typique des documents juridiques marocains */
+  /* Police arabe Amiri – classique, juridique */
   @font-face {
     font-family: "Amiri";
     src: url("{% static 'fonts/Amiri-Regular.ttf' %}");
     font-weight: normal;
-    font-style: normal;
   }
   @font-face {
     font-family: "Amiri";
     src: url("{% static 'fonts/Amiri-Bold.ttf' %}");
     font-weight: bold;
-    font-style: normal;
   }
 
-  /* Palette inspirée de mahakim.ma : bleu marine profond + or sable + ivoire */
+  /* Palette mahakim.ma : marine + or sable + ivoire */
   @page {
     size: A4;
-    margin: 3.2cm 1.5cm 2.6cm 1.5cm;
+    margin: 3.4cm 1.6cm 2.8cm 1.6cm;
     @frame header_frame {
       -pdf-frame-content: header_content;
-      top: 0.6cm; margin-left: 1.5cm; margin-right: 1.5cm; height: 2.6cm;
+      top: 0.6cm; margin-left: 1.6cm; margin-right: 1.6cm; height: 2.8cm;
     }
     @frame footer_frame {
       -pdf-frame-content: footer_content;
-      bottom: 0.5cm; margin-left: 1.5cm; margin-right: 1.5cm; height: 1.8cm;
+      bottom: 0.5cm; margin-left: 1.6cm; margin-right: 1.6cm; height: 2.0cm;
     }
   }
 
   body {
-    font-family: "Amiri", "Helvetica", sans-serif;
+    font-family: "Amiri";
     font-size: 11pt;
     color: #1c2b4a;
     direction: rtl;
-    line-height: 1.5;
+    line-height: 1.55;
   }
 
-  h1 {
-    font-family: "Amiri", sans-serif;
-    font-size: 18pt;
-    color: #0d2c54;
-    margin: 0 0 4pt 0;
+  /* ===== EN-TÊTE ===== */
+  .hdr-devise {
     text-align: center;
+    font-family: "Amiri";
+    font-size: 10.5pt;
     font-weight: bold;
-    letter-spacing: 0.5pt;
+    color: #0d2c54;
+    letter-spacing: 1pt;
+    padding: 0 0 3pt 0;
   }
 
-  .title-rule {
-    width: 38%;
-    margin: 4pt auto 10pt auto;
-    border-bottom: 1pt solid #c2a169;
+  .hdr-rule {
+    border-bottom: 0.75pt solid #c2a169;
+    margin: 2pt 0 6pt 0;
+    width: 100%;
   }
 
-  .meta {
-    color: #6a7892;
-    font-size: 9.5pt;
-    text-align: center;
-    margin-bottom: 14pt;
-  }
-
-  table {
+  .hdr-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 4pt;
-    font-family: "Amiri", sans-serif;
+    border: none;
+    margin: 0;
   }
-
-  thead th {
-    background-color: #0d2c54;
-    color: #f5e9c8;
-    padding: 7pt 5pt;
-    text-align: right;
-    font-weight: bold;
-    font-size: 10pt;
-    border: 0.5pt solid #0d2c54;
-    border-bottom: 1.5pt solid #c2a169;
+  .hdr-table td {
+    border: none;
+    padding: 0 4pt;
+    vertical-align: middle;
   }
+  .hdr-logo { width: 18%; }
+  .hdr-text { width: 64%; text-align: center; }
+  .hdr-logo-min { width: 18%; }
 
-  td {
-    padding: 6pt 5pt;
-    border: 0.4pt solid #d8d3c0;
-    font-size: 10.5pt;
-    text-align: right;
-    color: #1c2b4a;
-  }
-
-  tr.even td { background-color: #faf6ea; }
-  tr.odd td { background-color: #ffffff; }
-
-  .num-col { text-align: center; color: #6a7892; width: 6%; }
-
-  /* En-tête */
-  .header-table { width: 100%; border: none; margin: 0; }
-  .header-table td { border: none; padding: 0; vertical-align: middle; }
-
-  .devise {
-    text-align: center;
-    font-family: "Amiri", sans-serif;
-    font-size: 11pt;
-    font-weight: bold;
-    color: #0d2c54;
-    padding: 2pt 0 3pt 0;
-    border-bottom: 0.75pt solid #c2a169;
-    margin-bottom: 5pt;
-    letter-spacing: 1pt;
-  }
-
-  .cabinet-name {
-    font-family: "Amiri", sans-serif;
-    font-size: 13pt;
+  .hdr-cabinet {
+    font-family: "Amiri";
+    font-size: 13.5pt;
     font-weight: bold;
     color: #0d2c54;
     line-height: 1.2;
   }
-
-  .cabinet-avocat {
-    font-family: "Amiri", sans-serif;
+  .hdr-avocat {
+    font-family: "Amiri";
     font-size: 10pt;
     color: #1c2b4a;
     margin-top: 1pt;
   }
-
-  .cabinet-barreau {
-    font-family: "Amiri", sans-serif;
+  .hdr-barreau {
+    font-family: "Amiri";
     font-size: 9pt;
     color: #6a7892;
-    font-style: italic;
   }
 
-  /* Pied de page */
-  .footer-bar {
-    border-top: 0.75pt solid #c2a169;
-    padding-top: 4pt;
-    margin-top: 2pt;
-    font-family: "Amiri", sans-serif;
-    font-size: 8.5pt;
+  /* ===== TITRE PAGE ===== */
+  .title-block {
+    text-align: center;
+    margin: 2pt 0 12pt 0;
+  }
+  h1.page-title {
+    font-family: "Amiri";
+    font-size: 19pt;
+    color: #0d2c54;
+    margin: 0;
+    font-weight: bold;
+    display: inline-block;
+    padding: 4pt 22pt;
+    border-top: 0.5pt solid #c2a169;
+    border-bottom: 0.5pt solid #c2a169;
+  }
+  .meta {
+    font-family: "Amiri";
+    font-size: 9.5pt;
     color: #6a7892;
     text-align: center;
-    line-height: 1.5;
+    margin-top: 6pt;
   }
+  .meta .sep { color: #c2a169; padding: 0 6pt; }
 
-  .footer-bar .strong { color: #0d2c54; font-weight: bold; }
+  /* ===== TABLEAU ===== */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4pt;
+    font-family: "Amiri";
+  }
+  table.data thead th {
+    background-color: #0d2c54;
+    color: #f5e9c8;
+    padding: 8pt 6pt;
+    text-align: right;
+    font-weight: bold;
+    font-size: 10.5pt;
+    border: 0.5pt solid #0d2c54;
+    border-bottom: 1.5pt solid #c2a169;
+  }
+  table.data td {
+    padding: 7pt 6pt;
+    border-bottom: 0.4pt solid #d8d3c0;
+    border-right: 0.4pt solid #ece8d6;
+    border-left: 0.4pt solid #ece8d6;
+    font-size: 11pt;
+    text-align: right;
+    color: #1c2b4a;
+  }
+  table.data tr.even td { background-color: #faf6ea; }
+  table.data tr.odd  td { background-color: #ffffff; }
+  .num-col { text-align: center; color: #8c6f3a; width: 7%; font-weight: bold; }
+  .empty-cell { text-align: center; color: #6a7892; padding: 18pt; font-style: italic; }
 
+  /* ===== PIED ===== */
+  .ftr-rule {
+    border-top: 0.75pt solid #c2a169;
+    margin-bottom: 3pt;
+  }
+  .ftr-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    font-family: "Amiri";
+    font-size: 8.5pt;
+    color: #4a5772;
+  }
+  .ftr-table td {
+    border: none;
+    padding: 1pt 2pt;
+    vertical-align: top;
+  }
+  .ftr-label { color: #0d2c54; font-weight: bold; }
+  .ftr-center { text-align: center; }
+  .ftr-right { text-align: right; }
+  .ftr-left { text-align: left; }
   .pagenum:before { content: counter(page); }
   .pagetotal:before { content: counter(pages); }
-
   .page-info {
     color: #0d2c54;
     font-weight: bold;
+    font-size: 9pt;
   }
 </style>
 </head>
 <body>
 
+{# =========== EN-TÊTE =========== #}
 <div id="header_content">
-  {% if params.devise_ar %}<div class="devise">{{ params.devise_ar }}</div>{% endif %}
-  <table class="header-table">
+  {% if params.devise_ar %}
+    <div class="hdr-devise">{{ params.devise_ar|ar }}</div>
+    <div class="hdr-rule"></div>
+  {% endif %}
+  <table class="hdr-table">
     <tr>
-      <td width="20%">
-        {% if params.logo_cabinet %}<img src="{{ params.logo_cabinet.url }}" style="max-height:60pt;">{% endif %}
+      <td class="hdr-logo">
+        {% if params.logo_cabinet %}<img src="{{ params.logo_cabinet.url }}" style="max-height:62pt; max-width:90pt;">{% endif %}
       </td>
-      <td width="60%" align="center">
-        <div class="cabinet-name">{{ params.nom_cabinet_ar|default:params.nom_avocat_ar|default:"مكتب المحاماة" }}</div>
+      <td class="hdr-text">
+        <div class="hdr-cabinet">{{ params.nom_cabinet_ar|default:params.nom_avocat_ar|default:"مكتب المحاماة"|ar }}</div>
         {% if params.nom_avocat_ar and params.nom_cabinet_ar %}
-          <div class="cabinet-avocat">الأستاذ {{ params.nom_avocat_ar }}</div>
+          <div class="hdr-avocat">{{ "الأستاذ"|ar }} {{ params.nom_avocat_ar|ar }}</div>
         {% endif %}
-        {% if params.barreau %}<div class="cabinet-barreau">{{ params.barreau }}</div>{% endif %}
+        {% if params.barreau %}<div class="hdr-barreau">{{ params.barreau|ar }}</div>{% endif %}
       </td>
-      <td width="20%" align="left">
-        {% if params.logo_ministere %}<img src="{{ params.logo_ministere.url }}" style="max-height:60pt;">{% endif %}
+      <td class="hdr-logo-min">
+        {% if params.logo_ministere %}<img src="{{ params.logo_ministere.url }}" style="max-height:62pt; max-width:90pt;">{% endif %}
       </td>
     </tr>
   </table>
 </div>
 
+{# =========== PIED =========== #}
 <div id="footer_content">
-  <div class="footer-bar">
-    {% if params.adresse %}{{ params.adresse }}{% if params.ville %} — {{ params.ville }}{% endif %}<br>{% endif %}
-    {% if params.telephone %}<span class="strong">الهاتف:</span> {{ params.telephone }}{% endif %}
-    {% if params.fax %} &nbsp;•&nbsp; <span class="strong">الفاكس:</span> {{ params.fax }}{% endif %}
-    {% if params.email %} &nbsp;•&nbsp; {{ params.email }}{% endif %}
-    {% if params.site_web %} &nbsp;•&nbsp; {{ params.site_web }}{% endif %}
-    {% if params.ice or params.rib %}
-      <br>
-      {% if params.ice %}<span class="strong">ICE:</span> {{ params.ice }}{% endif %}
-      {% if params.rib %} &nbsp;•&nbsp; <span class="strong">RIB:</span> {{ params.rib }}{% endif %}
-    {% endif %}
-    {% if params.pied_page_ar %}<br>{{ params.pied_page_ar }}{% endif %}
-    <br><span class="page-info">صفحة <span class="pagenum"></span> / <span class="pagetotal"></span></span>
-  </div>
+  <div class="ftr-rule"></div>
+  <table class="ftr-table">
+    <tr>
+      <td class="ftr-right" width="33%">
+        {% if params.telephone %}<span class="ftr-label">{{ "الهاتف:"|ar }}</span> {{ params.telephone }}<br>{% endif %}
+        {% if params.fax %}<span class="ftr-label">{{ "الفاكس:"|ar }}</span> {{ params.fax }}<br>{% endif %}
+        {% if params.ice %}<span class="ftr-label">ICE:</span> {{ params.ice }}{% endif %}
+      </td>
+      <td class="ftr-center" width="34%">
+        {% if params.adresse %}{{ params.adresse|ar }}{% if params.ville %} — {{ params.ville|ar }}{% endif %}<br>{% endif %}
+        {% if params.pied_page_ar %}{{ params.pied_page_ar|ar }}<br>{% endif %}
+        <span class="page-info">{{ "صفحة"|ar }} <span class="pagenum"></span> / <span class="pagetotal"></span></span>
+      </td>
+      <td class="ftr-left" width="33%">
+        {% if params.email %}{{ params.email }}<br>{% endif %}
+        {% if params.site_web %}{{ params.site_web }}<br>{% endif %}
+        {% if params.rib %}<span class="ftr-label">RIB:</span> {{ params.rib }}{% endif %}
+      </td>
+    </tr>
+  </table>
 </div>
 
-<h1>{{ title }}</h1>
-<div class="title-rule"></div>
+{# =========== TITRE =========== #}
+<div class="title-block">
+  <h1 class="page-title">{{ title|ar }}</h1>
+</div>
 <div class="meta">
-  تاريخ الإصدار: {{ generated_at|date:"d/m/Y H:i" }} &nbsp;•&nbsp; عدد العناصر: {{ items|length }}
+  {{ "تاريخ الإصدار:"|ar }} {{ generated_at|date:"d/m/Y H:i" }}
+  <span class="sep">•</span>
+  {{ "عدد العناصر:"|ar }} {{ items|length }}
 </div>
 
-<table>
+{# =========== TABLEAU =========== #}
+<table class="data">
   <thead>
     <tr>
       <th class="num-col">#</th>
-      <th>الاسم</th>
+      <th>{{ "الاسم"|ar }}</th>
       {% for f in fields %}
         {% if f != "libelle" %}
-          <th>{% for k, v in labels.items %}{% if k == f %}{{ v }}{% endif %}{% endfor %}</th>
+          <th>{% for k, v in labels.items %}{% if k == f %}{{ v|ar }}{% endif %}{% endfor %}</th>
         {% endif %}
       {% endfor %}
     </tr>
@@ -216,20 +253,20 @@
     {% for it in items %}
       <tr class="{% cycle 'odd' 'even' %}">
         <td class="num-col">{{ forloop.counter }}</td>
-        <td>{{ it.libelle }}</td>
+        <td>{{ it.libelle|ar }}</td>
         {% for f in fields %}
           {% if f != "libelle" %}
             <td>
-              {% if f == "domaine" %}{{ it.get_domaine_display|default:"—" }}
-              {% elif f == "delai_legal_jours" %}{{ it.delai_legal_jours|default:"—" }}{% if it.delai_legal_jours %} يوم{% endif %}
-              {% elif f == "base_legale" %}{{ it.base_legale|default:"—" }}
+              {% if f == "domaine" %}{{ it.get_domaine_display|default:"—"|ar }}
+              {% elif f == "delai_legal_jours" %}{{ it.delai_legal_jours|default:"—" }}{% if it.delai_legal_jours %} {{ "يوم"|ar }}{% endif %}
+              {% elif f == "base_legale" %}{{ it.base_legale|default:"—"|ar }}
               {% else %}—{% endif %}
             </td>
           {% endif %}
         {% endfor %}
       </tr>
     {% empty %}
-      <tr><td colspan="10" align="center" style="color:#6a7892; padding:14pt;">لا توجد عناصر.</td></tr>
+      <tr><td colspan="10" class="empty-cell">{{ "لا توجد عناصر."|ar }}</td></tr>
     {% endfor %}
   </tbody>
 </table>

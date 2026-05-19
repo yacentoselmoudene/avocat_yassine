@@ -8,7 +8,13 @@ def _append(val, suffix):
 
 @register.filter(name="add_class")
 def add_class(field, css):
-    """{{ field|add_class:'form-control is-invalid' }}"""
+    """{{ field|add_class:'form-control is-invalid' }}
+
+    Si `field` n'est pas un BoundField (ex: nom de champ absent du form),
+    on retourne la valeur telle quelle plutôt que de crasher le template.
+    """
+    if not hasattr(field, "field") or not hasattr(field, "as_widget"):
+        return field
     attrs = field.field.widget.attrs
     attrs["class"] = _append(attrs.get("class", ""), css)
     return field.as_widget(attrs=attrs)
@@ -16,6 +22,8 @@ def add_class(field, css):
 @register.filter(name="set_attr")
 def set_attr(field, arg):
     """{{ field|set_attr:'placeholder:اكتب هنا' }}"""
+    if not hasattr(field, "field") or not hasattr(field, "as_widget"):
+        return field
     try:
         k, v = arg.split(":", 1)
     except ValueError:
@@ -43,12 +51,13 @@ def query_string(context, **kwargs):
 @register.filter(name="add_attr")
 def add_attr(field, arg):
     """{{ field|add_attr:'data-hx:1' }}"""
+    if not hasattr(field, "field") or not hasattr(field, "as_widget"):
+        return field
     try:
         k, v = arg.split(":", 1)
     except ValueError:
         return field
     attrs = field.field.widget.attrs
-    # لا تستبدل إن كان موجودًا
     if k in attrs:
         return field
     attrs[k] = v

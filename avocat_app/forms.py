@@ -144,7 +144,7 @@ class AffaireForm(ArabicBootstrapFormMixin):
     class Meta:
         model = Affaire
         fields = [
-            "reference_interne",
+            "reference_interne", "reference_tribunal",
             "numero_dossier", "code_categorie", "annee_dossier",
             "type_affaire", "statut_affaire", "phase",
             "juridiction", "avocat_responsable",
@@ -153,6 +153,7 @@ class AffaireForm(ArabicBootstrapFormMixin):
         ]
         labels = {
             "reference_interne": "المرجع الداخلي",
+            "reference_tribunal": "مرجع المحكمة",
             "numero_dossier": "رقم الملف",
             "code_categorie": "صنف القضية",
             "annee_dossier": "السنة",
