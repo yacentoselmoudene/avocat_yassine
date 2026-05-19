@@ -24,7 +24,7 @@
       <thead class="table-light">
         <tr>
           <th style="width:60px;">#</th>
-          <th>الاسم</th>
+          <th>{{ libelle_label|default:"الاسم" }}</th>
           {% for f in extra_fields %}
             <th>{% for key, val in field_labels.items %}{% if key == f %}{{ val }}{% endif %}{% endfor %}{% if not field_labels %}{{ f }}{% endif %}</th>
           {% endfor %}
@@ -38,14 +38,18 @@
             <td>{{ it.libelle }}</td>
             {% for f in extra_fields %}
               <td>
-                {% if f == "domaine" %}
-                  {{ it.get_domaine_display|default:"—" }}
-                {% else %}
-                  {% with val=it|default:"" %}
-                    {% firstof it.delai_legal_jours it.base_legale as extra_val %}
-                  {% endwith %}
-                  {% if f == "delai_legal_jours" %}{{ it.delai_legal_jours }} يوم{% elif f == "base_legale" %}{{ it.base_legale|default:"—" }}{% else %}—{% endif %}
-                {% endif %}
+                {% if f == "code" %}<code class="text-primary fw-bold">{{ it.code|default:"—" }}</code>
+                {% elif f == "domaine" %}{{ it.get_domaine_display|default:"—" }}
+                {% elif f == "delai_legal_jours" %}{{ it.delai_legal_jours|default:"—" }}{% if it.delai_legal_jours %} يوم{% endif %}
+                {% elif f == "base_legale" %}{{ it.base_legale|default:"—" }}
+                {% elif f == "type_juridiction_initiale" %}
+                  {% if it.type_juridiction_initiale %}
+                    <span class="badge bg-info-subtle text-info-emphasis">
+                      {{ it.type_juridiction_initiale.code_type }} — {{ it.type_juridiction_initiale.libelle }}
+                    </span>
+                  {% else %}—{% endif %}
+                {% elif f == "niveau" %}{{ it.get_niveau_display|default:"—" }}
+                {% else %}—{% endif %}
               </td>
             {% endfor %}
             <td class="text-end">

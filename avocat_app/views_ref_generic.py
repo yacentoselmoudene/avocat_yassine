@@ -17,7 +17,7 @@ from .models import (
     TypeDepense, TypeRecette, RoleUtilisateur, StatutTache, TypeAlerte,
     TypeRecours, StatutExecution, TypeExecution, StatutAffaire, TypeAffaire,
     TypeAudience, ResultatAudience, DegreJuridiction, TypeJuridiction,
-    TypeAvertissement,
+    TypeAvertissement, CodeCategorieAffaire,
 )
 from .forms import ArabicModelForm  # base de tes ModelForms ar
 
@@ -128,6 +128,11 @@ REFS: Dict[str, RefConfig] = {
     "typeavertissement": RefConfig(
         model=TypeAvertissement, fields=["libelle", "delai_legal_jours", "domaine", "base_legale"],
         list_title="أنواع الإنذارات", form_title_create="إضافة نوع إنذار", form_title_update="تعديل نوع إنذار"),
+    "categorieaffaire": RefConfig(
+        model=CodeCategorieAffaire, fields=["code", "libelle", "domaine", "type_juridiction_initiale"],
+        list_title="أصناف القضايا (CA الدار البيضاء)",
+        form_title_create="إضافة صنف قضية",
+        form_title_update="تعديل صنف قضية"),
 }
 
 # ---------------------------
@@ -148,8 +153,18 @@ class RefBase(SecureBase):
     def get_queryset(self):
         cfg = self.get_ref()
         qs = cfg.model.objects.all()
-        # si tu utilises un SoftDelete: qs = qs.filter(is_deleted=False)
-        return qs.order_by("libelle")
+        # Si soft-delete : filtrer is_deleted=False
+        if hasattr(cfg.model, "is_deleted"):
+            qs = qs.filter(is_deleted=False)
+        # Filtres supplémentaires depuis REF_REGISTRY
+        from .ref_registry import REF_REGISTRY
+        reg = REF_REGISTRY.get(self.kwargs.get(self.refname_kwarg), {})
+        extra_filter = reg.get("filter_qs") or {}
+        if extra_filter:
+            qs = qs.filter(**extra_filter)
+        # Ordre custom (ex: par code pour les catégories) sinon par libelle
+        order = reg.get("order_by") or "libelle"
+        return qs.order_by(order)
 
     # utilitaire commun aux vues HTMX (succès uniforme)
     def _success_json_refresh_list(self) -> JsonResponse:
@@ -189,6 +204,7 @@ class RefList(RefBase, ListView):
             "refname": self.kwargs["refname"],
             "extra_fields": extra_fields,
             "field_labels": field_labels,
+            "libelle_label": reg_cfg.get("libelle_label", "الاسم"),
         })
         return ctx
 
@@ -202,7 +218,13 @@ class RefCreate(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, CreateView):
 
     def get_form_class(self):
         cfg = self.get_ref()
-        return make_ref_form(cfg.model, cfg.fields, labels={"libelle": "الاسم"})
+        from .ref_registry import REF_REGISTRY
+        reg = REF_REGISTRY.get(self.kwargs.get(self.refname_kwarg), {})
+        # Récupère les labels depuis le registry, fallback "libelle": "الاسم"
+        registry_labels = reg.get("labels", {})
+        libelle_lbl = reg.get("libelle_label", "الاسم")
+        labels = {"libelle": libelle_lbl, **registry_labels}
+        return make_ref_form(cfg.model, cfg.fields, labels=labels)
 
     def get(self, request, *args, **kwargs):
         if self.htmx():
@@ -232,7 +254,13 @@ class RefUpdate(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, UpdateView):
 
     def get_form_class(self):
         cfg = self.get_ref()
-        return make_ref_form(cfg.model, cfg.fields, labels={"libelle": "الاسم"})
+        from .ref_registry import REF_REGISTRY
+        reg = REF_REGISTRY.get(self.kwargs.get(self.refname_kwarg), {})
+        # Récupère les labels depuis le registry, fallback "libelle": "الاسم"
+        registry_labels = reg.get("labels", {})
+        libelle_lbl = reg.get("libelle_label", "الاسم")
+        labels = {"libelle": libelle_lbl, **registry_labels}
+        return make_ref_form(cfg.model, cfg.fields, labels=labels)
 
     def get(self, request, *args, **kwargs):
         if self.htmx():
