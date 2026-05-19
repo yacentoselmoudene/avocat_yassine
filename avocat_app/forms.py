@@ -141,24 +141,29 @@ class AvocatForm(ArabicBootstrapFormMixin):
 
 # ---------- Affaire ----------
 class AffaireForm(ArabicBootstrapFormMixin):
+    """Formulaire de création/édition d'une affaire.
+
+    Champs auto-gérés (pas dans le formulaire) :
+    - reference_tribunal : composé automatiquement à partir de
+      numero_dossier / code_categorie.code / annee_dossier (modèle.save).
+    - statut_affaire : par défaut "مفتوحة" si non renseigné.
+    """
     class Meta:
         model = Affaire
         fields = [
-            "reference_interne", "reference_tribunal",
+            "reference_interne",
             "numero_dossier", "code_categorie", "annee_dossier",
-            "type_affaire", "statut_affaire", "phase",
+            "type_affaire", "phase",
             "juridiction", "avocat_responsable",
             "date_ouverture", "priorite",
             "valeur_litige", "objet", "notes",
         ]
         labels = {
             "reference_interne": "المرجع الداخلي",
-            "reference_tribunal": "مرجع المحكمة",
             "numero_dossier": "رقم الملف",
             "code_categorie": "صنف القضية",
             "annee_dossier": "السنة",
             "type_affaire": "نوع القضية",
-            "statut_affaire": "حالة القضية",
             "phase": "المرحلة",
             "juridiction": "المحكمة",
             "date_ouverture": "تاريخ الفتح",
@@ -184,11 +189,52 @@ class AffaireForm(ArabicBootstrapFormMixin):
         self.fields["annee_dossier"].widget.attrs["placeholder"] = "مثال: 2026"
         self.fields["valeur_litige"].widget.attrs["placeholder"] = "0.00"
 
+        # Affiche le code de la juridiction entre parenthèses pour faciliter
+        # la recherche dans la liste déroulante (Select2).
+        from .models import Juridiction
+        def _juridiction_label(obj):
+            nom = obj.nomtribunal_ar or obj.nomtribunal_fr or ""
+            ville = obj.villetribunal_ar or obj.villetribunal_fr or ""
+            code = obj.code or ""
+            base = f"{nom} - {ville}".strip(" -")
+            return f"{base} ({code})" if code else base
+        self.fields["juridiction"].label_from_instance = _juridiction_label
+        self.fields["juridiction"].queryset = Juridiction.objects.filter(is_deleted=False).order_by("nomtribunal_ar")
+        # Select2 pour recherche live (le widget par défaut select reçoit la class via le mixin)
+        self.fields["juridiction"].widget.attrs.setdefault("class", "form-select js-select2")
+        self.fields["juridiction"].widget.attrs["data-placeholder"] = "ابحث عن محكمة…"
+
     def clean(self):
         cleaned = super().clean()
         if not cleaned.get("reference_interne"):
             raise ValidationError("المرجع الداخلي مطلوب.")
         return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Auto-compose reference_tribunal depuis numero_dossier/code/année
+        from .models import StatutAffaire
+        parts = []
+        if instance.numero_dossier:
+            parts.append(str(instance.numero_dossier))
+        if instance.code_categorie_id and instance.code_categorie:
+            parts.append(str(instance.code_categorie.code))
+        if instance.annee_dossier:
+            parts.append(str(instance.annee_dossier))
+        if parts:
+            instance.reference_tribunal = "/".join(parts)
+
+        # Défaut "مفتوحة" pour le statut si non renseigné (création)
+        if not instance.statut_affaire_id:
+            default_statut = (StatutAffaire.objects.filter(libelle="مفتوحة").first()
+                              or StatutAffaire.objects.filter(is_deleted=False).order_by("pk").first())
+            if default_statut:
+                instance.statut_affaire = default_statut
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 # ---------- أمثلة مختصرة لنماذج أخرى بنفس النمط ----------
