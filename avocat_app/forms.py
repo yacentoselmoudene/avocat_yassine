@@ -210,11 +210,18 @@ class AffaireForm(ArabicBootstrapFormMixin):
         self.fields["type_affaire"].widget.attrs["data-placeholder"] = "ابحث بالاسم أو الرمز…"
 
         def _code_cat_label(obj):
-            dom = obj.get_domaine_display() if obj.domaine else ""
-            base = f"({obj.code}) {obj.libelle}"
-            return f"{base} — {dom}" if dom else base
+            tj = obj.type_juridiction_initiale
+            tj_part = f" — {tj.code_type}" if tj else ""
+            return f"({obj.code}) {obj.libelle}{tj_part}"
         self.fields["code_categorie"].label_from_instance = _code_cat_label
-        self.fields["code_categorie"].queryset = CodeCategorieAffaire.objects.filter(is_deleted=False).order_by("code")
+        # On limite la liste aux 55 catégories officielles du PDF de la CA
+        # de Casablanca (celles qui ont une juridiction initiale liée).
+        self.fields["code_categorie"].queryset = (
+            CodeCategorieAffaire.objects
+            .filter(is_deleted=False, type_juridiction_initiale__isnull=False)
+            .select_related("type_juridiction_initiale")
+            .order_by("code")
+        )
         self.fields["code_categorie"].widget.attrs["data-placeholder"] = "ابحث بالرمز أو الاسم…"
 
     def clean(self):
