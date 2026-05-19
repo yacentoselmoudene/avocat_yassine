@@ -189,20 +189,33 @@ class AffaireForm(ArabicBootstrapFormMixin):
         self.fields["annee_dossier"].widget.attrs["placeholder"] = "مثال: 2026"
         self.fields["valeur_litige"].widget.attrs["placeholder"] = "0.00"
 
-        # Affiche le code de la juridiction entre parenthèses pour faciliter
-        # la recherche dans la liste déroulante (Select2).
-        from .models import Juridiction
+        # Affiche le code entre parenthèses dans les listes déroulantes pour
+        # faciliter la recherche par code via Select2 (recherche live).
+        from .models import Juridiction, TypeAffaire, CodeCategorieAffaire
+
         def _juridiction_label(obj):
             nom = obj.nomtribunal_ar or obj.nomtribunal_fr or ""
             ville = obj.villetribunal_ar or obj.villetribunal_fr or ""
             code = obj.code or ""
             base = f"{nom} - {ville}".strip(" -")
-            return f"{base} ({code})" if code else base
+            return f"({code}) {base}" if code else base
         self.fields["juridiction"].label_from_instance = _juridiction_label
         self.fields["juridiction"].queryset = Juridiction.objects.filter(is_deleted=False).order_by("nomtribunal_ar")
-        # Select2 pour recherche live (le widget par défaut select reçoit la class via le mixin)
-        self.fields["juridiction"].widget.attrs.setdefault("class", "form-select js-select2")
-        self.fields["juridiction"].widget.attrs["data-placeholder"] = "ابحث عن محكمة…"
+        self.fields["juridiction"].widget.attrs["data-placeholder"] = "ابحث بالاسم أو الرمز…"
+
+        def _type_affaire_label(obj):
+            return f"({obj.code}) {obj.libelle}" if obj.code else obj.libelle
+        self.fields["type_affaire"].label_from_instance = _type_affaire_label
+        self.fields["type_affaire"].queryset = TypeAffaire.objects.filter(is_deleted=False).order_by("code")
+        self.fields["type_affaire"].widget.attrs["data-placeholder"] = "ابحث بالاسم أو الرمز…"
+
+        def _code_cat_label(obj):
+            dom = obj.get_domaine_display() if obj.domaine else ""
+            base = f"({obj.code}) {obj.libelle}"
+            return f"{base} — {dom}" if dom else base
+        self.fields["code_categorie"].label_from_instance = _code_cat_label
+        self.fields["code_categorie"].queryset = CodeCategorieAffaire.objects.filter(is_deleted=False).order_by("code")
+        self.fields["code_categorie"].widget.attrs["data-placeholder"] = "ابحث بالرمز أو الاسم…"
 
     def clean(self):
         cleaned = super().clean()

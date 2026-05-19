@@ -549,6 +549,12 @@ class CodeCategorieAffaire(TimeStampedSoftDeleteModel):
     libelle = models.CharField(max_length=200, verbose_name='التسمية')
     domaine = models.CharField(max_length=30, choices=DOMAINE_CHOICES, verbose_name='المجال')
     niveau = models.CharField(max_length=20, choices=NIVEAU_CHOICES, default='premiere_instance', verbose_name='الدرجة')
+    type_juridiction_initiale = models.ForeignKey(
+        TypeJuridiction, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="categories_initiales",
+        verbose_name="نوع المحكمة الأولى",
+        help_text="نوع المحكمة المختصة ابتدائيًا لهذه الفئة (مثلاً TPI، TC، TA، CA مباشرة...)",
+    )
 
     class Meta:
         db_table = 'code_categorie_affaire'

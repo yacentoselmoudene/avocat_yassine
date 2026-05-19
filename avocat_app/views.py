@@ -921,6 +921,40 @@ class AudienceRow(SecureBase, DetailView):
     permission_required = "cabinet.view_audience"
     context_object_name = "obj"
 
+
+def api_juridictions_for_category(request, code_categorie_id):
+    """Endpoint AJAX : retourne les juridictions adaptées à une catégorie.
+
+    Réponse JSON :
+        {
+          "type_code": "CA",
+          "type_label": "محكمة الاستئناف",
+          "juridiction_ids": [12, 45, 78, ...]
+        }
+
+    Le formulaire AffaireCreate utilise cette réponse pour filtrer dynamiquement
+    le dropdown des juridictions et afficher un hint à l'utilisateur.
+    """
+    from .models import CodeCategorieAffaire, Juridiction
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    try:
+        cat = CodeCategorieAffaire.objects.select_related("type_juridiction_initiale").get(pk=code_categorie_id)
+    except CodeCategorieAffaire.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "not_found"}, status=404)
+    tj = cat.type_juridiction_initiale
+    if not tj:
+        # Pas de spécification → retourner toutes les juridictions
+        ids = list(Juridiction.objects.filter(is_deleted=False).values_list("pk", flat=True))
+        return JsonResponse({"ok": True, "type_code": None, "type_label": None, "juridiction_ids": ids})
+    ids = list(Juridiction.objects.filter(is_deleted=False, type=tj).values_list("pk", flat=True))
+    return JsonResponse({
+        "ok": True,
+        "type_code": tj.code_type,
+        "type_label": tj.libelle,
+        "juridiction_ids": ids,
+    })
+
 # ----- Mesure
 class MesureList(SecureBase, NoPostOnReadOnlyMixin, SearchListMixin, HTMXPartialListMixin, ListView):
     model = Mesure

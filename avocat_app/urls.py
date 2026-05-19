@@ -64,6 +64,10 @@ urlpatterns = [
     path("audiences/<uuid:pk>/set-result/", views.AudienceSetResult.as_view(), name="audience_set_result"),
     path("audiences/<uuid:pk>/row/", views.AudienceRow.as_view(), name="audience_row"),
 
+    # API : juridictions adaptées à une catégorie d'affaire
+    path("api/categories/<int:code_categorie_id>/juridictions/",
+         views.api_juridictions_for_category, name="api_juridictions_for_category"),
+
     # ====== Decision ======
     path("decisions/", views.DecisionList.as_view(), name="decision_list"),
     path("decisions/create/", views.DecisionCreate.as_view(), name="decision_create"),

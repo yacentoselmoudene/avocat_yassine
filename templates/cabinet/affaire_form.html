@@ -325,6 +325,72 @@
   // Auto-initialize Select2 on this page
   document.addEventListener('DOMContentLoaded', function() {
     initSelect2(document);
+    initCategoryJuridictionLink();
   });
+
+  // Filtrage dynamique : quand l'utilisateur choisit une صنف القضية, on
+  // restreint le dropdown des juridictions à celles du type compétent et
+  // on affiche un hint en arabe.
+  function initCategoryJuridictionLink() {
+    const $cat = $('#id_code_categorie');
+    const $jur = $('#id_juridiction');
+    if (!$cat.length || !$jur.length) return;
+
+    // Hint area
+    let $hint = $('#juridiction-hint');
+    if (!$hint.length) {
+      $hint = $('<div id="juridiction-hint" class="form-hint mt-1" style="display:none"></div>');
+      $jur.closest('.col-12, .col-sm-6, .col-lg-4, div').first().append($hint);
+    }
+
+    // Sauvegarde toutes les options initiales pour pouvoir rétablir
+    if (!$jur.data('all-options')) {
+      $jur.data('all-options', $jur.find('option').map(function(){ return this; }).get());
+    }
+
+    function restoreAll() {
+      const all = $jur.data('all-options');
+      $jur.empty();
+      all.forEach(function (opt) { $jur.append(opt.cloneNode(true)); });
+      if ($jur.data('select2')) {
+        $jur.select2('destroy');
+      }
+      $jur.select2({ theme: 'bootstrap-5', matcher: containsMatcher });
+    }
+
+    $cat.on('change', function () {
+      const id = $(this).val();
+      if (!id) {
+        restoreAll();
+        $hint.hide();
+        return;
+      }
+      $.getJSON('/api/categories/' + id + '/juridictions/')
+        .done(function (data) {
+          if (!data || !data.ok) return;
+          if (!data.type_code) {
+            restoreAll();
+            $hint.hide();
+            return;
+          }
+          // Filtrer : ne garder que les juridictions du type
+          const allowed = new Set(data.juridiction_ids.map(String));
+          const all = $jur.data('all-options');
+          $jur.empty();
+          all.forEach(function (opt) {
+            if (!opt.value || allowed.has(String(opt.value))) {
+              $jur.append(opt.cloneNode(true));
+            }
+          });
+          // Reset Select2 pour qu'il prenne en compte les nouvelles options
+          if ($jur.data('select2')) {
+            $jur.select2('destroy');
+          }
+          $jur.select2({ theme: 'bootstrap-5', matcher: containsMatcher });
+          $hint.html('<i class="bi bi-lightbulb"></i> هذه الفئة تختص بها عادةً : <strong>' + data.type_label + '</strong> (' + data.juridiction_ids.length + ' محكمة متاحة)');
+          $hint.show();
+        });
+    });
+  }
 </script>
 {% endblock %}

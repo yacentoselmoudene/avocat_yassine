@@ -157,11 +157,57 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var f = document.getElementById('affaireStepperForm');
-  if (f) initStepper(f);
+  if (f) { initStepper(f); initAffaireCatJurLink(f); }
 });
-// Also handle HTMX re-renders
 document.body.addEventListener('htmx:afterSwap', function() {
   var f = document.getElementById('affaireStepperForm');
-  if (f) initStepper(f);
+  if (f) { initStepper(f); initAffaireCatJurLink(f); }
 });
+
+// Filtrage dynamique des juridictions selon la catégorie sélectionnée.
+function initAffaireCatJurLink(scope) {
+  const $cat = $(scope).find('#id_code_categorie');
+  const $jur = $(scope).find('#id_juridiction');
+  if (!$cat.length || !$jur.length) return;
+  if ($cat.data('cat-jur-init')) return;
+  $cat.data('cat-jur-init', '1');
+
+  let $hint = $(scope).find('#mahakim-jur-hint');
+  if (!$hint.length) {
+    $hint = $('<div id="mahakim-jur-hint" class="alert alert-info py-2 small mt-2 mb-0" style="display:none"></div>');
+    $jur.closest('.col-6, .col, div').first().append($hint);
+  }
+
+  if (!$jur.data('all-options')) {
+    $jur.data('all-options', $jur.find('option').map(function(){ return this; }).get());
+  }
+  function restoreAll() {
+    const all = $jur.data('all-options');
+    $jur.empty();
+    all.forEach(function (opt) { $jur.append(opt.cloneNode(true)); });
+    if ($jur.data('select2')) $jur.select2('destroy');
+    $jur.select2({ theme: 'bootstrap-5', matcher: containsMatcher });
+  }
+
+  $cat.on('change.catjur', function () {
+    const id = $(this).val();
+    if (!id) { restoreAll(); $hint.hide(); return; }
+    $.getJSON('/api/categories/' + id + '/juridictions/')
+      .done(function (data) {
+        if (!data || !data.ok || !data.type_code) { restoreAll(); $hint.hide(); return; }
+        const allowed = new Set(data.juridiction_ids.map(String));
+        const all = $jur.data('all-options');
+        $jur.empty();
+        all.forEach(function (opt) {
+          if (!opt.value || allowed.has(String(opt.value))) {
+            $jur.append(opt.cloneNode(true));
+          }
+        });
+        if ($jur.data('select2')) $jur.select2('destroy');
+        $jur.select2({ theme: 'bootstrap-5', matcher: containsMatcher, dropdownParent: $jur.closest('.modal') });
+        $hint.html('<i class="bi bi-lightbulb"></i> هذه الفئة تختص بها عادةً : <strong>' + data.type_label + '</strong> (' + data.juridiction_ids.length + ' محكمة)');
+        $hint.show();
+      });
+  });
+}
 </script>
