@@ -223,16 +223,35 @@ class BarreauForm(ArabicBootstrapFormMixin):
         }
 
 class AudienceForm(ArabicBootstrapFormMixin):
+    """Formulaire de création/édition d'une audience.
+
+    Le résultat (`resultat`) n'est pas demandé ici : il est facultatif et sera
+    saisi plus tard via un popup dédié (AudienceResultForm).
+    """
     class Meta:
         model = Audience
-        fields = ["type_audience", "date_audience", "resultat"]  # pas "affaire" ici
+        fields = ["type_audience", "date_audience"]
         labels = {
             "type_audience": "نوع الجلسة",
             "date_audience": "تاريخ الجلسة",
-            "resultat": "النتيجة",
             "proces_verbal": "محضر",
         }
         widgets = {"date_audience": forms.DateInput(attrs={"type": "date"})}
+
+
+class AudienceResultForm(ArabicBootstrapFormMixin):
+    """Popup dédié à la saisie/modification du résultat d'une audience."""
+    class Meta:
+        model = Audience
+        fields = ["resultat", "proces_verbal"]
+        labels = {
+            "resultat": "النتيجة",
+            "proces_verbal": "محضر الجلسة",
+        }
+        widgets = {
+            "resultat": forms.Select(attrs={"class": "form-select"}),
+            "proces_verbal": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
+        }
 
 class MesureForm(ArabicBootstrapFormMixin):
     class Meta:

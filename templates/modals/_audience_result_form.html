@@ -1,0 +1,40 @@
+{# FILE: templates/modals/_audience_result_form.html — saisie/édition de la نتيجة après création #}
+{% load form_extras %}
+
+<form method="post"
+      action="{{ request.path }}"
+      hx-post="{{ request.path }}"
+      hx-target="this" hx-swap="outerHTML"
+      novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+      {{ form.non_field_errors }}
+    </div>
+  {% endif%}
+
+  <div class="mb-3">
+    <h6 class="text-primary mb-3"><i class="bi bi-flag ms-1"></i> النتيجة</h6>
+    <div class="mb-3">
+      <label class="form-label small fw-bold">{{ form.resultat.label }}</label>
+      {{ form.resultat }}
+      {% if form.resultat.errors %}<div class="invalid-feedback d-block">{{ form.resultat.errors|join:", " }}</div>{% endif %}
+    </div>
+    <div>
+      <label class="form-label small fw-bold">{{ form.proces_verbal.label }}</label>
+      {{ form.proces_verbal }}
+      {% if form.proces_verbal.errors %}<div class="invalid-feedback d-block">{{ form.proces_verbal.errors|join:", " }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="bi bi-x-lg ms-1"></i> إلغاء
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check2-circle ms-1"></i> حفظ النتيجة
+    </button>
+  </div>
+</form>

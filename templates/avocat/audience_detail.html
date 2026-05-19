@@ -13,6 +13,11 @@
 
 {% block header_actions %}
   {% if user|can_see:"ui_btn_edit" %}
+  <a class="btn {% if object.resultat %}btn-outline-info{% else %}btn-info text-white{% endif %}" href="#"
+     data-bs-toggle="modal" data-bs-target="#mainModal"
+     hx-get="{% url 'cabinet:audience_set_result' object.pk %}" hx-target="#modalBody">
+    <i class="bi bi-flag-fill ms-1"></i> {% if object.resultat %}تعديل النتيجة{% else %}تحديد النتيجة{% endif %}
+  </a>
   <a class="btn btn-primary" href="#"
      data-bs-toggle="modal" data-bs-target="#mainModal"
      hx-get="{% url 'cabinet:audience_update' object.pk %}" hx-target="#modalBody">
@@ -39,7 +44,13 @@
 
     <dt class="col-sm-4 text-secondary">النتيجة</dt>
     <dd class="col-sm-8">
-      <span class="badge bg-info text-dark">{{ object.resultat }}</span>
+      {% if object.resultat %}
+        <span class="badge bg-info-subtle text-info-emphasis">{{ object.resultat }}</span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">
+          <i class="bi bi-hourglass-split ms-1"></i> لم تُحدَّد بعد
+        </span>
+      {% endif %}
     </dd>
   </dl>
 

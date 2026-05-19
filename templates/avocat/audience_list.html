@@ -43,23 +43,7 @@
         </thead>
         <tbody>
         {% for obj in object_list %}
-        <tr>
-          <td class="fw-bold">{{ obj.affaire.reference_interne }}</td>
-          <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ obj.type_audience }}</span></td>
-          <td class="small text-secondary">{{ obj.date_audience }}</td>
-          <td><span class="badge bg-info-subtle text-info-emphasis">{{ obj.resultat }}</span></td>
-          <td class="text-center">
-            <div class="btn-group btn-group-sm">
-              <a class="btn btn-outline-secondary" href="{% url 'cabinet:audience_detail' obj.pk %}" title="عرض"><i class="bi bi-eye"></i></a>
-              {% if user|can_see:"ui_btn_edit" %}
-              <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
-              {% endif %}
-              {% if user|can_see:"ui_btn_delete" %}
-              <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
+          {% include 'avocat/_audience_row.html' %}
         {% empty %}
           <tr><td colspan="5">{% include '_partials/_empty_state.html' %}</td></tr>
         {% endfor %}

@@ -35,7 +35,7 @@ from .filters import AffaireFilter, DepenseFilter, RecetteFilter, PieceJointeFil
 
 from .forms import (
     JuridictionForm, AvocatForm, AffaireForm, PartieForm, AffairePartieForm, AffaireAvocatForm,
-    AudienceForm, MesureForm, ExpertiseForm, DecisionForm, NotificationForm, VoieDeRecoursForm,
+    AudienceForm, AudienceResultForm, MesureForm, ExpertiseForm, DecisionForm, NotificationForm, VoieDeRecoursForm,
     ExecutionForm, DepenseForm, RecetteForm, PieceJointeForm, UtilisateurForm, TacheForm, AlerteForm, ExpertForm,
     BarreauForm, AvertissementForm,
 )
@@ -887,6 +887,39 @@ class AudienceDelete(UIPermRequiredMixin, SecureBase, ModalDeleteView, DeleteVie
     model = Audience
     permission_required = "cabinet.delete_audience"
     def get_success_url(self): return reverse_lazy("cabinet:audience_list")
+
+
+class AudienceSetResult(UIPermRequiredMixin, SecureBase, HTMXModalFormMixin, UpdateView):
+    """Popup dédié pour saisir/modifier la النتيجة d'une audience après création."""
+    ui_perm = "ui_btn_edit"
+    model = Audience
+    form_class = AudienceResultForm
+    permission_required = "cabinet.change_audience"
+    modal_template = "modals/_audience_result_form.html"
+    page_template = "modals/_audience_result_form.html"
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.htmx():
+            return self.success_json(
+                "تم تحديث نتيجة الجلسة.",
+                refreshTarget="#audience-row-" + str(self.object.pk),
+                refreshUrl=reverse("cabinet:audience_row", args=[self.object.pk]),
+                closeModal=True,
+            )
+        messages.success(self.request, "تم تحديث نتيجة الجلسة.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("cabinet:audience_detail", kwargs={"pk": self.object.pk})
+
+
+class AudienceRow(SecureBase, DetailView):
+    """Rend une seule ligne <tr> du tableau des audiences (pour refresh HTMX)."""
+    model = Audience
+    template_name = "avocat/_audience_row.html"
+    permission_required = "cabinet.view_audience"
+    context_object_name = "obj"
 
 # ----- Mesure
 class MesureList(SecureBase, NoPostOnReadOnlyMixin, SearchListMixin, HTMXPartialListMixin, ListView):

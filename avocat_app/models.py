@@ -734,7 +734,7 @@ class Audience(TimeStampedSoftDeleteModel):
     affaire = models.ForeignKey(Affaire, on_delete=models.CASCADE, verbose_name='القضية')
     type_audience = models.ForeignKey(TypeAudience, on_delete=models.PROTECT, verbose_name="نوع الجلسة")
     date_audience = models.DateTimeField(verbose_name='تاريخ الجلسة')
-    resultat = models.ForeignKey(ResultatAudience, on_delete=models.PROTECT, verbose_name="النتيجة")
+    resultat = models.ForeignKey(ResultatAudience, on_delete=models.PROTECT, null=True, blank=True, verbose_name="النتيجة")
     proces_verbal = models.TextField(null=True, blank=True, verbose_name='محضر الجلسة', validators=[arabic_text_validator])
 
     class Meta:

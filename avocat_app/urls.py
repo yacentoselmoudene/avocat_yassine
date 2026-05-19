@@ -61,6 +61,8 @@ urlpatterns = [
     path("audiences/<uuid:pk>/", views.AudienceDetail.as_view(), name="audience_detail"),
     path("audiences/<uuid:pk>/update/", views.AudienceUpdate.as_view(), name="audience_update"),
     path("audiences/<uuid:pk>/delete/", views.AudienceDelete.as_view(), name="audience_delete"),
+    path("audiences/<uuid:pk>/set-result/", views.AudienceSetResult.as_view(), name="audience_set_result"),
+    path("audiences/<uuid:pk>/row/", views.AudienceRow.as_view(), name="audience_row"),
 
     # ====== Decision ======
     path("decisions/", views.DecisionList.as_view(), name="decision_list"),

@@ -1,0 +1,33 @@
+{# FILE: templates/avocat/_audience_row.html — une ligne <tr> du tableau des audiences #}
+{% load ui_perms %}
+<tr id="audience-row-{{ obj.pk }}">
+  <td class="fw-bold">{{ obj.affaire.reference_interne }}</td>
+  <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ obj.type_audience }}</span></td>
+  <td class="small text-secondary">{{ obj.date_audience }}</td>
+  <td>
+    {% if obj.resultat %}
+      <span class="badge bg-info-subtle text-info-emphasis">{{ obj.resultat }}</span>
+    {% else %}
+      <span class="badge bg-warning-subtle text-warning-emphasis">
+        <i class="bi bi-hourglass-split ms-1"></i> في انتظار النتيجة
+      </span>
+    {% endif %}
+  </td>
+  <td class="text-center">
+    <div class="btn-group btn-group-sm">
+      <a class="btn btn-outline-secondary" href="{% url 'cabinet:audience_detail' obj.pk %}" title="عرض"><i class="bi bi-eye"></i></a>
+      {% if user|can_see:"ui_btn_edit" %}
+      <a class="btn {% if obj.resultat %}btn-outline-info{% else %}btn-info text-white{% endif %}"
+         href="#" data-bs-toggle="modal" data-bs-target="#mainModal"
+         hx-get="{% url 'cabinet:audience_set_result' obj.pk %}" hx-target="#modalBody"
+         title="{% if obj.resultat %}تعديل النتيجة{% else %}تحديد النتيجة{% endif %}">
+        <i class="bi bi-flag-fill"></i>
+      </a>
+      <a class="btn btn-outline-primary" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_update' obj.pk %}" hx-target="#modalBody" title="تعديل"><i class="bi bi-pencil"></i></a>
+      {% endif %}
+      {% if user|can_see:"ui_btn_delete" %}
+      <a class="btn btn-outline-danger" href="#" data-bs-toggle="modal" data-bs-target="#mainModal" hx-get="{% url 'cabinet:audience_delete' obj.pk %}" hx-target="#modalBody" title="حذف"><i class="bi bi-trash"></i></a>
+      {% endif %}
+    </div>
+  </td>
+</tr>
