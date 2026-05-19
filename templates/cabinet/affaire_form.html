@@ -97,156 +97,119 @@
 {% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data"
-      hx-post="{{ request.path }}" hx-target="#modalBody" hx-swap="outerHTML"
-      novalidate>
-  {% csrf_token %}
+{% include '_partials/_stepper.html' %}
 
-  {# --- Non-field errors --- #}
-  {% if form.non_field_errors %}
-    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-      <i class="bi bi-exclamation-triangle-fill ms-1"></i>
-      {% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  {% endif %}
+<div class="form-section">
+  <div class="form-section-body">
 
-  <div class="row g-3">
-    {# ======================== COLUMN 1: Main Form ======================== #}
-    <div class="col-12 col-lg-8">
+    <form method="post" enctype="multipart/form-data"
+          id="affairePageForm"
+          action="{{ request.path }}"
+          novalidate>
+      {% csrf_token %}
 
-      {# --- Section 1: References & Identification --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-hash"></i>
-          <h6>المراجع والتعريف</h6>
+      {# --- Non-field errors --- #}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+          <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+          {% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <div class="form-section-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-floating-label required-asterisk" for="{{ form.reference_interne.id_for_label }}">{{ form.reference_interne.label }}</label>
-              {{ form.reference_interne|add_class:'form-control' }}
-              {% if form.reference_interne.errors %}<div class="invalid-feedback d-block">{{ form.reference_interne.errors|join:", " }}</div>{% endif %}
-              <div class="form-hint">رمز فريد لتعريف القضية داخل المكتب</div>
-            </div>
+      {% endif %}
 
-            <div class="col-12">
-              <label class="form-floating-label">مرجع المحكمة <small class="text-secondary">(رقم الملف / الصنف / السنة)</small></label>
-              <div class="row g-2 align-items-end">
-                <div class="col-4">
-                  <label class="form-hint mb-1">{{ form.numero_dossier.label }}</label>
-                  {{ form.numero_dossier|add_class:'form-control text-center' }}
-                  {% if form.numero_dossier.errors %}<div class="invalid-feedback d-block">{{ form.numero_dossier.errors|join:", " }}</div>{% endif %}
-                </div>
-                <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
-                <div class="col-4">
-                  <label class="form-hint mb-1">{{ form.code_categorie.label }}</label>
-                  {{ form.code_categorie }}
-                  {% if form.code_categorie.errors %}<div class="invalid-feedback d-block">{{ form.code_categorie.errors|join:", " }}</div>{% endif %}
-                </div>
-                <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
-                <div class="col-2">
-                  <label class="form-hint mb-1">{{ form.annee_dossier.label }}</label>
-                  {{ form.annee_dossier|add_class:'form-control text-center' }}
-                  {% if form.annee_dossier.errors %}<div class="invalid-feedback d-block">{{ form.annee_dossier.errors|join:", " }}</div>{% endif %}
-                </div>
-              </div>
-              <div class="form-hint mt-1"><i class="bi bi-info-circle"></i> يُولَّد مرجع المحكمة تلقائيًا بصيغة: 1234/COM/2026</div>
-            </div>
-          </div>
-        </div>
+      {# Stepper nav #}
+      <div class="stepper-nav">
+        <div class="step-indicator active"><span class="step-num">1</span> المراجع</div>
+        <div class="step-indicator"><span class="step-num">2</span> التصنيف والمحكمة</div>
+        <div class="step-indicator"><span class="step-num">3</span> التواريخ والأولوية</div>
+        <div class="step-indicator"><span class="step-num">4</span> الموضوع</div>
       </div>
 
-      {# --- Section 2: Classification --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-tags"></i>
-          <h6>التصنيف</h6>
-        </div>
-        <div class="form-section-body">
-          <div class="row g-3">
-            <div class="col-12 col-sm-6">
-              <label class="form-floating-label required-asterisk" for="{{ form.type_affaire.id_for_label }}">{{ form.type_affaire.label }}</label>
-              {{ form.type_affaire }}
-              {% if form.type_affaire.errors %}<div class="invalid-feedback d-block">{{ form.type_affaire.errors|join:", " }}</div>{% endif %}
-            </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-floating-label" for="{{ form.phase.id_for_label }}">{{ form.phase.label }}</label>
-              {{ form.phase }}
-              {% if form.phase.errors %}<div class="invalid-feedback d-block">{{ form.phase.errors|join:", " }}</div>{% endif %}
-            </div>
-            <div class="col-12">
-              <div class="alert alert-info py-2 mb-0 small">
-                <i class="bi bi-info-circle ms-1"></i>
-                <strong>حالة القضية</strong> تُعيَّن تلقائيًا إلى <strong>"مفتوحة"</strong> عند الإنشاء. يمكن تعديلها لاحقًا.
+      {# === Step 1: المراجع === #}
+      <div class="step-panel active" data-step="0">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-floating-label required-asterisk" for="{{ form.reference_interne.id_for_label }}">{{ form.reference_interne.label }}</label>
+            {{ form.reference_interne|add_class:'form-control' }}
+            {% if form.reference_interne.errors %}<div class="invalid-feedback d-block">{{ form.reference_interne.errors|join:", " }}</div>{% endif %}
+            <div class="form-hint">رمز فريد لتعريف القضية داخل المكتب</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-floating-label">مرجع المحكمة <small class="text-secondary">(رقم الملف / الصنف / السنة)</small></label>
+            <div class="row g-2 align-items-end">
+              <div class="col-4">
+                <label class="form-hint mb-1">{{ form.numero_dossier.label }}</label>
+                {{ form.numero_dossier|add_class:'form-control text-center' }}
+                {% if form.numero_dossier.errors %}<div class="invalid-feedback d-block">{{ form.numero_dossier.errors|join:", " }}</div>{% endif %}
+              </div>
+              <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
+              <div class="col-4">
+                <label class="form-hint mb-1">{{ form.code_categorie.label }}</label>
+                {{ form.code_categorie }}
+                {% if form.code_categorie.errors %}<div class="invalid-feedback d-block">{{ form.code_categorie.errors|join:", " }}</div>{% endif %}
+              </div>
+              <div class="col-1 text-center pb-2"><span class="fw-bold text-secondary fs-5">/</span></div>
+              <div class="col-2">
+                <label class="form-hint mb-1">{{ form.annee_dossier.label }}</label>
+                {{ form.annee_dossier|add_class:'form-control text-center' }}
+                {% if form.annee_dossier.errors %}<div class="invalid-feedback d-block">{{ form.annee_dossier.errors|join:", " }}</div>{% endif %}
               </div>
             </div>
+            <div class="form-hint mt-1"><i class="bi bi-info-circle"></i> يُولَّد مرجع المحكمة تلقائيًا بصيغة: 1234/1606/2026</div>
           </div>
         </div>
       </div>
 
-      {# --- Section 3: Court & Lawyer --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-building"></i>
-          <h6>المحكمة والمحامي</h6>
-        </div>
-        <div class="form-section-body">
-          <div class="row g-3">
-            <div class="col-12 col-sm-6">
-              <label class="form-floating-label required-asterisk" for="{{ form.juridiction.id_for_label }}">{{ form.juridiction.label }}</label>
-              {{ form.juridiction }}
-              {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
-            </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-floating-label required-asterisk" for="{{ form.avocat_responsable.id_for_label }}">{{ form.avocat_responsable.label }}</label>
-              {{ form.avocat_responsable }}
-              {% if form.avocat_responsable.errors %}<div class="invalid-feedback d-block">{{ form.avocat_responsable.errors|join:", " }}</div>{% endif %}
+      {# === Step 2: التصنيف والمحكمة === #}
+      <div class="step-panel" data-step="1">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-floating-label required-asterisk" for="{{ form.type_affaire.id_for_label }}">{{ form.type_affaire.label }}</label>
+            {{ form.type_affaire }}
+            {% if form.type_affaire.errors %}<div class="invalid-feedback d-block">{{ form.type_affaire.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-floating-label" for="{{ form.phase.id_for_label }}">{{ form.phase.label }}</label>
+            {{ form.phase }}
+            {% if form.phase.errors %}<div class="invalid-feedback d-block">{{ form.phase.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-floating-label required-asterisk" for="{{ form.juridiction.id_for_label }}">{{ form.juridiction.label }}</label>
+            {{ form.juridiction }}
+            {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-floating-label required-asterisk" for="{{ form.avocat_responsable.id_for_label }}">{{ form.avocat_responsable.label }}</label>
+            {{ form.avocat_responsable }}
+            {% if form.avocat_responsable.errors %}<div class="invalid-feedback d-block">{{ form.avocat_responsable.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <div class="alert alert-info py-2 mb-0 small">
+              <i class="bi bi-info-circle ms-1"></i>
+              <strong>حالة القضية</strong> تُعيَّن تلقائيًا إلى <strong>"مفتوحة"</strong> عند الإنشاء. يمكن تعديلها لاحقًا.
             </div>
           </div>
         </div>
       </div>
 
-      {# --- Section 4: Subject & Notes --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-journal-text"></i>
-          <h6>الموضوع والملاحظات</h6>
-        </div>
-        <div class="form-section-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-floating-label" for="{{ form.objet.id_for_label }}">{{ form.objet.label }}</label>
-              {{ form.objet|add_class:'form-control' }}
-              {% if form.objet.errors %}<div class="invalid-feedback d-block">{{ form.objet.errors|join:", " }}</div>{% endif %}
-              <div class="form-hint">وصف مختصر لموضوع الدعوى</div>
-            </div>
-            <div class="col-12">
-              <label class="form-floating-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
-              {{ form.notes|add_class:'form-control' }}
-              {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors|join:", " }}</div>{% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {# ======================== COLUMN 2: Sidebar ======================== #}
-    <div class="col-12 col-lg-4">
-
-      {# --- Date & Priority --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-calendar3"></i>
-          <h6>التاريخ والأولوية</h6>
-        </div>
-        <div class="form-section-body">
-          <div class="mb-3">
+      {# === Step 3: التواريخ والأولوية === #}
+      <div class="step-panel" data-step="2">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
             <label class="form-floating-label required-asterisk" for="{{ form.date_ouverture.id_for_label }}">{{ form.date_ouverture.label }}</label>
             {{ form.date_ouverture|add_class:'form-control' }}
             {% if form.date_ouverture.errors %}<div class="invalid-feedback d-block">{{ form.date_ouverture.errors|join:", " }}</div>{% endif %}
           </div>
-          <div class="mb-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-floating-label" for="{{ form.valeur_litige.id_for_label }}">{{ form.valeur_litige.label }}</label>
+            <div class="input-group">
+              {{ form.valeur_litige|add_class:'form-control' }}
+              <span class="input-group-text">د.م.</span>
+            </div>
+            {% if form.valeur_litige.errors %}<div class="invalid-feedback d-block">{{ form.valeur_litige.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12">
             <label class="form-floating-label required-asterisk">{{ form.priorite.label }}</label>
             <div class="priority-group btn-group w-100" role="group">
               {% for val, label in form.priorite.field.choices %}
@@ -264,67 +227,54 @@
         </div>
       </div>
 
-      {# --- Financial --- #}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-cash-coin"></i>
-          <h6>الجانب المالي</h6>
-        </div>
-        <div class="form-section-body">
-          <div class="mb-0">
-            <label class="form-floating-label" for="{{ form.valeur_litige.id_for_label }}">{{ form.valeur_litige.label }}</label>
-            <div class="input-group">
-              {{ form.valeur_litige|add_class:'form-control' }}
-              <span class="input-group-text">د.م.</span>
-            </div>
-            {% if form.valeur_litige.errors %}<div class="invalid-feedback d-block">{{ form.valeur_litige.errors|join:", " }}</div>{% endif %}
+      {# === Step 4: الموضوع والملاحظات === #}
+      <div class="step-panel" data-step="3">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-floating-label" for="{{ form.objet.id_for_label }}">{{ form.objet.label }}</label>
+            {{ form.objet|add_class:'form-control' }}
+            {% if form.objet.errors %}<div class="invalid-feedback d-block">{{ form.objet.errors|join:", " }}</div>{% endif %}
+            <div class="form-hint">وصف مختصر لموضوع الدعوى</div>
+          </div>
+          <div class="col-12">
+            <label class="form-floating-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+            {{ form.notes|add_class:'form-control' }}
+            {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors|join:", " }}</div>{% endif %}
           </div>
         </div>
       </div>
 
-      {# --- Summary (only on edit) --- #}
-      {% if form.instance.pk %}
-      <div class="form-section">
-        <div class="form-section-header">
-          <i class="bi bi-info-circle"></i>
-          <h6>معلومات</h6>
-        </div>
-        <div class="form-section-body">
-          <dl class="row mb-0 small">
-            <dt class="col-5 text-secondary">المعرّف</dt>
-            <dd class="col-7"><code class="small">{{ form.instance.pk|truncatechars:13 }}</code></dd>
-            <dt class="col-5 text-secondary">تاريخ الإنشاء</dt>
-            <dd class="col-7">{{ form.instance.created_at|date:"Y-m-d" }}</dd>
-            <dt class="col-5 text-secondary">آخر تحديث</dt>
-            <dd class="col-7">{{ form.instance.updated_at|date:"Y-m-d H:i" }}</dd>
-          </dl>
-        </div>
-      </div>
-      {% endif %}
-
-      {# --- Actions (sticky on desktop) --- #}
-      <div class="form-section">
-        <div class="form-section-body">
-          <button class="btn btn-primary w-100 mb-2" type="submit">
+      {# === Navigation === #}
+      <div class="stepper-buttons mt-4">
+        <button type="button" class="btn btn-outline-secondary stepper-prev" style="display:none;">
+          <i class="bi bi-arrow-right ms-1"></i> السابق
+        </button>
+        <div class="d-flex gap-2 me-auto">
+          <a href="{% url 'cabinet:affaire_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg ms-1"></i> إلغاء
+          </a>
+          <button type="button" class="btn btn-primary stepper-next">
+            التالي <i class="bi bi-arrow-left me-1"></i>
+          </button>
+          <button type="submit" class="btn btn-primary stepper-submit" style="display:none;">
             <i class="bi bi-check2-circle ms-1"></i>
             {% if form.instance.pk %}تحديث القضية{% else %}حفظ القضية{% endif %}
           </button>
-          <a href="{% url 'cabinet:affaire_list' %}" class="btn btn-outline-secondary w-100">
-            <i class="bi bi-x-lg ms-1"></i> إلغاء
-          </a>
         </div>
       </div>
-    </div>
+    </form>
+
   </div>
-</form>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 {{ block.super }}
 <script>
-  // Auto-initialize Select2 on this page
   document.addEventListener('DOMContentLoaded', function() {
     initSelect2(document);
+    var f = document.getElementById('affairePageForm');
+    if (f) initStepper(f);
     initCategoryJuridictionLink();
   });
 
