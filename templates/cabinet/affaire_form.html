@@ -105,6 +105,7 @@
     <form method="post" enctype="multipart/form-data"
           id="affairePageForm"
           action="{{ request.path }}"
+          data-affaire-pk="{{ form.instance.pk|default:'' }}"
           novalidate>
       {% csrf_token %}
 
@@ -121,7 +122,7 @@
       <div class="stepper-nav">
         <div class="step-indicator active"><span class="step-num">1</span> المراجع</div>
         <div class="step-indicator"><span class="step-num">2</span> التصنيف والمحكمة</div>
-        <div class="step-indicator"><span class="step-num">3</span> التواريخ والأولوية</div>
+        <div class="step-indicator"><span class="step-num">3</span> تفاصيل مالية</div>
         <div class="step-indicator"><span class="step-num">4</span> الموضوع</div>
       </div>
 
@@ -161,7 +162,7 @@
         </div>
       </div>
 
-      {# === Step 2: التصنيف والمحكمة === #}
+      {# === Step 2: التصنيف والمحكمة (cascade style mahakim.ma) === #}
       <div class="step-panel" data-step="1">
         <div class="row g-3">
           <div class="col-12 col-sm-6">
@@ -174,11 +175,47 @@
             {{ form.phase }}
             {% if form.phase.errors %}<div class="invalid-feedback d-block">{{ form.phase.errors|join:", " }}</div>{% endif %}
           </div>
-          <div class="col-12 col-sm-6">
-            <label class="form-floating-label required-asterisk" for="{{ form.juridiction.id_for_label }}">{{ form.juridiction.label }}</label>
-            {{ form.juridiction }}
-            {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
+
+          {# --- Cascade CA → 1ère instance optionnelle (مثل mahakim.ma) --- #}
+          <div class="col-12">
+            <div class="card border-primary border-opacity-25 bg-light bg-opacity-50">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-bank text-primary"></i>
+                  <strong class="text-primary">اختيار المحكمة</strong>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-floating-label required-asterisk" for="{{ form.cour_appel.id_for_label }}">
+                    {{ form.cour_appel.label }}
+                  </label>
+                  {{ form.cour_appel }}
+                  {% if form.cour_appel.errors %}<div class="invalid-feedback d-block">{{ form.cour_appel.errors|join:", " }}</div>{% endif %}
+                  <div class="form-hint">اختر محكمة الاستئناف المختصة جغرافيا</div>
+                </div>
+
+                <div class="form-check mb-2">
+                  {{ form.is_premiere_instance }}
+                  <label class="form-check-label" for="{{ form.is_premiere_instance.id_for_label }}">
+                    {{ form.is_premiere_instance.label }}
+                  </label>
+                </div>
+
+                <div id="pi-block" style="display:none;">
+                  <label class="form-floating-label required-asterisk" for="{{ form.juridiction.id_for_label }}">
+                    {{ form.juridiction.label }}
+                  </label>
+                  {{ form.juridiction }}
+                  {% if form.juridiction.errors %}<div class="invalid-feedback d-block">{{ form.juridiction.errors|join:", " }}</div>{% endif %}
+                  <div class="form-hint">
+                    <i class="bi bi-funnel"></i>
+                    قائمة المحاكم الإبتدائية تُصفّى حسب محكمة الاستئناف المختارة.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
           <div class="col-12 col-sm-6">
             <label class="form-floating-label required-asterisk" for="{{ form.avocat_responsable.id_for_label }}">{{ form.avocat_responsable.label }}</label>
             {{ form.avocat_responsable }}
@@ -276,7 +313,129 @@
     var f = document.getElementById('affairePageForm');
     if (f) initStepper(f);
     initCategoryJuridictionLink();
+    initMahakimCascade();
+    initAffaireDuplicateCheck(document);
   });
+
+  // Vérifie en AJAX si la référence interne (ou la combinaison numéro/code/année)
+  // est déjà utilisée par une autre affaire. Affiche un warning sous le champ.
+  function initAffaireDuplicateCheck(scope) {
+    const refField = scope.querySelector('#id_reference_interne');
+    const numField = scope.querySelector('#id_numero_dossier');
+    const codeField = scope.querySelector('#id_code_categorie');
+    const anField = scope.querySelector('#id_annee_dossier');
+    const excludeId = scope.querySelector('#affairePageForm')?.dataset.affairePk
+                   || scope.querySelector('[data-affaire-pk]')?.dataset.affairePk || '';
+    const apiUrl = '{% url "cabinet:api_affaire_check_duplicate" %}';
+
+    function makeWarn(field, key) {
+      let w = field.parentNode.querySelector('.dup-warn[data-key="' + key + '"]');
+      if (!w) {
+        w = document.createElement('div');
+        w.className = 'dup-warn alert alert-warning py-1 px-2 mt-1 small d-none';
+        w.dataset.key = key;
+        field.parentNode.appendChild(w);
+      }
+      return w;
+    }
+
+    function showWarn(w, conflict) {
+      w.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ملف موجود مسبقا : '
+        + '<strong>' + (conflict.reference_interne || '—') + '</strong>'
+        + (conflict.reference_tribunal ? ' (' + conflict.reference_tribunal + ')' : '');
+      w.classList.remove('d-none');
+    }
+    function hideWarn(w) { w.classList.add('d-none'); w.innerHTML = ''; }
+
+    async function checkRef() {
+      if (!refField || !refField.value.trim()) return;
+      const w = makeWarn(refField, 'ref');
+      const u = new URL(apiUrl, window.location.origin);
+      u.searchParams.set('reference_interne', refField.value.trim());
+      if (excludeId) u.searchParams.set('exclude_id', excludeId);
+      try {
+        const r = await fetch(u, { credentials: 'same-origin' });
+        const d = await r.json();
+        if (d.ok && d.exists) showWarn(w, d.conflict); else hideWarn(w);
+      } catch (e) { /* silent */ }
+    }
+    async function checkMahakim() {
+      if (!numField || !codeField || !anField) return;
+      const numero = numField.value.trim();
+      const code = codeField.value;
+      const annee = anField.value.trim();
+      const w = makeWarn(numField, 'mahakim');
+      if (!numero || !code || !annee) { hideWarn(w); return; }
+      const u = new URL(apiUrl, window.location.origin);
+      u.searchParams.set('numero_dossier', numero);
+      u.searchParams.set('code_categorie', code);
+      u.searchParams.set('annee_dossier', annee);
+      if (excludeId) u.searchParams.set('exclude_id', excludeId);
+      try {
+        const r = await fetch(u, { credentials: 'same-origin' });
+        const d = await r.json();
+        if (d.ok && d.exists) showWarn(w, d.conflict); else hideWarn(w);
+      } catch (e) { /* silent */ }
+    }
+
+    if (refField) refField.addEventListener('blur', checkRef);
+    [numField, anField].forEach(f => { if (f) f.addEventListener('blur', checkMahakim); });
+    if (codeField) $(codeField).on('change', checkMahakim);
+  }
+
+  // Cascade mahakim.ma : CA → checkbox 1ère instance → PI filtré par CA
+  function initMahakimCascade() {
+    const $ca = $('#id_cour_appel');
+    const $cb = $('#id_is_premiere_instance');
+    const $pi = $('#id_juridiction');
+    const $piBlock = $('#pi-block');
+    if (!$ca.length || !$cb.length || !$pi.length) return;
+
+    // Sauvegarder toutes les options PI initiales pour pouvoir restaurer
+    if (!$pi.data('all-options')) {
+      $pi.data('all-options', $pi.find('option').map(function(){ return this; }).get());
+    }
+
+    function togglePiBlock() {
+      if ($cb.is(':checked')) {
+        $piBlock.show();
+        loadPiForCa($ca.val(), $pi.val());
+      } else {
+        $piBlock.hide();
+        $pi.val('').trigger('change');
+      }
+    }
+
+    function loadPiForCa(caId, preselectId) {
+      if (!caId) {
+        // Pas de CA → vider la PI
+        $pi.empty().append('<option value="">— اختر محكمة الاستئناف أولاً —</option>');
+        if ($pi.data('select2')) { $pi.select2('destroy'); }
+        $pi.select2({ theme: 'bootstrap-5' });
+        return;
+      }
+      $.getJSON('{% url "cabinet:api_juridictions_by_ca" %}', {ca: caId})
+        .done(function (data) {
+          if (!data || !data.ok) return;
+          $pi.empty();
+          $pi.append('<option value="">— اختيار المحكمة الإبتدائية —</option>');
+          data.results.forEach(function (j) {
+            const sel = (String(j.id) === String(preselectId)) ? ' selected' : '';
+            $pi.append('<option value="' + j.id + '"' + sel + '>' + j.nom + '</option>');
+          });
+          if ($pi.data('select2')) { $pi.select2('destroy'); }
+          $pi.select2({ theme: 'bootstrap-5', matcher: containsMatcher });
+        });
+    }
+
+    $cb.on('change', togglePiBlock);
+    $ca.on('change', function () {
+      if ($cb.is(':checked')) loadPiForCa($(this).val(), null);
+    });
+
+    // État initial (édition)
+    togglePiBlock();
+  }
 
   // Filtrage dynamique : quand l'utilisateur choisit une صنف القضية, on
   // restreint le dropdown des juridictions à celles du type compétent et

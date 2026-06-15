@@ -1,5 +1,6 @@
 # avocat_app/forms.py
 from django import forms
+from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import AuthenticationForm
 from .models import (
@@ -143,11 +144,29 @@ class AvocatForm(ArabicBootstrapFormMixin):
 class AffaireForm(ArabicBootstrapFormMixin):
     """Formulaire de création/édition d'une affaire.
 
+    Cascade mahakim.ma sur le choix de la juridiction :
+      1. cour_appel (virtuel) — toujours visible, obligatoire
+      2. is_premiere_instance (checkbox virtuel) — si coché, on saisit aussi la PI
+      3. juridiction (modèle) — devient la PI si coché, sinon = la CA
+
     Champs auto-gérés (pas dans le formulaire) :
     - reference_tribunal : composé automatiquement à partir de
       numero_dossier / code_categorie.code / annee_dossier (modèle.save).
     - statut_affaire : par défaut "مفتوحة" si non renseigné.
     """
+    # === Champs virtuels pour la cascade mahakim.ma ===
+    cour_appel = forms.ModelChoiceField(
+        queryset=Juridiction.objects.none(),  # rempli dans __init__
+        required=True,
+        label="محكمة الاستئناف",
+        widget=forms.Select(attrs={"class": "form-select js-select2", "dir": "rtl"}),
+    )
+    is_premiere_instance = forms.BooleanField(
+        required=False,
+        label="القضية ابتدائية (تابعة لمحكمة ابتدائية)",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
     class Meta:
         model = Affaire
         fields = [
@@ -165,7 +184,7 @@ class AffaireForm(ArabicBootstrapFormMixin):
             "annee_dossier": "السنة",
             "type_affaire": "نوع القضية",
             "phase": "المرحلة",
-            "juridiction": "المحكمة",
+            "juridiction": "المحكمة الابتدائية",
             "date_ouverture": "تاريخ الفتح",
             "objet": "موضوع الدعوى",
             "avocat_responsable": "المحامي المسؤول",
@@ -189,20 +208,50 @@ class AffaireForm(ArabicBootstrapFormMixin):
         self.fields["annee_dossier"].widget.attrs["placeholder"] = "مثال: 2026"
         self.fields["valeur_litige"].widget.attrs["placeholder"] = "0.00"
 
-        # Affiche le code entre parenthèses dans les listes déroulantes pour
-        # faciliter la recherche par code via Select2 (recherche live).
         from .models import Juridiction, TypeAffaire, CodeCategorieAffaire
 
-        def _juridiction_label(obj):
+        # === Cascade CA → PI ===
+        # On considère qu'une "Cour d'Appel" est une juridiction dont le type
+        # a niveau='appel' OU dont le code commence par "CA" (import XLSX).
+        ca_qs = Juridiction.objects.filter(is_deleted=False).filter(
+            models.Q(type__niveau__iexact="appel") | models.Q(code__startswith="CA")
+        ).select_related("type").order_by("nomtribunal_ar").distinct()
+
+        def _ca_label(obj):
+            return obj.nomtribunal_ar or obj.nomtribunal_fr or obj.code
+        self.fields["cour_appel"].queryset = ca_qs
+        self.fields["cour_appel"].label_from_instance = _ca_label
+        self.fields["cour_appel"].widget.attrs["data-placeholder"] = "اختيار محكمة الاستئناف…"
+
+        # juridiction = la PI choisie (visible seulement si is_premiere_instance=True)
+        # Queryset complet ici ; le filtrage côté client se fait via /api/juridictions/?parent=
+        def _pi_label(obj):
             nom = obj.nomtribunal_ar or obj.nomtribunal_fr or ""
             ville = obj.villetribunal_ar or obj.villetribunal_fr or ""
-            code = obj.code or ""
-            base = f"{nom} - {ville}".strip(" -")
-            return f"({code}) {base}" if code else base
-        self.fields["juridiction"].label_from_instance = _juridiction_label
-        self.fields["juridiction"].queryset = Juridiction.objects.filter(is_deleted=False).order_by("nomtribunal_ar")
-        self.fields["juridiction"].widget.attrs["data-placeholder"] = "ابحث بالاسم أو الرمز…"
+            return f"{nom} - {ville}".strip(" -") or obj.code
+        self.fields["juridiction"].label_from_instance = _pi_label
+        self.fields["juridiction"].queryset = (
+            Juridiction.objects.filter(is_deleted=False)
+            .exclude(TribunalParent__isnull=True)
+            .select_related("TribunalParent")
+            .order_by("nomtribunal_ar")
+        )
+        self.fields["juridiction"].required = False
+        self.fields["juridiction"].widget.attrs["data-placeholder"] = "اختيار المحكمة الإبتدائية…"
 
+        # Pré-remplissage en édit : déduire CA + checkbox depuis la juridiction stockée
+        if self.instance and self.instance.pk and self.instance.juridiction_id:
+            jur = self.instance.juridiction
+            if jur.TribunalParent_id:
+                # C'est une PI → CA = son parent
+                self.fields["cour_appel"].initial = jur.TribunalParent_id
+                self.fields["is_premiere_instance"].initial = True
+            else:
+                # C'est directement une CA
+                self.fields["cour_appel"].initial = jur.pk
+                self.fields["is_premiere_instance"].initial = False
+
+        # Labels enrichis pour les autres dropdowns
         def _type_affaire_label(obj):
             return f"({obj.code}) {obj.libelle}" if obj.code else obj.libelle
         self.fields["type_affaire"].label_from_instance = _type_affaire_label
@@ -210,17 +259,17 @@ class AffaireForm(ArabicBootstrapFormMixin):
         self.fields["type_affaire"].widget.attrs["data-placeholder"] = "ابحث بالاسم أو الرمز…"
 
         def _code_cat_label(obj):
-            tj = obj.type_juridiction_initiale
-            tj_part = f" — {tj.code_type}" if tj else ""
-            return f"({obj.code}) {obj.libelle}{tj_part}"
+            type_part = f" — {obj.type_libelle}" if obj.type_libelle else (
+                f" — {obj.type_juridiction_initiale.code_type}" if obj.type_juridiction_initiale else ""
+            )
+            sous = f" [{obj.sous_type}]" if obj.sous_type else ""
+            return f"({obj.code}) {obj.libelle}{type_part}{sous}"
         self.fields["code_categorie"].label_from_instance = _code_cat_label
-        # On limite la liste aux 55 catégories officielles du PDF de la CA
-        # de Casablanca (celles qui ont une juridiction initiale liée).
         self.fields["code_categorie"].queryset = (
             CodeCategorieAffaire.objects
-            .filter(is_deleted=False, type_juridiction_initiale__isnull=False)
+            .filter(is_deleted=False)
             .select_related("type_juridiction_initiale")
-            .order_by("code")
+            .order_by("code_type", "code")
         )
         self.fields["code_categorie"].widget.attrs["data-placeholder"] = "ابحث بالرمز أو الاسم…"
 
@@ -228,10 +277,30 @@ class AffaireForm(ArabicBootstrapFormMixin):
         cleaned = super().clean()
         if not cleaned.get("reference_interne"):
             raise ValidationError("المرجع الداخلي مطلوب.")
+
+        ca = cleaned.get("cour_appel")
+        if not ca:
+            raise ValidationError({"cour_appel": "اختر محكمة الاستئناف."})
+
+        is_pi = cleaned.get("is_premiere_instance")
+        pi = cleaned.get("juridiction")
+        if is_pi:
+            if not pi:
+                raise ValidationError({"juridiction": "اختر المحكمة الابتدائية."})
+            # Garantir que la PI choisie est bien rattachée à la CA choisie.
+            if pi.TribunalParent_id != ca.pk:
+                raise ValidationError({"juridiction": "هذه المحكمة الابتدائية لا تتبع محكمة الاستئناف المختارة."})
+            # juridiction reste la PI choisie (déjà dans cleaned)
+        else:
+            # Pas de 1ère instance → la juridiction de l'affaire = la CA elle-même.
+            cleaned["juridiction"] = ca
         return cleaned
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+        # juridiction finale a déjà été ajustée dans clean() via cleaned_data
+        instance.juridiction = self.cleaned_data.get("juridiction")
+
         # Auto-compose reference_tribunal depuis numero_dossier/code/année
         from .models import StatutAffaire
         parts = []

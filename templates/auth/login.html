@@ -52,6 +52,16 @@
             <i class="bi bi-box-arrow-in-right ms-1"></i> دخول
           </button>
         </form>
+
+        {% if DESKTOP_MODE %}
+          <hr class="my-3">
+          <div class="text-center small">
+            <a href="/desktop/setup/" class="text-decoration-none">
+              <i class="bi bi-gear ms-1"></i>
+              أوّل استعمال؟ اضبط بيانات الدخول من نسخة الويب
+            </a>
+          </div>
+        {% endif %}
       </div>
       <div class="card-footer text-center text-secondary small">
         &copy; مكتب المحاماة — جميع الحقوق محفوظة

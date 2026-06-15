@@ -12,3 +12,8 @@ class AvocatAppConfig(AppConfig):
         from .services import signals  # noqa: F401 — ensure signal registration
         from .services import auth_signals  # إشارات التوكن
         from .services import audit_signals  # <— تفعيل إشارات التدقيق
+
+        from django.conf import settings
+        if getattr(settings, "DESKTOP_MODE", False):
+            from .sync_signals import register_outbox_signals
+            register_outbox_signals()

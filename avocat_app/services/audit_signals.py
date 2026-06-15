@@ -22,9 +22,25 @@ def _get_before_dict():
 def _key(inst: Model):
     return f"{inst._meta.label_lower}:{inst.pk or 'new'}"
 
+def _sync_pull_in_progress() -> bool:
+    """When the desktop sync engine is applying rows pulled from the server,
+    we don't want to fabricate AuditLog entries — and we can't safely call
+    str(instance) because date/datetime fields are still raw ISO strings at
+    that point (Django defers to_python until DB write)."""
+    try:
+        from avocat_app.sync_signals import _is_suppressed
+    except ImportError:
+        return False
+    return _is_suppressed()
+
+
 def _should_audit(inst: Model) -> bool:
     # لا تسجل نفسك ولا موديلات التدقيق
-    return inst.__class__ is not AuditLog
+    if inst.__class__ is AuditLog:
+        return False
+    if _sync_pull_in_progress():
+        return False
+    return True
 
 @receiver(pre_save)
 def _capture_before_save(sender, instance, **kwargs):

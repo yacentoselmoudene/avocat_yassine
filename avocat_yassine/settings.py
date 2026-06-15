@@ -69,6 +69,9 @@ INSTALLED_APPS = [
     'django_extensions',
     'django_filters',
     'axes',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
 ]
 
 # === Audit switches & defaults ===
@@ -86,6 +89,7 @@ LOGOUT_REDIRECT_URL = "/auth/login/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -241,7 +245,45 @@ ANTHROPIC_DRY_RUN = env.bool('ANTHROPIC_DRY_RUN', default=False)
 # Sans clé, fallback sur un embedding hash-based déterministe (fonctionne en dev).
 VOYAGE_API_KEY = env('VOYAGE_API_KEY', default='')
 
-# =============================
-# Portail client (magic link)
-# =============================
 PORTAIL_COOKIE_SECRET = env('PORTAIL_COOKIE_SECRET', default=SECRET_KEY)
+
+# =============================
+# REST API (sync local <-> serveur)
+# =============================
+from datetime import timedelta
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_RENDERER_CLASSES": (
+        "rest_framework.renderers.JSONRenderer",
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+    ),
+    "UNAUTHENTICATED_USER": None,
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=12),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://localhost:8003",
+    "http://127.0.0.1:8003",
+])
+CORS_ALLOW_CREDENTIALS = True
+
+SYNC_PULL_DEFAULT_LIMIT = 200
+SYNC_PULL_MAX_LIMIT = 1000
+SYNC_PUSH_MAX_BATCH = 500

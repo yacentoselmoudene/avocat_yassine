@@ -1,0 +1,9 @@
+node_modules/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+# Signing material — never commit
+android/app/release.jks
+android/app/signing.properties
+android/app/google-services.json

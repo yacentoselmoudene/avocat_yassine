@@ -1,0 +1,98 @@
+{# Client-side search + pagination logic for /ref/ tables. #}
+<script>
+(function () {
+  const root = document.getElementById('ref-list');
+  if (!root) return;
+  const table = root.querySelector('table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  const search = document.getElementById('ref-search');
+  const pageSizeSel = document.getElementById('ref-page-size');
+  const pager = document.getElementById('ref-pager');
+  const info = document.getElementById('ref-pager-info');
+  if (!tbody || !search || !pageSizeSel || !pager || !info) return;
+
+  const allRows = Array.from(tbody.querySelectorAll('tr')).filter(tr => tr.id && tr.id.startsWith('row-'));
+  const colCount = table.querySelectorAll('thead th').length;
+  let currentPage = 1;
+
+  function getFiltered() {
+    const q = (search.value || '').trim().toLowerCase();
+    if (!q) return allRows;
+    return allRows.filter(tr => tr.textContent.toLowerCase().includes(q));
+  }
+
+  function ensureEmptyRow() {
+    let er = tbody.querySelector('tr.ref-empty-row');
+    if (!er) {
+      er = document.createElement('tr');
+      er.className = 'ref-empty-row';
+      er.innerHTML = `<td colspan="${colCount}" class="text-center text-secondary py-4">لا توجد نتائج مطابقة.</td>`;
+      tbody.appendChild(er);
+    }
+    return er;
+  }
+
+  function render() {
+    const filtered = getFiltered();
+    const pageSize = parseInt(pageSizeSel.value, 10) || 25;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+
+    allRows.forEach(tr => { tr.style.display = 'none'; });
+    const visible = filtered.slice(start, end);
+    visible.forEach((tr, i) => {
+      tr.style.display = '';
+      const numCell = tr.querySelector('td:first-child');
+      if (numCell) numCell.textContent = start + i + 1;
+    });
+
+    const er = tbody.querySelector('tr.ref-empty-row');
+    if (filtered.length === 0) {
+      const emptyRow = ensureEmptyRow();
+      emptyRow.style.display = '';
+    } else if (er) {
+      er.style.display = 'none';
+    }
+
+    info.textContent = filtered.length
+      ? `${start + 1}–${Math.min(end, filtered.length)} من ${filtered.length}`
+      : '0 نتائج';
+
+    pager.innerHTML = '';
+    const mkBtn = (label, page, opts = {}) => {
+      const li = document.createElement('li');
+      li.className = 'page-item' + (opts.disabled ? ' disabled' : '') + (opts.active ? ' active' : '');
+      const a = document.createElement('a');
+      a.className = 'page-link';
+      a.href = '#';
+      a.textContent = label;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (opts.disabled || opts.active) return;
+        currentPage = page;
+        render();
+      });
+      li.appendChild(a);
+      return li;
+    };
+
+    pager.appendChild(mkBtn('«', currentPage - 1, { disabled: currentPage === 1 }));
+    const maxButtons = 7;
+    let from = Math.max(1, currentPage - 3);
+    let to = Math.min(totalPages, from + maxButtons - 1);
+    from = Math.max(1, to - maxButtons + 1);
+    for (let p = from; p <= to; p++) {
+      pager.appendChild(mkBtn(String(p), p, { active: p === currentPage }));
+    }
+    pager.appendChild(mkBtn('»', currentPage + 1, { disabled: currentPage === totalPages }));
+  }
+
+  search.addEventListener('input', () => { currentPage = 1; render(); });
+  pageSizeSel.addEventListener('change', () => { currentPage = 1; render(); });
+  render();
+})();
+</script>

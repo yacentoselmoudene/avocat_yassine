@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>مكتب المحاماة</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Cairo", sans-serif;
+      background: linear-gradient(135deg, #0e5f3f 0%, #094128 100%);
+      color: #f3ecdc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #f3ecdc;
+      color: #1a2238;
+      border-radius: 16px;
+      padding: 2rem 1.75rem;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.32);
+    }
+    h1 { margin: 0 0 .25rem; font-size: 1.5rem; font-weight: 700; color: #0e5f3f; }
+    p.sub { margin: 0 0 1.5rem; color: #5a6275; font-size: .95rem; }
+    label { display: block; font-weight: 600; margin: 0 0 .4rem; font-size: .95rem; }
+    input[type=url] {
+      width: 100%;
+      padding: .85rem 1rem;
+      font-size: 1rem;
+      border: 1px solid #d5cdb9;
+      border-radius: 10px;
+      background: #fff;
+      direction: ltr;
+      text-align: left;
+    }
+    input[type=url]:focus { outline: none; border-color: #0e5f3f; box-shadow: 0 0 0 3px rgba(14,95,63,0.18); }
+    button {
+      width: 100%;
+      margin-top: 1.25rem;
+      padding: .95rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f3ecdc;
+      background: #0e5f3f;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:active { background: #094128; }
+    .hint { margin-top: 1rem; font-size: .82rem; color: #6a7387; }
+    .err { color: #b22222; margin: .5rem 0 0; font-size: .9rem; min-height: 1.2em; }
+    .saved-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 1rem;
+      padding: .75rem;
+      background: #fff;
+      border-radius: 8px;
+      direction: ltr;
+      font-size: .85rem;
+      color: #1a2238;
+    }
+    .saved-row button {
+      width: auto;
+      margin: 0;
+      padding: .4rem .8rem;
+      font-size: .82rem;
+      background: transparent;
+      color: #b22222;
+      border: 1px solid #b22222;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>مكتب المحاماة</h1>
+    <p class="sub">أدخل عنوان خادم المكتب للاتصال</p>
+
+    <form id="f" autocomplete="off">
+      <label for="url">عنوان الخادم</label>
+      <input type="url" id="url" inputmode="url" placeholder="https://office.example.ma" required>
+      <p class="err" id="err"></p>
+      <button type="submit">اتصال</button>
+    </form>
+
+    <div id="saved" hidden></div>
+
+    <p class="hint">عنوان من نوع <code dir="ltr">https://…</code> أو <code dir="ltr">http://192.168.x.x:8003</code> داخل الشبكة المحلية.</p>
+  </main>
+
+  <script>
+    const KEY = "avocat.serverUrl";
+    const form = document.getElementById("f");
+    const inp  = document.getElementById("url");
+    const err  = document.getElementById("err");
+    const saved = document.getElementById("saved");
+
+    function normalize(u) {
+      try {
+        const url = new URL(u);
+        if (!["http:", "https:"].includes(url.protocol)) throw new Error("scheme");
+        // Trim trailing slash so the redirect lands on a known path.
+        return url.toString().replace(/\/+$/, "");
+      } catch {
+        return null;
+      }
+    }
+
+    function redirect(url) { location.href = url + "/"; }
+
+    // On launch, if we have a saved URL, redirect immediately.
+    const stored = localStorage.getItem(KEY);
+    if (stored) {
+      // Show a tiny "saved" hint while redirecting, in case it never resolves.
+      saved.hidden = false;
+      saved.className = "saved-row";
+      saved.innerHTML = `<span>${stored}</span><button type="button" id="forget">تغيير</button>`;
+      document.getElementById("forget").addEventListener("click", () => {
+        localStorage.removeItem(KEY);
+        location.reload();
+      });
+      // Brief delay so user sees the splash, then redirect.
+      setTimeout(() => redirect(stored), 200);
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      err.textContent = "";
+      const url = normalize(inp.value.trim());
+      if (!url) {
+        err.textContent = "عنوان غير صالح";
+        return;
+      }
+      localStorage.setItem(KEY, url);
+      redirect(url);
+    });
+  </script>
+</body>
+</html>

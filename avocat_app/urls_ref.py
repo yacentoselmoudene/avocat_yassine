@@ -1,6 +1,6 @@
 # avocat_app/urls_ref.py
 from django.urls import path
-from . import views_ref as v
+from . import views_ref as v, views_codes_affaire
 from .views_ref_generic import RefList, RefCreate, RefUpdate, RefDelete
 from .views_cabinet_params import ref_print_pdf
 
@@ -8,6 +8,17 @@ from .views_cabinet_params import ref_print_pdf
 app_name = "cabinet_ref"
 
 urlpatterns = [
+    # === Page CRUD dédiée pour les codes d'affaires (521 codes XLSX) ===
+    # Ces routes DOIVENT être déclarées avant <slug:refname>/ sinon Django
+    # leur préfère le pattern slug et lève "Référentiel inconnu".
+    path("codes-affaire/",                    views_codes_affaire.codes_affaire_page,    name="codes_affaire_page"),
+    path("codes-affaire/list/",               views_codes_affaire.codes_affaire_list,    name="codes_affaire_list"),
+    path("codes-affaire/create/",             views_codes_affaire.codes_affaire_create,  name="codes_affaire_create"),
+    path("codes-affaire/<int:pk>/update/",    views_codes_affaire.codes_affaire_update,  name="codes_affaire_update"),
+    path("codes-affaire/archive/",            views_codes_affaire.codes_affaire_archive, name="codes_affaire_archive"),
+    path("codes-affaire/restore/",            views_codes_affaire.codes_affaire_restore, name="codes_affaire_restore"),
+
+    # Référentiels génériques (en dernier — catchall slug)
     path("<slug:refname>/", RefList.as_view(), name="ref_list"),
     path("<slug:refname>/print/", ref_print_pdf, name="ref_print"),
     path("<slug:refname>/new/", RefCreate.as_view(), name="ref_create"),

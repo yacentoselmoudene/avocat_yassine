@@ -636,6 +636,14 @@ class _AffaireFormMixin(HTMXModalFormMixin):
     def form_valid(self, form):
         self.object = form.save()
         if self.htmx():
+            # Update : pk dans l'URL → fermer modal + toast + reload pour rafraîchir.
+            # Create  : pas de pk → redirection vers le détail de la nouvelle affaire.
+            if self.kwargs.get("pk"):
+                return self.success_json(
+                    self.success_message,
+                    closeModal=True,
+                    reload=True,
+                )
             return self.success_json(
                 self.success_message,
                 redirect=str(reverse_lazy("cabinet:affaire_detail", args=[self.object.pk])),
@@ -924,6 +932,155 @@ class AudienceRow(SecureBase, DetailView):
     template_name = "avocat/_audience_row.html"
     permission_required = "cabinet.view_audience"
     context_object_name = "obj"
+
+
+# =============================================================
+# API JSON : vérification de doublons sur le formulaire affaire
+# =============================================================
+
+def api_affaire_check_duplicate(request):
+    """GET /api/affaires/check-duplicate/?reference_interne=...&exclude_id=...
+       GET /api/affaires/check-duplicate/?numero_dossier=&code_categorie=&annee_dossier=&exclude_id=
+
+    Retourne {ok: True, exists: bool, conflict: {id, reference_interne, reference_tribunal}}.
+    Utilisé sur blur des champs côté formulaire pour alerter l'utilisateur AVANT submit.
+    """
+    from .models import Affaire
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+
+    exclude_id = (request.GET.get("exclude_id") or "").strip()
+    qs = Affaire.objects.filter(is_deleted=False)
+    if exclude_id:
+        qs = qs.exclude(pk=exclude_id)
+
+    ref = (request.GET.get("reference_interne") or "").strip()
+    if ref:
+        match = qs.filter(reference_interne__iexact=ref).first()
+        if match:
+            return JsonResponse({
+                "ok": True, "exists": True, "field": "reference_interne",
+                "conflict": {
+                    "id": str(match.pk),
+                    "reference_interne": match.reference_interne,
+                    "reference_tribunal": match.reference_tribunal or "",
+                },
+            })
+        return JsonResponse({"ok": True, "exists": False, "field": "reference_interne"})
+
+    numero = (request.GET.get("numero_dossier") or "").strip()
+    code_cat = (request.GET.get("code_categorie") or "").strip()
+    annee = (request.GET.get("annee_dossier") or "").strip()
+    if numero and code_cat and annee:
+        match = (qs.filter(numero_dossier=numero, code_categorie_id=code_cat, annee_dossier=annee)
+                   .select_related("code_categorie").first())
+        if match:
+            return JsonResponse({
+                "ok": True, "exists": True, "field": "mahakim_ref",
+                "conflict": {
+                    "id": str(match.pk),
+                    "reference_interne": match.reference_interne,
+                    "reference_tribunal": match.reference_tribunal or "",
+                },
+            })
+        return JsonResponse({"ok": True, "exists": False, "field": "mahakim_ref"})
+
+    return JsonResponse({"ok": False, "error": "paramètres manquants"}, status=400)
+
+
+# =============================================================
+# API JSON pour la cascade mahakim.ma (CA → checkbox → PI → code affaire)
+# =============================================================
+
+def api_cours_appel(request):
+    """GET /api/cours-appel/  →  liste des Cours d'Appel."""
+    from .models import Juridiction
+    from django.db.models import Q
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    qs = (Juridiction.objects.filter(is_deleted=False)
+          .filter(Q(type__niveau__iexact="appel") | Q(code__startswith="CA"))
+          .select_related("type")
+          .order_by("nomtribunal_ar")
+          .distinct())
+    data = [{
+        "id": j.pk,
+        "code": j.code,
+        "nom": j.nomtribunal_ar or j.nomtribunal_fr or j.code,
+        "ville": j.villetribunal_ar or j.villetribunal_fr or "",
+    } for j in qs]
+    return JsonResponse({"ok": True, "results": data})
+
+
+def api_juridictions_by_ca(request):
+    """GET /api/juridictions-by-ca/?ca=<id>  →  PI rattachées à la CA."""
+    from .models import Juridiction
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    ca_id = request.GET.get("ca")
+    if not ca_id:
+        return JsonResponse({"ok": False, "error": "ca manquant"}, status=400)
+    qs = (Juridiction.objects.filter(is_deleted=False, TribunalParent_id=ca_id)
+          .select_related("type")
+          .order_by("nomtribunal_ar"))
+    data = [{
+        "id": j.pk,
+        "code": j.code,
+        "nom": j.nomtribunal_ar or j.nomtribunal_fr or j.code,
+        "type": j.type.libelle if j.type_id else "",
+    } for j in qs]
+    return JsonResponse({"ok": True, "results": data})
+
+
+def api_code_types(request):
+    """GET /api/code-types/  →  liste distincte des chambres (code_type, libelle)."""
+    from .models import CodeCategorieAffaire
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    sous_type = request.GET.get("sous_type")
+    categorie_globale = request.GET.get("categorie_globale")
+    qs = CodeCategorieAffaire.objects.filter(is_deleted=False).exclude(code_type="")
+    if sous_type:
+        qs = qs.filter(sous_type=sous_type)
+    if categorie_globale:
+        qs = qs.filter(categorie_globale=categorie_globale)
+    rows = (qs.values("code_type", "type_libelle")
+              .order_by("code_type")
+              .distinct())
+    data = [{"code_type": r["code_type"], "libelle": r["type_libelle"] or ""} for r in rows]
+    return JsonResponse({"ok": True, "results": data})
+
+
+def api_codes_affaire(request):
+    """GET /api/codes-affaire/?code_type=&sous_type=&categorie_globale=  →  codes affaire filtrés."""
+    from .models import CodeCategorieAffaire
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    qs = CodeCategorieAffaire.objects.filter(is_deleted=False)
+    code_type = request.GET.get("code_type")
+    sous_type = request.GET.get("sous_type")
+    categorie_globale = request.GET.get("categorie_globale")
+    q = request.GET.get("q")  # recherche libre
+    if code_type:
+        qs = qs.filter(code_type=code_type)
+    if sous_type:
+        qs = qs.filter(sous_type=sous_type)
+    if categorie_globale:
+        qs = qs.filter(categorie_globale=categorie_globale)
+    if q:
+        from django.db.models import Q
+        qs = qs.filter(Q(code__icontains=q) | Q(libelle__icontains=q))
+    qs = qs.order_by("code")[:500]
+    data = [{
+        "id": c.pk,
+        "code": c.code,
+        "libelle": c.libelle,
+        "code_type": c.code_type or "",
+        "type_libelle": c.type_libelle or "",
+        "sous_type": c.sous_type or "",
+        "categorie_globale": c.categorie_globale or "",
+    } for c in qs]
+    return JsonResponse({"ok": True, "results": data})
 
 
 def api_juridictions_for_category(request, code_categorie_id):

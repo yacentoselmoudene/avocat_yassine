@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+  <li class="breadcrumb-item active">{{ title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .filters-bar { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.5rem; padding:.75rem; }
+  .codes-table th { font-size:.85rem; background:#f1f5f9; }
+  .codes-table td { font-size:.9rem; vertical-align:middle; }
+  .codes-table tbody tr.archived { opacity:.55; background:#fef3c7; }
+  .badge-soustype { background:#e0e7ff; color:#3730a3; font-weight:500; }
+  .badge-codetype { background:#dcfce7; color:#166534; font-weight:600; font-family:monospace; }
+  .badge-archived { background:#fde68a; color:#92400e; }
+  .pagination-bar { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .page-info { color:#64748b; font-size:.85rem; }
+  .skeleton-row td { background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%); background-size:200% 100%; animation:skel 1.4s infinite; height:2.2rem; }
+  @keyframes skel { 0%{background-position:200% 0;}100%{background-position:-200% 0;} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+
+    {# --- Toolbar : recherche + filtres + bouton add --- #}
+    <div class="filters-bar mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label small mb-1"><i class="bi bi-search"></i> بحث</label>
+          <input type="text" id="ca-search" class="form-control" placeholder="رمز / تسمية / غرفة…" dir="rtl">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">الفئة</label>
+          <select id="ca-filter-globale" class="form-select form-select-sm" dir="rtl">
+            <option value="">— الكل —</option>
+            {% for k, v in categories_globales %}
+              <option value="{{ k }}">{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">الغرفة</label>
+          <select id="ca-filter-codetype" class="form-select form-select-sm" dir="rtl">
+            <option value="">— الكل —</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">النوع الفرعي</label>
+          <select id="ca-filter-soustype" class="form-select form-select-sm" dir="rtl">
+            <option value="">— الكل —</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="ca-show-archived">
+            <label class="form-check-label small" for="ca-show-archived">عرض المؤرشفة</label>
+          </div>
+        </div>
+        <div class="col-12 col-md-1 text-end">
+          <button class="btn btn-primary w-100" id="ca-btn-add" data-bs-toggle="modal" data-bs-target="#caModal">
+            <i class="bi bi-plus-lg"></i>
+            <span class="d-none d-md-inline">إضافة</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# --- Bulk actions --- #}
+    <div class="d-flex justify-content-between align-items-center mb-2" id="ca-bulkbar" style="display:none !important;">
+      <div class="text-secondary small">
+        <i class="bi bi-check2-square"></i> <span id="ca-selcount">0</span> عنصر(ات) مختار(ة)
+      </div>
+      <div class="btn-group btn-group-sm">
+        <button class="btn btn-outline-warning" id="ca-bulk-archive">
+          <i class="bi bi-archive"></i> أرشفة المختار
+        </button>
+        <button class="btn btn-outline-success" id="ca-bulk-restore" style="display:none;">
+          <i class="bi bi-arrow-counterclockwise"></i> استرجاع
+        </button>
+      </div>
+    </div>
+
+    {# --- Tableau --- #}
+    <div class="table-responsive">
+      <table class="table table-hover codes-table align-middle">
+        <thead>
+          <tr>
+            <th style="width:32px;"><input type="checkbox" class="form-check-input" id="ca-check-all"></th>
+            <th style="width:90px;">الرمز</th>
+            <th>التسمية</th>
+            <th style="width:130px;">الغرفة</th>
+            <th style="width:200px;">تسمية الغرفة</th>
+            <th style="width:120px;">النوع الفرعي</th>
+            <th style="width:90px;">الفئة</th>
+            <th style="width:130px;" class="text-end">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="ca-tbody">
+          <tr class="skeleton-row"><td colspan="8"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    {# --- Pagination --- #}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+      <div class="pagination-bar">
+        <span class="page-info">عدد لكل صفحة</span>
+        <select id="ca-pagesize" class="form-select form-select-sm" style="width:auto;">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+        </select>
+        <span class="page-info" id="ca-pageinfo"></span>
+      </div>
+      <ul class="pagination pagination-sm mb-0" id="ca-pagenav"></ul>
+    </div>
+
+  </div>
+</div>
+
+{# --- Modal create / edit --- #}
+<div class="modal fade" id="caModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="caForm" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title" id="caModalTitle">إضافة رمز قضية</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="id" id="ca-id">
+          <div class="row g-3">
+            <div class="col-12 col-md-3">
+              <label class="form-label small">الرمز <span class="text-danger">*</span></label>
+              <input class="form-control" name="code" id="ca-code" required maxlength="10" placeholder="1101">
+            </div>
+            <div class="col-12 col-md-9">
+              <label class="form-label small">التسمية <span class="text-danger">*</span></label>
+              <input class="form-control" name="libelle" id="ca-libelle" required dir="rtl">
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label small">رمز الغرفة</label>
+              <input class="form-control" name="code_type" id="ca-codetype" maxlength="10" placeholder="1100">
+            </div>
+            <div class="col-12 col-md-9">
+              <label class="form-label small">تسمية الغرفة</label>
+              <input class="form-control" name="type_libelle" id="ca-typelibelle" dir="rtl">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small">النوع الفرعي</label>
+              <input class="form-control" name="sous_type" id="ca-soustype" dir="rtl" placeholder="ابتدائي / استئنافي / ...">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small">الفئة العامة</label>
+              <select class="form-select" name="categorie_globale" id="ca-globale" dir="rtl">
+                <option value="">—</option>
+                {% for k, v in categories_globales %}
+                  <option value="{{ k }}">{{ v }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small">المجال</label>
+              <select class="form-select" name="domaine" id="ca-domaine" dir="rtl">
+                {% for k, v in domaines %}
+                  <option value="{{ k }}">{{ v }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div id="ca-formerror" class="alert alert-danger mt-2" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-primary" id="ca-save-btn">
+            <span class="spinner-border spinner-border-sm d-none" id="ca-save-spinner"></span>
+            حفظ
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                 || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+  const STATE = {
+    items: [], filtered: [], page: 1, pageSize: 25,
+    selected: new Set(),
+    showArchived: false,
+  };
+
+  function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+  function escapeHtml(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+  function showToast(msg, kind) {
+    const cls = kind === 'error' ? 'bg-danger' : 'bg-success';
+    const div = document.createElement('div');
+    div.className = `toast align-items-center text-white ${cls} border-0 show position-fixed top-0 end-0 m-3`;
+    div.style.zIndex = 1100;
+    div.innerHTML = `<div class="d-flex"><div class="toast-body">${escapeHtml(msg)}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3500);
+  }
+
+  async function api(url, opts = {}) {
+    const headers = { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' };
+    const r = await fetch(url, { credentials: 'same-origin', headers, ...opts });
+    const data = await r.json().catch(() => ({ ok: false, error: 'استجابة غير صالحة' }));
+    if (!r.ok || !data.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('ca-search').value.trim();
+    const globale = document.getElementById('ca-filter-globale').value;
+    const ct = document.getElementById('ca-filter-codetype').value;
+    const st = document.getElementById('ca-filter-soustype').value;
+    let f = STATE.items;
+    if (q.length >= 2) {
+      const ql = q.toLowerCase();
+      f = f.filter(c => (c.code+' '+c.libelle+' '+c.type_libelle).toLowerCase().includes(ql));
+    }
+    if (globale) f = f.filter(c => c.categorie_globale === globale);
+    if (ct)      f = f.filter(c => c.code_type === ct);
+    if (st)      f = f.filter(c => c.sous_type === st);
+    STATE.filtered = f;
+    STATE.page = 1;
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('ca-tbody');
+    const start = (STATE.page - 1) * STATE.pageSize;
+    const slice = STATE.filtered.slice(start, start + STATE.pageSize);
+    if (!slice.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">
+        <i class="bi bi-inbox fs-3 d-block mb-2"></i> لا توجد عناصر مطابقة</td></tr>`;
+    } else {
+      tbody.innerHTML = slice.map(c => `
+        <tr data-id="${c.id}" class="${c.is_archived ? 'archived' : ''}">
+          <td><input type="checkbox" class="form-check-input ca-rowcheck" value="${c.id}"
+                     ${STATE.selected.has(c.id) ? 'checked' : ''}></td>
+          <td><span class="badge badge-codetype">${escapeHtml(c.code)}</span></td>
+          <td>${escapeHtml(c.libelle)}</td>
+          <td><span class="text-secondary">${escapeHtml(c.code_type || '—')}</span></td>
+          <td class="small">${escapeHtml(c.type_libelle || '—')}</td>
+          <td>${c.sous_type ? `<span class="badge badge-soustype">${escapeHtml(c.sous_type)}</span>` : '—'}</td>
+          <td><small>${escapeHtml(c.categorie_globale_label || '—')}</small></td>
+          <td class="text-end">
+            ${c.is_archived
+              ? `<button class="btn btn-sm btn-outline-success ca-restore"><i class="bi bi-arrow-counterclockwise"></i></button>`
+              : `<button class="btn btn-sm btn-outline-primary ca-edit"><i class="bi bi-pencil"></i></button>
+                 <button class="btn btn-sm btn-outline-danger ca-archive"><i class="bi bi-archive"></i></button>`}
+          </td>
+        </tr>`).join('');
+    }
+    renderPager();
+    renderBulkbar();
+  }
+
+  function renderPager() {
+    const total = STATE.filtered.length;
+    const pages = Math.max(1, Math.ceil(total / STATE.pageSize));
+    if (STATE.page > pages) STATE.page = pages;
+    const start = total ? (STATE.page - 1) * STATE.pageSize + 1 : 0;
+    const end = Math.min(STATE.page * STATE.pageSize, total);
+    document.getElementById('ca-pageinfo').textContent = total ? `${start}-${end} من ${total}` : '0 عنصر';
+    const nav = document.getElementById('ca-pagenav');
+    let html = `<li class="page-item ${STATE.page<=1?'disabled':''}"><a class="page-link" href="#" data-p="${STATE.page-1}">‹</a></li>`;
+    const maxBtns = 5;
+    let from = Math.max(1, STATE.page - Math.floor(maxBtns/2));
+    let to = Math.min(pages, from + maxBtns - 1);
+    if (to - from + 1 < maxBtns) from = Math.max(1, to - maxBtns + 1);
+    for (let i = from; i <= to; i++) {
+      html += `<li class="page-item ${i===STATE.page?'active':''}"><a class="page-link" href="#" data-p="${i}">${i}</a></li>`;
+    }
+    html += `<li class="page-item ${STATE.page>=pages?'disabled':''}"><a class="page-link" href="#" data-p="${STATE.page+1}">›</a></li>`;
+    nav.innerHTML = html;
+  }
+
+  function renderBulkbar() {
+    const bar = document.getElementById('ca-bulkbar');
+    if (STATE.selected.size === 0) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    document.getElementById('ca-selcount').textContent = STATE.selected.size;
+    // Hide archive / show restore selon le contexte d'archive
+    document.getElementById('ca-bulk-archive').style.display = STATE.showArchived ? 'none' : '';
+    document.getElementById('ca-bulk-restore').style.display = STATE.showArchived ? '' : 'none';
+  }
+
+  async function loadData() {
+    const params = new URLSearchParams();
+    if (STATE.showArchived) params.set('include_archived', '1');
+    try {
+      const data = await api('?' + params.toString(), { method: 'GET' }).catch(() => null)
+                ?? await api(`{% url 'cabinet_ref:codes_affaire_list' %}?${params}`);
+      STATE.items = data.items || [];
+      // Hydrater filtres
+      const ct = document.getElementById('ca-filter-codetype');
+      ct.innerHTML = '<option value="">— الكل —</option>' + (data.meta?.code_types || []).map(t =>
+        `<option value="${t.code_type}">${t.code_type} ${t.libelle ? '— '+escapeHtml(t.libelle) : ''}</option>`).join('');
+      const st = document.getElementById('ca-filter-soustype');
+      st.innerHTML = '<option value="">— الكل —</option>' + (data.meta?.sous_types || []).map(s =>
+        `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      applyFilters();
+    } catch (e) {
+      showToast('خطأ تحميل البيانات: ' + e.message, 'error');
+    }
+  }
+
+  function openCreateModal() {
+    document.getElementById('caModalTitle').textContent = 'إضافة رمز قضية';
+    document.getElementById('caForm').reset();
+    document.getElementById('ca-id').value = '';
+    document.getElementById('ca-formerror').style.display = 'none';
+  }
+
+  function openEditModal(item) {
+    document.getElementById('caModalTitle').textContent = `تعديل ${item.code}`;
+    document.getElementById('ca-id').value = item.id;
+    document.getElementById('ca-code').value = item.code;
+    document.getElementById('ca-libelle').value = item.libelle;
+    document.getElementById('ca-codetype').value = item.code_type || '';
+    document.getElementById('ca-typelibelle').value = item.type_libelle || '';
+    document.getElementById('ca-soustype').value = item.sous_type || '';
+    document.getElementById('ca-globale').value = item.categorie_globale || '';
+    document.getElementById('ca-domaine').value = item.domaine || 'civil';
+    document.getElementById('ca-formerror').style.display = 'none';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('caModal')).show();
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    const id = document.getElementById('ca-id').value;
+    const payload = {
+      code: document.getElementById('ca-code').value.trim(),
+      libelle: document.getElementById('ca-libelle').value.trim(),
+      code_type: document.getElementById('ca-codetype').value.trim(),
+      type_libelle: document.getElementById('ca-typelibelle').value.trim(),
+      sous_type: document.getElementById('ca-soustype').value.trim(),
+      categorie_globale: document.getElementById('ca-globale').value,
+      domaine: document.getElementById('ca-domaine').value,
+    };
+    const spin = document.getElementById('ca-save-spinner');
+    const btn = document.getElementById('ca-save-btn');
+    spin.classList.remove('d-none'); btn.disabled = true;
+    try {
+      const url = id ? `{% url 'cabinet_ref:codes_affaire_update' 0 %}`.replace('/0/', `/${id}/`)
+                     : `{% url 'cabinet_ref:codes_affaire_create' %}`;
+      const data = await api(url, { method: 'POST', body: JSON.stringify(payload) });
+      if (id) {
+        const i = STATE.items.findIndex(c => c.id == id);
+        if (i >= 0) STATE.items[i] = data.item;
+      } else {
+        STATE.items.unshift(data.item);
+      }
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('caModal')).hide();
+      showToast(data.message);
+      applyFilters();
+    } catch (err) {
+      const e = document.getElementById('ca-formerror');
+      e.textContent = err.message; e.style.display = '';
+    } finally {
+      spin.classList.add('d-none'); btn.disabled = false;
+    }
+  }
+
+  async function archiveIds(ids) {
+    if (!ids.length) return;
+    if (!confirm(`تأكيد أرشفة ${ids.length} عنصر(ات) ؟`)) return;
+    try {
+      const data = await api('{% url "cabinet_ref:codes_affaire_archive" %}', {
+        method: 'POST', body: JSON.stringify({ ids })
+      });
+      ids.forEach(id => {
+        const c = STATE.items.find(x => x.id == id);
+        if (c) c.is_archived = true;
+        STATE.selected.delete(id);
+      });
+      if (!STATE.showArchived) {
+        STATE.items = STATE.items.filter(c => !c.is_archived);
+      }
+      showToast(data.message);
+      applyFilters();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function restoreIds(ids) {
+    if (!ids.length) return;
+    try {
+      const data = await api('{% url "cabinet_ref:codes_affaire_restore" %}', {
+        method: 'POST', body: JSON.stringify({ ids })
+      });
+      ids.forEach(id => {
+        const c = STATE.items.find(x => x.id == id);
+        if (c) c.is_archived = false;
+        STATE.selected.delete(id);
+      });
+      showToast(data.message);
+      applyFilters();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  // === bindings ===
+  document.getElementById('ca-search').addEventListener('input', debounce(applyFilters, 200));
+  document.getElementById('ca-filter-globale').addEventListener('change', applyFilters);
+  document.getElementById('ca-filter-codetype').addEventListener('change', applyFilters);
+  document.getElementById('ca-filter-soustype').addEventListener('change', applyFilters);
+  document.getElementById('ca-pagesize').addEventListener('change', (e) => {
+    STATE.pageSize = parseInt(e.target.value, 10); STATE.page = 1; renderTable();
+  });
+  document.getElementById('ca-show-archived').addEventListener('change', (e) => {
+    STATE.showArchived = e.target.checked; STATE.selected.clear(); loadData();
+  });
+  document.getElementById('ca-pagenav').addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-p]'); if (!a) return; e.preventDefault();
+    const p = parseInt(a.dataset.p, 10);
+    if (!isNaN(p) && p >= 1) { STATE.page = p; renderTable(); }
+  });
+  document.getElementById('ca-btn-add').addEventListener('click', openCreateModal);
+  document.getElementById('caForm').addEventListener('submit', submitForm);
+
+  document.getElementById('ca-check-all').addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    const start = (STATE.page - 1) * STATE.pageSize;
+    STATE.filtered.slice(start, start + STATE.pageSize).forEach(c => {
+      if (checked) STATE.selected.add(c.id); else STATE.selected.delete(c.id);
+    });
+    renderTable();
+  });
+
+  document.getElementById('ca-tbody').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+    const id = parseInt(tr.dataset.id, 10);
+    if (e.target.classList.contains('ca-rowcheck')) {
+      if (e.target.checked) STATE.selected.add(id); else STATE.selected.delete(id);
+      renderBulkbar();
+    } else if (e.target.closest('.ca-edit')) {
+      const item = STATE.items.find(c => c.id === id);
+      if (item) openEditModal(item);
+    } else if (e.target.closest('.ca-archive')) {
+      archiveIds([id]);
+    } else if (e.target.closest('.ca-restore')) {
+      restoreIds([id]);
+    }
+  });
+
+  document.getElementById('ca-bulk-archive').addEventListener('click', () => archiveIds([...STATE.selected]));
+  document.getElementById('ca-bulk-restore').addEventListener('click', () => restoreIds([...STATE.selected]));
+
+  // CSRF token from cookie if no hidden input
+  {% csrf_token %}
+
+  loadData();
+})();
+</script>
+{% endblock %}

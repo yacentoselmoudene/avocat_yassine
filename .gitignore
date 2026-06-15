@@ -33,3 +33,8 @@ media/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local tokens (POC clients)
+*.token.json
+client_poc/.token*
+

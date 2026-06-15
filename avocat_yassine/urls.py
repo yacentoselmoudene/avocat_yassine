@@ -4,8 +4,14 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
+from avocat_app.views_pwa import manifest as pwa_manifest, service_worker as pwa_sw
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+
+    # PWA — both must be at root for proper scope/installability.
+    path("manifest.webmanifest", pwa_manifest, name="pwa_manifest"),
+    path("sw.js", pwa_sw, name="pwa_sw"),
 
     # Auth (واجهة عربية جميلة عبر django.contrib.auth + قوالبك)
     path("auth/", include(("avocat_app.auth_urls", "authui"), namespace="authui")),
@@ -14,9 +20,14 @@ urlpatterns = [
     # templates/registration/logged_out.html
     path("ref/", include("avocat_app.urls_ref")),  # toutes les pages référentiel sous /ref/
 
+    path("api/", include(("avocat_app.api.urls", "api"), namespace="api")),
+
     # تطبيق المكتب (كل صفحات CRUD والمودالات HTMX…)
     path("", include(("avocat_app.urls", "cabinet"), namespace="cabinet")),
 ]
+
+if getattr(settings, "DESKTOP_MODE", False):
+    urlpatterns.insert(-1, path("desktop/", include(("desktop.urls", "desktop"), namespace="desktop")))
 
 # ملفات MEDIA أثناء التطوير فقط
 if settings.DEBUG:

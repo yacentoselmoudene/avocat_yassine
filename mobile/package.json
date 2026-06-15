@@ -1,0 +1,19 @@
+{
+  "name": "avocat-mobile",
+  "version": "0.1.0",
+  "description": "APK wrapper (Capacitor) for the Avocat Yassine office suite",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "build:debug": "cd android && ./gradlew assembleDebug",
+    "build:release": "cd android && ./gradlew assembleRelease"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/android": "^6.2.0"
+  }
+}

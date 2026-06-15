@@ -544,7 +544,13 @@ class CodeCategorieAffaire(TimeStampedSoftDeleteModel):
         ('cassation', 'نقض'), ('execution', 'تنفيذ'),
         ('notification', 'تبليغ'),
     ]
-
+    # رموز الملفات — colonne du XLSX. 4 grandes familles (sheet cat3).
+    CATEGORIE_GLOBALE_CHOICES = [
+        ('civil',      'رموز الملفات بالمحاكم المدنية'),
+        ('penal',      'رموز الملفات الجنحية'),
+        ('admin',      'رموز الملفات بالمحاكم الإدارية'),
+        ('commercial', 'رموز الملفات بالمحاكم التجارية'),
+    ]
     code = models.CharField(max_length=10, unique=True, verbose_name='الرمز')
     libelle = models.CharField(max_length=200, verbose_name='التسمية')
     domaine = models.CharField(max_length=30, choices=DOMAINE_CHOICES, verbose_name='المجال')
@@ -555,15 +561,53 @@ class CodeCategorieAffaire(TimeStampedSoftDeleteModel):
         verbose_name="نوع المحكمة الأولى",
         help_text="نوع المحكمة المختصة ابتدائيًا لهذه الفئة (مثلاً TPI، TC، TA، CA مباشرة...)",
     )
+    # === Hiérarchie introduite depuis رموز المحاكم.xlsx ===
+    # code_type : code 4 chiffres de la chambre (ex 1100, 1200, 1300...).
+    # Plusieurs CodeCategorieAffaire partagent le même code_type.
+    code_type = models.CharField(
+        max_length=10, null=True, blank=True, db_index=True,
+        verbose_name='رمز الغرفة',
+        help_text='Code du groupe / chambre (ex: 1100, 1200, 1300)',
+    )
+    type_libelle = models.CharField(
+        max_length=200, null=True, blank=True,
+        verbose_name='تسمية الغرفة',
+        help_text='Libellé de la chambre (ex: مؤسسة الرئيس وغرفة المشورة, المدني)',
+    )
+    sous_type = models.CharField(
+        max_length=80, blank=True, default='',
+        verbose_name='النوع الفرعي',
+        help_text='ابتدائي / استئنافي / محلي / إنابة / ... (texte libre depuis le XLSX)',
+    )
+    categorie_globale = models.CharField(
+        max_length=20, blank=True, default='',
+        choices=CATEGORIE_GLOBALE_CHOICES,
+        verbose_name='الفئة العامة',
+        help_text='Grande famille (civil/pénal/admin/commercial)',
+    )
 
     class Meta:
         db_table = 'code_categorie_affaire'
         verbose_name = 'رمز صنف القضية'
         verbose_name_plural = 'رموز أصناف القضايا'
         ordering = ['code']
+        indexes = [
+            models.Index(fields=['code_type']),
+            models.Index(fields=['sous_type']),
+            models.Index(fields=['categorie_globale']),
+        ]
 
     def __str__(self):
         return f"{self.code} — {self.libelle}"
+
+    @property
+    def is_premiere_instance(self) -> bool:
+        """True si l'affaire est de 1ère instance (cascade mahakim.ma)."""
+        return self.sous_type == "ابتدائي" or self.niveau == "premiere_instance"
+
+    @property
+    def is_appel(self) -> bool:
+        return self.sous_type == "استئنافي" or self.niveau == "appel"
 
 
 class Affaire(TimeStampedSoftDeleteModel):
@@ -1501,3 +1545,35 @@ class CabinetParams(TimeStampedSoftDeleteModel):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+# =============================================
+# SyncOutbox — staging table for desktop (.exe/.apk) local writes.
+# Filled by post_save/post_delete signals when DESKTOP_MODE is True;
+# drained by the desktop sync engine which pushes to the central API.
+# =============================================
+class SyncOutbox(models.Model):
+    UPSERT = "upsert"
+    DELETE = "delete"
+    OP_CHOICES = [(UPSERT, "upsert"), (DELETE, "delete")]
+
+    table_name = models.CharField(max_length=64, db_index=True)
+    entity_id = models.CharField(max_length=64)
+    op = models.CharField(max_length=8, choices=OP_CHOICES)
+    changed_fields = models.TextField(null=True, blank=True)
+    client_updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    pushed_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "sync_outbox"
+        ordering = ["created_at", "id"]
+        indexes = [
+            models.Index(fields=["pushed_at", "created_at"]),
+            models.Index(fields=["table_name", "entity_id"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.op}] {self.table_name}:{self.entity_id}"

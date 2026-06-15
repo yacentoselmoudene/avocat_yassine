@@ -1,6 +1,6 @@
 # avocat_app/urls.py
 from django.urls import path
-from . import views, views_audit, views_portail, views_cabinet_params, views_users
+from . import views, views_audit, views_portail, views_cabinet_params, views_users, views_codes_affaire
 
 app_name = "cabinet"
 
@@ -67,6 +67,18 @@ urlpatterns = [
     # API : juridictions adaptées à une catégorie d'affaire
     path("api/categories/<int:code_categorie_id>/juridictions/",
          views.api_juridictions_for_category, name="api_juridictions_for_category"),
+
+    # === API : cascade mahakim.ma ===
+    # GET /api/cours-appel/                  → liste des CA
+    # GET /api/juridictions-by-ca/?ca=<id>   → PI rattachées à une CA
+    # GET /api/codes-affaire/                → tous les code_type (chambres) groupés
+    #                              ?sous_type=ابتدائي → codes filtrés par sous_type
+    #                              ?code_type=1100    → codes d'une chambre donnée
+    path("api/affaires/check-duplicate/", views.api_affaire_check_duplicate, name="api_affaire_check_duplicate"),
+    path("api/cours-appel/",            views.api_cours_appel,        name="api_cours_appel"),
+    path("api/juridictions-by-ca/",     views.api_juridictions_by_ca, name="api_juridictions_by_ca"),
+    path("api/codes-affaire/",          views.api_codes_affaire,      name="api_codes_affaire"),
+    path("api/code-types/",             views.api_code_types,         name="api_code_types"),
 
     # ====== Decision ======
     path("decisions/", views.DecisionList.as_view(), name="decision_list"),

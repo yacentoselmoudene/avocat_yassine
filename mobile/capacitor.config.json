@@ -1,0 +1,14 @@
+{
+  "appId": "ma.avocatyassine.maktab",
+  "appName": "مكتب المحاماة",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">مكتب المحاماة</string>
+    <string name="title_activity_main">مكتب المحاماة</string>
+    <string name="package_name">ma.avocatyassine.maktab</string>
+    <string name="custom_url_scheme">ma.avocatyassine.maktab</string>
+</resources>

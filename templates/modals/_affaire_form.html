@@ -7,6 +7,7 @@
       action="{{ action_url|default:request.path }}"
       hx-post="{{ action_url|default:request.path }}"
       hx-target="this" hx-swap="outerHTML"
+      data-affaire-pk="{{ form.instance.pk|default:'' }}"
       novalidate>
   {% csrf_token %}
 
@@ -21,8 +22,8 @@
   <div class="stepper-nav">
     <div class="step-indicator active"><span class="step-num">1</span> المرجع</div>
     <div class="step-indicator"><span class="step-num">2</span> التصنيف</div>
-    <div class="step-indicator"><span class="step-num">3</span> المحكمة</div>
-    <div class="step-indicator"><span class="step-num">4</span> التفاصيل</div>
+    <div class="step-indicator"><span class="step-num">3</span> تفاصيل مالية</div>
+    <div class="step-indicator"><span class="step-num">4</span> الموضوع</div>
   </div>
 
   {# === Step 1: المرجع الداخلي + مرجع المحكمة === #}
@@ -97,7 +98,7 @@
 
   {# === Step 3: التاريخ والتفاصيل المالية === #}
   <div class="step-panel" data-step="2">
-    <h6 class="text-primary mb-3"><i class="bi bi-calendar3 ms-1"></i> التاريخ والتفاصيل</h6>
+    <h6 class="text-primary mb-3"><i class="bi bi-cash-coin ms-1"></i> تفاصيل مالية</h6>
     <div class="row g-2">
       <div class="col-4">
         <label class="form-label small fw-bold">{{ form.date_ouverture.label }} <span class="text-danger">*</span></label>
@@ -157,12 +158,77 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var f = document.getElementById('affaireStepperForm');
-  if (f) { initStepper(f); initAffaireCatJurLink(f); }
+  if (f) { initStepper(f); initAffaireCatJurLink(f); initAffaireDuplicateCheckModal(f); }
 });
 document.body.addEventListener('htmx:afterSwap', function() {
   var f = document.getElementById('affaireStepperForm');
-  if (f) { initStepper(f); initAffaireCatJurLink(f); }
+  if (f) { initStepper(f); initAffaireCatJurLink(f); initAffaireDuplicateCheckModal(f); }
 });
+
+// Vérification AJAX doublon (reference_interne + combinaison mahakim).
+function initAffaireDuplicateCheckModal(form) {
+  if (form.dataset.dupInit) return;
+  form.dataset.dupInit = '1';
+  const refField  = form.querySelector('#id_reference_interne');
+  const numField  = form.querySelector('#id_numero_dossier');
+  const codeField = form.querySelector('#id_code_categorie');
+  const anField   = form.querySelector('#id_annee_dossier');
+  const excludeId = form.dataset.affairePk || '';
+  const apiUrl = '{% url "cabinet:api_affaire_check_duplicate" %}';
+
+  function makeWarn(field, key) {
+    let w = field.parentNode.querySelector('.dup-warn[data-key="' + key + '"]');
+    if (!w) {
+      w = document.createElement('div');
+      w.className = 'dup-warn alert alert-warning py-1 px-2 mt-1 small d-none';
+      w.dataset.key = key;
+      field.parentNode.appendChild(w);
+    }
+    return w;
+  }
+  function showWarn(w, c) {
+    w.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ملف موجود مسبقا : <strong>'
+      + (c.reference_interne || '—') + '</strong>'
+      + (c.reference_tribunal ? ' (' + c.reference_tribunal + ')' : '');
+    w.classList.remove('d-none');
+  }
+  function hideWarn(w) { w.classList.add('d-none'); w.innerHTML = ''; }
+
+  async function checkRef() {
+    if (!refField || !refField.value.trim()) return;
+    const w = makeWarn(refField, 'ref');
+    const u = new URL(apiUrl, window.location.origin);
+    u.searchParams.set('reference_interne', refField.value.trim());
+    if (excludeId) u.searchParams.set('exclude_id', excludeId);
+    try {
+      const r = await fetch(u, { credentials: 'same-origin' });
+      const d = await r.json();
+      if (d.ok && d.exists) showWarn(w, d.conflict); else hideWarn(w);
+    } catch (e) {}
+  }
+  async function checkMahakim() {
+    if (!numField || !codeField || !anField) return;
+    const numero = numField.value.trim();
+    const code = codeField.value;
+    const annee = anField.value.trim();
+    const w = makeWarn(numField, 'mahakim');
+    if (!numero || !code || !annee) { hideWarn(w); return; }
+    const u = new URL(apiUrl, window.location.origin);
+    u.searchParams.set('numero_dossier', numero);
+    u.searchParams.set('code_categorie', code);
+    u.searchParams.set('annee_dossier', annee);
+    if (excludeId) u.searchParams.set('exclude_id', excludeId);
+    try {
+      const r = await fetch(u, { credentials: 'same-origin' });
+      const d = await r.json();
+      if (d.ok && d.exists) showWarn(w, d.conflict); else hideWarn(w);
+    } catch (e) {}
+  }
+
+  if (refField) refField.addEventListener('blur', checkRef);
+  [numField, anField].forEach(f => { if (f) f.addEventListener('blur', checkMahakim); });
+  if (codeField) $(codeField).on('change', checkMahakim);
+}
 
 // Filtrage dynamique des juridictions selon la catégorie sélectionnée.
 function initAffaireCatJurLink(scope) {
