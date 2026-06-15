@@ -289,6 +289,17 @@ class RefDelete(UIPermRequiredMixin, RefBase, HTMXModalFormMixin, DeleteView):
     ui_perm = "ui_btn_delete"
     page_template = "ref/libelle_confirm_delete.html"
 
+    def get_queryset(self):
+        """Override : ne PAS filtrer is_deleted pour la suppression.
+
+        RefBase.get_queryset() applique `is_deleted=False`, ce qui rend
+        introuvables les items déjà soft-deleted (→ 404 sur le delete d'un
+        item archivé). On veut pouvoir agir sur eux aussi (suppression
+        physique d'archive, désarchivage).
+        """
+        cfg = self.get_ref()
+        return cfg.model.objects.all()
+
     def get(self, request, *args, **kwargs):
         if self.htmx():
             self.object = self.get_object()

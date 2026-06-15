@@ -84,10 +84,30 @@
   const data = JSON.parse(document.getElementById('mapPoints').textContent || '[]');
   // Centre Maroc
   const map = L.map('juridictions-map').setView([31.7917, -7.0926], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
+  // CartoDB Voyager : tile server CDN gratuit, n'exige pas de Referer HTTP
+  // (résout l'erreur "Access blocked: referer is required" derrière reverse-proxy).
+  // Fallback automatique vers OSM si CartoDB indisponible.
+  const tileUrls = [
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  ];
+  let tileIndex = 0;
+  function makeTileLayer() {
+    return L.tileLayer(tileUrls[tileIndex], {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '© OpenStreetMap, © CartoDB',
+      crossOrigin: true,
+    });
+  }
+  let tiles = makeTileLayer().addTo(map);
+  tiles.on('tileerror', function () {
+    if (tileIndex < tileUrls.length - 1) {
+      tileIndex++;
+      map.removeLayer(tiles);
+      tiles = makeTileLayer().addTo(map);
+    }
+  });
 
   const markers = [];
   data.forEach(p => {
