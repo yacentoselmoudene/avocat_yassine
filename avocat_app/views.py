@@ -24,7 +24,7 @@ from .views_mixins import (
     UIPermRequiredMixin,)
 
 from .models import (
-    Juridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
+    Juridiction, TypeJuridiction, Avocat, Affaire, Partie, AffairePartie, AffaireAvocat,
     Audience, Mesure, Expertise, Decision, Notification, VoieDeRecours,
     Execution, Depense, Recette, PieceJointe, Utilisateur, Tache, Alerte, Expert, Barreau,
     Avertissement, PhaseAffaire, DocumentRequirement, MahakimSyncResult,
@@ -3664,40 +3664,67 @@ def jurisprudence_search(request: HttpRequest) -> HttpResponse:
 
 @login_required(login_url=reverse_lazy('authui:login'))
 def juridictions_map(request: HttpRequest) -> HttpResponse:
-    """Page de carte affichant les juridictions géolocalisées."""
+    """Page de carte affichant TOUTES les juridictions géolocalisées.
+
+    Le filtrage par type et la pagination sont gérés côté client à partir des
+    données JSON injectées via json_script. Le serveur ne paginne pas ici :
+    on a ~200 juridictions max, c'est trivial pour le client.
+    """
     from django.db.models import Count
 
     qs = (
-        Juridiction.objects
+        Juridiction.objects.filter(is_deleted=False)
+        .select_related("type", "TribunalParent")
         .annotate(affaires_count=Count("affaire", distinct=True))
-        .order_by("villetribunal_ar")
+        .order_by("villetribunal_ar", "nomtribunal_ar")
     )
 
-    points = []
-    missing = []
-    for j in qs:
-        if j.latitude is not None and j.longitude is not None:
-            points.append({
-                "id": j.pk,
-                "nom_ar": j.nomtribunal_ar or "",
-                "nom_fr": j.nomtribunal_fr or "",
-                "ville": j.villetribunal_ar or j.villetribunal_fr or "",
-                "lat": float(j.latitude),
-                "lng": float(j.longitude),
-                "telephone": j.telephonetribunal or "",
-                "affaires_count": j.affaires_count,
-                "url_detail": j.get_absolute_url(),
-                "url_affaires": reverse("cabinet:affaire_list") + f"?juridiction={j.pk}",
-                "url_directions": j.google_maps_directions_url,
-            })
-        else:
-            missing.append(j)
+    def _serialize(j):
+        return {
+            "id": j.pk,
+            "code": j.code or "",
+            "nom_ar": j.nomtribunal_ar or "",
+            "nom_fr": j.nomtribunal_fr or "",
+            "ville": j.villetribunal_ar or j.villetribunal_fr or "",
+            "type_id": j.type_id,
+            "type_libelle": j.type.libelle if j.type_id else "",
+            "type_code": j.type.code_type if j.type_id else "",
+            "parent_id": j.TribunalParent_id,
+            "parent_nom": (j.TribunalParent.nomtribunal_ar
+                           or j.TribunalParent.nomtribunal_fr) if j.TribunalParent_id else "",
+            "lat": float(j.latitude) if j.latitude is not None else None,
+            "lng": float(j.longitude) if j.longitude is not None else None,
+            "telephone": j.telephonetribunal or "",
+            "affaires_count": j.affaires_count,
+            "url_detail": j.get_absolute_url(),
+            "url_update": reverse("cabinet:juridiction_update", args=[j.pk]),
+            "url_affaires": reverse("cabinet:affaire_list") + f"?juridiction={j.pk}",
+            "url_directions": j.google_maps_directions_url,
+        }
+
+    all_points = [_serialize(j) for j in qs]
+    points = [p for p in all_points if p["lat"] is not None]
+    missing = [p for p in all_points if p["lat"] is None]
+
+    # Types présents (pour le filtre)
+    types = (
+        TypeJuridiction.objects.filter(is_deleted=False)
+        .filter(juridiction__in=qs).distinct()
+        .order_by("libelle")
+    )
+    types_list = [{
+        "id": t.pk,
+        "libelle": t.libelle,
+        "code_type": t.code_type or "",
+    } for t in types]
 
     return render(request, "cabinet/juridictions_map.html", {
         "points": points,
-        "missing": missing,
+        "all_juridictions": all_points,  # inclut ceux sans coordonnées
+        "types": types_list,
         "missing_count": len(missing),
-        "total_count": len(points) + len(missing),
+        "total_count": len(all_points),
+        "geo_count": len(points),
     })
 
 
